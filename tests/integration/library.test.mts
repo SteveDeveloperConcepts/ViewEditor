@@ -41,16 +41,16 @@ test('imports every supported format and prepares previews', async () => {
   assert.equal(a.height, 720);
   assert.equal(a.fps, 30);
   assert.ok(Math.abs(a.duration - 6) < 0.05);
-  assert.equal(a.hasAudio, true);
+  assert.equal(a.hasAudio, true, 'clip-a.mp4 has audio');
   assert.equal(a.audioChannels, 1);
   assert.equal(a.colorMatrix, 'bt709');
   assert.equal(a.proxy, 'none', 'H.264 MP4 plays directly');
-  assert.equal(a.previewChecked, true);
+  assert.equal(a.previewChecked, true, 'clip-a.mp4 needs no check in the editor');
   assert.equal(byName['portrait.mp4'].width, 720);
   assert.equal(byName['portrait.mp4'].height, 1280);
   assert.equal(byName['fast60.mp4'].fps, 60);
-  assert.equal(byName['hdr.mp4'].isHdr, true);
-  assert.equal(byName['logo.png'].hasAlpha, true);
+  assert.equal(byName['hdr.mp4'].isHdr, true, 'hdr.mp4 is recognised as HDR');
+  assert.equal(byName['logo.png'].hasAlpha, true, 'logo.png keeps its transparency');
 
   // Posters, filmstrips and waveforms exist for everything that should have them.
   for (const v of lib.data.assets.filter((x) => x.kind === 'video')) {

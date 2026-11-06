@@ -226,9 +226,9 @@ test('every supported input format can be exported', async () => {
   const assets = await Promise.all([...videos, ...audios, ...images].map(assetFor));
   const byName = Object.fromEntries(assets.map((a) => [a.name, a]));
 
-  assert.equal(byName['hdr.mp4'].isHdr, true);
-  assert.equal(byName['alpha.webm'].hasAlpha, true);
-  assert.equal(byName['logo.png'].hasAlpha, true);
+  assert.equal(byName['hdr.mp4'].isHdr, true, 'hdr.mp4 is recognised as HDR');
+  assert.equal(byName['alpha.webm'].hasAlpha, true, 'alpha.webm keeps its transparency');
+  assert.equal(byName['logo.png'].hasAlpha, true, 'logo.png keeps its transparency');
   assert.equal(byName['anim.gif'].kind, 'video');
   assert.equal(byName['pic.avif'].kind, 'image');
 

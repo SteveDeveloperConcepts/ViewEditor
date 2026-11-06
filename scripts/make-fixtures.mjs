@@ -37,6 +37,8 @@ ff('fast60.mp4', [...lavfi('testsrc2=s=1280x720:r=60:d=3'), ...h264]);
 ff('hevc.mp4', [...lavfi('testsrc2=s=1280x720:r=30:d=3'), ...lavfi('sine=f=500:d=3'), '-c:v', 'libx265', '-preset', 'ultrafast', '-tag:v', 'hvc1', '-pix_fmt', 'yuv420p', ...aac, '-shortest']);
 ff('hdr.mp4', [
   ...lavfi('testsrc2=s=1280x720:r=30:d=3'),
+  // setparams as well: newer FFmpeg takes these tags from the frames, and ignores the output options.
+  '-vf', 'setparams=color_primaries=bt2020:color_trc=smpte2084:colorspace=bt2020nc',
   '-c:v', 'libx265', '-preset', 'ultrafast', '-tag:v', 'hvc1', '-pix_fmt', 'yuv420p10le',
   '-color_primaries', 'bt2020', '-color_trc', 'smpte2084', '-colorspace', 'bt2020nc',
 ]);
