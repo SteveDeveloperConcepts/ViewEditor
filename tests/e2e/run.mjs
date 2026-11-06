@@ -1588,6 +1588,15 @@ section('ai', async () => {
     check(true, 'lip-sync is in the AI panel with the other tools');
     await p.selectOption('select[aria-label="What to generate"]', 'text-to-video');
 
+    // Starting from the sound: a clip of sound offers a picture to go with it.
+    await blank([media('tone.mp3')]);
+    const toneClip = (await pclips())[0];
+    await selectClip(toneClip.id);
+    await p.click('.inspector button:has-text("Generate a picture for this")');
+    await p.waitForSelector('.ai-form .sound-window');
+    check((await p.inputValue('.ai-form select[aria-label="Sound from"]')).length > 0, 'a piece of sound opens the AI form with that sound chosen');
+    check(await p.isVisible('.ai-form .segmented button[aria-pressed="true"]:has-text("My media")'), 'and the Sound row set to it');
+
     // The whole job in one form: an AI clip with the sound of a recording.
     await toHome();
     await p.click('.sidebar .nav-item:has-text("Generate with AI")');

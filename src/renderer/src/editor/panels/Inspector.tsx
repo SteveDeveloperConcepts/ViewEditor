@@ -28,6 +28,7 @@ import type { Asset, ID, Item, MediaItem, ProjectDoc, TextItem, TextStyle } from
 import { Button, ColorField, FieldRow, IconButton, Notice, NumberInput, Segmented, Slider, Switch, TimeInput } from '@/components/ui';
 import { actionLabel, actionsFor, openClipAi } from '@/ai/clipActions';
 import { openConnections } from '@/ai/ConnectionsDialog';
+import { generatePictureFor } from '@/lib/mediaActions';
 import { useConnected } from '@/store/ai';
 import {
   apply,
@@ -170,6 +171,11 @@ function AudioControls({ item, asset }: { item: MediaItem; asset: Asset | undefi
           {item.type === 'video' && (
             <Button size="small" icon={<AudioLines size={13} />} onClick={() => void extractAudioFrom(item)}>
               Extract audio
+            </Button>
+          )}
+          {item.type === 'audio' && asset && (
+            <Button size="small" icon={<Sparkles size={13} />} onClick={() => void generatePictureFor(asset, item.trimStart, item.duration * item.speed)}>
+              Generate a picture for this
             </Button>
           )}
         </section>

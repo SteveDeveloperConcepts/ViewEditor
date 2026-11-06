@@ -9,7 +9,7 @@ import { Field, IconButton } from '@/components/ui';
 import { AiForm } from '@/ai/AiForm';
 import { ClipAiForm, useClipAi } from '@/ai/clipActions';
 import { openConnections } from '@/ai/ConnectionsDialog';
-import { draftTask, saveDraftTask } from '@/ai/drafts';
+import { draftTask, saveDraftTask, useDraftRevision } from '@/ai/drafts';
 import { JobList } from '@/ai/JobList';
 import { useEditor } from '@/store/editor';
 
@@ -28,7 +28,9 @@ export function AiPanel({ projectId }: { projectId: ID }): ReactNode {
   const doc = useEditor((s) => s.doc)!;
   const request = useClipAi((s) => s.request);
   const clip = request && doc.items.find((it) => it.id === request.itemId);
-  const [task, setTask] = useState<AiTask>(() => draftTask(projectId) ?? 'text-to-video');
+  const [picked, setTask] = useState<AiTask>('text-to-video');
+  const revision = useDraftRevision((s) => s.n);
+  const task = draftTask(projectId) ?? picked;
   const [where, setWhere] = useState<Where>('playhead');
   const current = TASKS.find((t) => t.task === task)!;
   const choose = (next: AiTask): void => {
@@ -57,7 +59,7 @@ export function AiPanel({ projectId }: { projectId: ID }): ReactNode {
           </select>
           {current.hint && <p className="faint panel-note">{current.hint}</p>}
           <AiForm
-            key={task}
+            key={`${task}:${revision}`}
             task={task}
             draftKey={`${projectId}:${task}`}
             projectId={projectId}

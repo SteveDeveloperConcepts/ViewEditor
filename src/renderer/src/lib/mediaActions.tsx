@@ -1,20 +1,22 @@
 // What can be done with something in Media, wherever it is shown: previewing it, using it, taking its sound.
 
 import type { ReactNode } from 'react';
-import { AudioLines, Eye, Plus, Scissors, Trash2 } from 'lucide-react';
+import { AudioLines, Eye, Plus, Scissors, Sparkles, Trash2 } from 'lucide-react';
 import { fileTitle } from '@shared/constants';
 import { formatBytes, formatClock } from '@shared/time';
 import type { Asset } from '@shared/types';
+import { closeClipAi } from '@/ai/clipActions';
+import { draftForSound } from '@/ai/drafts';
 import type { MenuEntry } from '@/components/Menu';
 import { confirmDialog, Modal } from '@/components/Modal';
 import { Button } from '@/components/ui';
 import { addSoundOf } from '@/editor/actions';
-import { addAsset, useEditor } from '@/store/editor';
+import { addAsset, setPanel, useEditor } from '@/store/editor';
 import { getLibrary } from '@/store/library';
 import { navigate, showModal, toast } from '@/store/ui';
 import { api, errorMessage } from './api';
 import { assetUrl } from './media';
-import { startProjectWith } from './projects';
+import { createDraft, startProjectWith } from './projects';
 
 export interface MediaAction {
   label: string;
@@ -49,6 +51,20 @@ async function extractToMedia(asset: Asset): Promise<void> {
   }
 }
 
+/** Opens the AI form with this sound chosen and the length to match. */
+export async function generatePictureFor(asset: Asset, start = 0, seconds = Math.min(5, asset.duration)): Promise<void> {
+  try {
+    closeClipAi();
+    const open = useEditor.getState().doc;
+    const projectId = open?.id ?? (await createDraft()).id;
+    draftForSound(projectId, { assetId: asset.id, start }, seconds);
+    if (open) setPanel('ai');
+    else await navigate({ page: 'editor', projectId, showAi: true });
+  } catch (err) {
+    toast(errorMessage(err), { kind: 'error' });
+  }
+}
+
 /** The project you were last working on, which is where something from Media most likely belongs. */
 function lastProject(): { id: string; name: string } | undefined {
   return getLibrary()
@@ -73,6 +89,7 @@ function waysToUse(asset: Asset): MediaAction[] {
   if (asset.kind === 'video' && asset.hasAudio) {
     actions.push({ label: 'Extract audio', icon: <AudioLines size={15} />, run: () => void (open ? addSoundOf(asset) : extractToMedia(asset)) });
   }
+  if (asset.hasAudio) actions.push({ label: 'Generate a picture for this', icon: <Sparkles size={15} />, run: () => void generatePictureFor(asset) });
   return actions;
 }
 

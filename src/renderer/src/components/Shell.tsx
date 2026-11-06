@@ -51,7 +51,7 @@ export function Sidebar(): ReactNode {
       </div>
       <div className="nav-heading first">Create</div>
       <NavItem icon={<Scissors size={16} />} label="Edit my footage" onClick={() => openStartDialog()} />
-      <NavItem icon={<Sparkles size={16} />} label="Generate with AI" onClick={() => void startBlankProject({}, undefined, true)} />
+      <NavItem icon={<Sparkles size={16} />} label="Generate with AI" onClick={() => void startBlankProject({}, true)} />
       <NavItem icon={<FileText size={16} />} label="Video from a script" page="script" onClick={() => void navigate({ page: 'script' })} />
       <NavItem icon={<CircleDot size={16} />} label="Record" onClick={() => void openRecorder({})} />
       <div className="nav-heading">Library</div>

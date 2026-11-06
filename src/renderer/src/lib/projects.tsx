@@ -42,11 +42,17 @@ export interface ProjectPlace {
 /** Projects started empty here, with the name they started with. */
 const drafts = new Map<ID, string>();
 
-/** A new, empty project, straight into the editor. It goes away again if nothing is ever put in it. */
-export function startBlankProject(place: ProjectPlace = {}, name?: string, showAi = false): Promise<void> {
+/** A new, empty project. It goes away again if nothing is ever put in it. */
+export async function createDraft(place: ProjectPlace = {}): Promise<ProjectMeta> {
+  const meta = await api.library.createProject(place);
+  drafts.set(meta.id, meta.name);
+  return meta;
+}
+
+/** A new, empty project, straight into the editor. */
+export function startBlankProject(place: ProjectPlace = {}, showAi = false): Promise<void> {
   return attempt(async () => {
-    const meta = await api.library.createProject({ ...place, name });
-    drafts.set(meta.id, meta.name);
+    const meta = await createDraft(place);
     await navigate({ page: 'editor', projectId: meta.id, showAi });
   });
 }
