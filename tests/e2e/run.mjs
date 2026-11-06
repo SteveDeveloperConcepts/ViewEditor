@@ -347,6 +347,12 @@ section('timeline', async () => {
 });
 
 // Behaviour that came out of the design review of 0.1.0.
+section('start', async () => {
+  // A first run lands on the ways to start something, with nothing to fill in.
+  check(!!(await page.$('.start-tile:has-text("Edit my footage")')) && (await page.$$('.start-tile')).length === 4, 'the first run lands on the start page');
+  await shot(page, '09-start-page');
+});
+
 section('review', async () => {
   // Files dropped on the dashboard start a project.
   await home();
@@ -892,6 +898,7 @@ section('persistence', async () => {
   const after = (await library()).projects.filter((p) => !p.trashedAt).map((p) => p.name).sort();
   check(JSON.stringify(before) === JSON.stringify(after), 'projects are all there after restarting the app');
   check((await page.$$('.recent')).length > 0, 'Recents is filled in after restarting');
+  check((await page.textContent('.page-head h1')).length > 0 && !!(await page.$('.project-card')), 'with projects, the app opens on them');
   await page.click('.recent >> nth=0');
   await page.waitForSelector('.editor');
   await sleep(500);
@@ -1011,7 +1018,10 @@ section('script', async () => {
   await page.click('.sidebar .nav-item:has-text("Video from a script")');
   await page.click('[role="tab"]:has-text("Script")');
   const pills = await page.$$eval('.pill', (e) => e.map((p) => p.textContent));
-  check(pills.length >= 6, 'the script settings are shown', pills.join(', '));
+  check(pills.length >= 4 && pills.length <= 6, 'the main script settings are shown, the rest on request', pills.join(', '));
+  await page.click('.pill:has-text("More options")');
+  check((await page.$$('.pill')).length >= 6, 'More options shows the rest');
+  await page.click('.pill:has-text("Fewer options")');
   await page.fill('.prompt-input', 'Welcome to the first test of this feature. It turns text into a video!\n\nEach sentence becomes a subtitle, timed to the voice.');
   await sleep(100);
   await shot(page, '25-script');
@@ -1043,6 +1053,7 @@ section('script', async () => {
 
   // A topic needs a key; without one the message says so instead of failing silently.
   await page.click('.sidebar .nav-item:has-text("Video from a script")');
+  await page.click('[role="tab"]:has-text("Topic")');
   await page.fill('.prompt-input', 'Why teams should write things down');
   await page.click('button:has-text("Write script")');
   await page.waitForSelector('.notice.error', { timeout: 30000 });
@@ -1788,7 +1799,10 @@ section('topic', async () => {
   const inst = await launch(second, { ANTHROPIC_BASE_URL: `http://127.0.0.1:${port}`, ANTHROPIC_API_KEY: 'local-test' });
   const p = inst.page;
   try {
+    await p.click('.sidebar .nav-item:has-text("Video from a script")');
+    await p.click('[role="tab"]:has-text("Topic")');
     await p.fill('.prompt-input', 'Why teams should write things down');
+    await p.click('.pill:has-text("More options")');
     await p.click('.pill:has-text("Tone of voice")');
     await p.click('.menu-item:has-text("Calm")');
     await p.click('.pill:has-text("30s")');
@@ -1821,7 +1835,7 @@ section('topic', async () => {
 
 // ---------------------------------------------------------------- run
 
-const order = ['timeline', 'review', 'text', 'export', 'formats', 'library', 'persistence', 'phone', 'recorder', 'script', 'brand', 'tools', 'rotation', 'themes', 'update', 'topic', 'ai'];
+const order = ['start', 'timeline', 'review', 'text', 'export', 'formats', 'library', 'persistence', 'phone', 'recorder', 'script', 'brand', 'tools', 'rotation', 'themes', 'update', 'topic', 'ai'];
 for (const name of order) {
   if (only.length && !only.includes(name)) continue;
   console.log(`\n== ${name}`);

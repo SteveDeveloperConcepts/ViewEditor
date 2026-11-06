@@ -43,12 +43,12 @@ export function Sidebar(): ReactNode {
   );
   return (
     <nav className="sidebar" aria-label="Main">
-      <div className="brand">
+      <button type="button" className="brand" onClick={() => void navigate({ page: 'start' })}>
         <span className="brand-mark">
           <Video size={15} />
         </span>
         <span>{APP_NAME}</span>
-      </div>
+      </button>
       <div className="nav-heading first">Create</div>
       <NavItem icon={<Scissors size={16} />} label="Edit my footage" onClick={() => openStartDialog()} />
       <NavItem icon={<Sparkles size={16} />} label="Generate with AI" onClick={() => void startBlankProject({}, true)} />

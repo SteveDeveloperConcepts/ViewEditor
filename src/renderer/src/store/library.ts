@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { AppInfo } from '@shared/api';
 import type { Asset, ID, Library, RenderProgress } from '@shared/types';
 import { api } from '@/lib/api';
+import { useUi } from './ui';
 
 interface LibraryState {
   lib: Library | null;
@@ -33,6 +34,8 @@ export async function initLibrary(): Promise<void> {
   api.on('assets:importing', (importing) => useLibrary.setState({ importing }));
   api.on('render:progress', (render) => useLibrary.setState({ render }));
   const [info, lib, render] = await Promise.all([api.app.info(), api.library.get(), api.render.current()]);
+  // People with work land on it. The start page is for the first run.
+  if (lib.projects.some((p) => !p.trashedAt)) useUi.setState({ route: { page: 'library', view: { kind: 'all' } } });
   setLibrary(lib);
   useLibrary.setState({ info, render });
 }

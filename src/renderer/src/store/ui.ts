@@ -5,6 +5,7 @@ import type { Asset, ID, ScriptOrigin } from '@shared/types';
 export type LibraryView = { kind: 'all' } | { kind: 'space'; spaceId: ID; folderId: ID | null } | { kind: 'trash' };
 
 export type Route =
+  | { page: 'start' }
   | { page: 'script'; prefill?: ScriptOrigin | null }
   | { page: 'library'; view: LibraryView }
   | { page: 'assets' }
@@ -35,7 +36,7 @@ interface UiState {
 }
 
 export const useUi = create<UiState>(() => ({
-  route: { page: 'script' },
+  route: { page: 'start' },
   toasts: [],
   modals: [],
 }));

@@ -20,6 +20,7 @@ import { BrandPage } from '@/pages/BrandPage';
 import { CreateAssetPage } from '@/pages/CreateAssetPage';
 import { LibraryPage } from '@/pages/LibraryPage';
 import { ScriptPage } from '@/pages/ScriptPage';
+import { StartPage } from '@/pages/StartPage';
 import { TemplatesPage } from '@/pages/TemplatesPage';
 import { VideoPage } from '@/pages/VideoPage';
 import { loadProviders } from '@/store/ai';
@@ -29,6 +30,8 @@ import { useUi, type Route } from '@/store/ui';
 
 function Page({ route }: { route: Route }): ReactNode {
   switch (route.page) {
+    case 'start':
+      return <StartPage />;
     case 'script':
       return <ScriptPage key={JSON.stringify(route.prefill ?? null)} prefill={route.prefill} />;
     case 'library':

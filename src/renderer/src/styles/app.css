@@ -60,6 +60,11 @@
   display: flex;
   align-items: center;
   gap: 9px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
   padding: 4px 8px 14px;
   font-size: 15px;
   font-weight: 700;
@@ -1009,4 +1014,47 @@ button.asset-card-picture {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.start-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+}
+.start-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 300px));
+  gap: 14px;
+}
+.start-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+.start-tile:hover {
+  border-color: var(--accent);
+}
+.start-tile .muted {
+  font-size: 13px;
+}
+.start-tile-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 4px;
+  border-radius: var(--radius-m);
+  background: var(--accent-soft);
+  color: var(--accent-text);
 }

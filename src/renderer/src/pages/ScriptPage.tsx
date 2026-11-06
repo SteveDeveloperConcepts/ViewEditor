@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, AudioLines, Captions, CircleAlert, Clock, Gauge, Image as ImageIcon, KeyRound, Mic, Palette, Proportions, RefreshCw, Sparkles, Users, Clapperboard, MessageCircle, MonitorPlay } from 'lucide-react';
+import { ArrowRight, AudioLines, Captions, CircleAlert, Clock, Gauge, Image as ImageIcon, KeyRound, Mic, Palette, Proportions, RefreshCw, SlidersHorizontal, Sparkles, Users, Clapperboard, MessageCircle, MonitorPlay } from 'lucide-react';
 import { BACKGROUND_SWATCHES, SCRIPT_MAX_CHARS, SIZE_PRESETS, SUBTITLE_STYLES } from '@shared/constants';
 import type { ID, ScriptOrigin, ScriptVideoSettings, VoiceInfo } from '@shared/types';
 import { openConnections } from '@/ai/ConnectionsDialog';
@@ -91,7 +91,10 @@ export function ScriptPage({ prefill }: { prefill?: ScriptOrigin | null }): Reac
   const providers = useAi((s) => s.providers);
   const assets = useLibrary((s) => s.lib?.assets);
   const templates = useLibrary((s) => s.lib?.templates) ?? [];
-  const [mode, setMode] = useState<'topic' | 'script'>(prefill?.mode ?? 'topic');
+  // Writing from a topic needs a Claude key, so without one the Script tab, which needs nothing, comes first.
+  const [mode, setMode] = useState<'topic' | 'script'>(prefill?.mode ?? (hasKey ? 'topic' : 'script'));
+  /** The settings most videos leave alone stay out of the way until asked for. */
+  const [more, setMore] = useState(!!prefill);
   const [topic, setTopic] = useState(prefill?.topic ?? '');
   const [script, setScript] = useState(prefill?.script ?? '');
   const [settings, setSettings] = useState<ScriptVideoSettings>({ ...DEFAULTS, ...prefill?.settings });
@@ -264,31 +267,37 @@ export function ScriptPage({ prefill }: { prefill?: ScriptOrigin | null }): Reac
                 ...(voices ?? []).map((v) => ({ label: `${v.name}${v.lang ? ` (${v.lang})` : ''}`, checked: v.id === settings.voice, onSelect: () => patch({ voice: v.id }) })),
               ]}
             />
-            <Pill
-              icon={<Gauge size={13} />}
-              label={`${settings.rate}x`}
-              entries={() => ['Speaking speed', ...[0.8, 0.9, 1, 1.1, 1.25].map((r) => ({ label: `${r}x`, checked: r === settings.rate, onSelect: () => patch({ rate: r }) }))]}
-            />
+            {more && (
+              <Pill
+                icon={<Gauge size={13} />}
+                label={`${settings.rate}x`}
+                entries={() => ['Speaking speed', ...[0.8, 0.9, 1, 1.1, 1.25].map((r) => ({ label: `${r}x`, checked: r === settings.rate, onSelect: () => patch({ rate: r }) }))]}
+              />
+            )}
             <Pill
               icon={<Captions size={13} />}
               label={subtitleName}
               entries={() => ['Subtitle style', ...SUBTITLE_STYLES.map((s) => ({ label: s.label, checked: s.id === settings.subtitleStyle, onSelect: () => patch({ subtitleStyle: s.id }) }))]}
             />
-            <Pill
-              icon={<AudioLines size={13} />}
-              label={musicName}
-              entries={() => [
-                'Background music',
-                { label: 'No music', checked: !settings.musicAssetId, onSelect: () => patch({ musicAssetId: null }) },
-                ...music.map((m) => ({ label: m.name, checked: m.id === settings.musicAssetId, onSelect: () => patch({ musicAssetId: m.id }) })),
-                !music.length && { label: 'Add audio under Media to use it here', disabled: true, onSelect: () => undefined },
-              ]}
-            />
-            <Pill
-              icon={<span className="color-dot" style={{ background: settings.background }} />}
-              label="Background"
-              entries={() => ['Background', ...BACKGROUND_SWATCHES.map((c) => ({ label: c, icon: <span className="color-dot" style={{ background: c }} />, checked: c === settings.background, onSelect: () => patch({ background: c }) }))]}
-            />
+            {more && (
+              <>
+                <Pill
+                  icon={<AudioLines size={13} />}
+                  label={musicName}
+                  entries={() => [
+                    'Background music',
+                    { label: 'No music', checked: !settings.musicAssetId, onSelect: () => patch({ musicAssetId: null }) },
+                    ...music.map((m) => ({ label: m.name, checked: m.id === settings.musicAssetId, onSelect: () => patch({ musicAssetId: m.id }) })),
+                    !music.length && { label: 'Add audio under Media to use it here', disabled: true, onSelect: () => undefined },
+                  ]}
+                />
+                <Pill
+                  icon={<span className="color-dot" style={{ background: settings.background }} />}
+                  label="Background"
+                  entries={() => ['Background', ...BACKGROUND_SWATCHES.map((c) => ({ label: c, icon: <span className="color-dot" style={{ background: c }} />, checked: c === settings.background, onSelect: () => patch({ background: c }) }))]}
+                />
+              </>
+            )}
             <Pill
               icon={<Proportions size={13} />}
               label={settings.aspect}
@@ -301,6 +310,8 @@ export function ScriptPage({ prefill }: { prefill?: ScriptOrigin | null }): Reac
                   label={`${settings.targetDuration}s`}
                   entries={() => ['Length', ...[15, 30, 45, 60, 90, 120].map((d) => ({ label: `${d} seconds`, checked: d === settings.targetDuration, onSelect: () => patch({ targetDuration: d }) }))]}
                 />
+                {more && (
+                  <>
                 <Pill
                   icon={<Users size={13} />}
                   label={settings.audience || 'Audience'}
@@ -321,8 +332,14 @@ export function ScriptPage({ prefill }: { prefill?: ScriptOrigin | null }): Reac
                   label={settings.platform || 'Platform'}
                   entries={() => ['Platform', ...PLATFORMS.map((p) => ({ label: p.label, checked: p.label === settings.platform, onSelect: () => patch({ platform: p.label, aspect: p.aspect }) }))]}
                 />
+                  </>
+                )}
               </>
             )}
+            <button type="button" className="pill" aria-expanded={more} onClick={() => setMore(!more)}>
+              <SlidersHorizontal size={13} />
+              <span className="truncate">{more ? 'Fewer options' : 'More options'}</span>
+            </button>
           </div>
           <div className="prompt-foot">
             {showScriptBox && (
