@@ -2,11 +2,12 @@
 
 import { AudioLines, ClipboardPaste, Copy, CopyPlus, Download, Group, Replace, Scissors, Sparkles, Trash2, Ungroup, Volume2, VolumeX } from 'lucide-react';
 import { formatClock } from '@shared/time';
-import { detachAudio, isTimed, itemEnd } from '@shared/timeline';
+import { detachAudio, isTimed, itemEnd, updateItems } from '@shared/timeline';
 import type { Asset, ID, Item } from '@shared/types';
 import { actionLabel, actionsFor, openClipAi } from '@/ai/clipActions';
 import { openConnections } from '@/ai/ConnectionsDialog';
 import type { MenuEntry } from '@/components/Menu';
+import { confirmDialog } from '@/components/Modal';
 import { api, errorMessage, MOD_LABEL } from '@/lib/api';
 import { useAi } from '@/store/ai';
 import { startRender } from '@/lib/exporter';
@@ -92,6 +93,23 @@ export async function addSoundOf(video: Asset): Promise<void> {
   } catch (err) {
     toast(errorMessage(err), { kind: 'error' });
   }
+}
+
+/** A voice-over competes with any sound still playing under it, so the question is asked once it lands. */
+export async function offerToMuteUnder(voiceId: ID | undefined): Promise<void> {
+  const doc = useEditor.getState().doc;
+  const voice = doc?.items.find((it) => it.id === voiceId);
+  if (!doc || !voice) return;
+  const assets = getAssets();
+  const under = doc.items.filter((it) => it.type === 'video' && !it.muted && it.volume > 0 && assets[it.assetId]?.hasAudio && it.start < itemEnd(voice) && itemEnd(it) > voice.start);
+  if (!under.length) return;
+  const mute = await confirmDialog({
+    title: 'Mute the sound underneath?',
+    message: 'Your video has its own sound while this voice-over plays. Mute the video so only the voice-over is heard?',
+    confirmLabel: 'Mute the video',
+    cancelLabel: 'Keep both',
+  });
+  if (mute) apply((d) => updateItems(d, under.map((it) => it.id), (it) => ({ ...it, muted: true }) as Item));
 }
 
 /** Right-click menu of a timeline element. */

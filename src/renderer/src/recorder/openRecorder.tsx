@@ -10,7 +10,9 @@ import { Modal } from '@/components/Modal';
 import { Button, Field, Notice, Segmented, Spinner, Switch } from '@/components/ui';
 import { api, errorMessage } from '@/lib/api';
 import { startProjectWithAsset } from '@/lib/projects';
+import { offerToMuteUnder } from '@/editor/actions';
 import { addToTimeline } from '@/editor/importing';
+import { useEditor } from '@/store/editor';
 import { useLibrary } from '@/store/library';
 import { showModal, toast } from '@/store/ui';
 
@@ -303,6 +305,7 @@ function RecorderBody({ options, close }: { options: RecorderOptions; close: () 
       if (options.projectId) {
         if (options.addToTimeline) await addToTimeline([asset]);
         toast('Recording saved to Media and added to the timeline.', { kind: 'success' });
+        if (asset.kind === 'audio') await offerToMuteUnder(useEditor.getState().selection[0]);
       } else {
         await startProjectWithAsset(asset, name);
       }

@@ -1016,6 +1016,13 @@ section('tools', async () => {
   await page.waitForSelector('.clip.audio', { timeout: 30000 });
   await page.waitForSelector('.clip.text', { timeout: 5000 });
   check((await page.$$('.clip.text')).length >= 2, 'text to speech adds a voice-over and matching subtitles');
+  await page.waitForSelector('.modal:has-text("Mute the sound underneath?")', { timeout: 5000 });
+  check(true, 'a voice-over over footage asks about the sound underneath');
+  await page.click('.modal-foot button:has-text("Mute the video")');
+  await sleep(150);
+  check((await storedDoc()).items.find((i) => i.type === 'video').muted, 'and mutes it on request');
+  await page.keyboard.press(`${MOD}+z`);
+  await sleep(150);
 
   // Speed
   let list = await clips(page);

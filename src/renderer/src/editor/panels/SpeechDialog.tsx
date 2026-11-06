@@ -13,6 +13,7 @@ import { api, errorMessage } from '@/lib/api';
 import type { ProjectPlace } from '@/lib/projects';
 import { addSubtitles, useEditor, whenOpen } from '@/store/editor';
 import { navigate, showModal, toast } from '@/store/ui';
+import { offerToMuteUnder } from '../actions';
 import { addToTimeline } from '../importing';
 
 export function VoicePicker({ voices, value, onChange }: { voices: VoiceInfo[]; value: string; onChange: (v: string) => void }): ReactNode {
@@ -59,9 +60,11 @@ function SpeechBody({ projectId, place, close }: { projectId: ID | null; place: 
       const { asset, timings } = await api.voice.speak({ sentences, voice, rate, name, target: { scope: 'project', projectId: target } });
       const at = snapToFrame(useEditor.getState().playhead, useEditor.getState().doc?.settings.fps ?? 30);
       await addToTimeline([asset]);
+      const voiceId = useEditor.getState().selection[0];
       if (subtitles) addSubtitles(sentences.flatMap((s, i) => chunkCue(s, at + timings[i].start, at + timings[i].end)));
       toast('Voice-over added to the timeline.', { kind: 'success' });
       close();
+      await offerToMuteUnder(voiceId);
     } catch (err) {
       setError(errorMessage(err));
       setBusy(false);
