@@ -186,6 +186,21 @@ test('fal: a talking photo sends a picture and audio to Fabric', async () => {
   assert.deepEqual(body, { image_url: 'https://v3.fal.media/files/test/image.jpg', audio_url: 'https://v3.fal.media/files/test/audio.mp3', resolution: '720p' });
 });
 
+test('fal: the sound of a video can be used, cut to the chosen stretch', async () => {
+  const c = await setup();
+  const photo = (await c.assets.importFiles([media('photo.jpg')], { scope: 'workspace' })).assets[0];
+  const video = await importClip(c, 'clip-a.mp4');
+  const key = await modelKey(c, 'fal', 'veed/fabric-1.0', 'talking-photo');
+  const job = await c.jobs.generate({ modelKey: key, choices: { resolution: '720p' }, image: { assetId: photo.id }, audio: { assetId: video.id, start: 1, end: 3 }, target: { scope: 'workspace' }, placement: { kind: 'none' } });
+  const done = await finished(c, job.id);
+  assert.equal(done.state, 'done', done.error ?? '');
+  const sent = server.uploads.filter((u) => u.name === 'audio.mp3').at(-1)!;
+  const file = join(c.root, 'sent.mp3');
+  await writeFile(file, sent.bytes);
+  const seconds = Number((await runFfprobe(file)).format?.duration);
+  assert.ok(Math.abs(seconds - 2) < 0.15, `two seconds were sent, not the whole six (${seconds})`);
+});
+
 test('fal: a still taken from the end of a clip, for extending it', async () => {
   const c = await setup();
   const clip = await importClip(c, 'clip-a.mp4');

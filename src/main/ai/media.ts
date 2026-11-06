@@ -98,7 +98,9 @@ export async function prepareAudio(lib: LibraryStore, ref: AiMediaRef, dir: stri
   const a = requireAsset(lib, ref);
   if (!a.hasAudio) throw new Error('This file has no sound.');
   const name = 'audio.mp3';
-  const range = ref.start !== undefined ? ['-ss', ref.start.toFixed(3), ...(ref.end !== undefined ? ['-t', (ref.end - ref.start).toFixed(3)] : [])] : [];
-  await runFfmpeg([...range, '-i', lib.paths.assetOriginal(a), '-vn', '-c:a', 'libmp3lame', '-b:a', '192k', join(dir, name)]);
+  const start = ref.start ?? 0;
+  const range = [...(start > 0 ? ['-ss', start.toFixed(3)] : []), ...(ref.end !== undefined ? ['-t', (ref.end - start).toFixed(3)] : [])];
+  const seekable = isSeekableExt(a.ext);
+  await runFfmpeg([...(seekable ? range : []), '-i', lib.paths.assetOriginal(a), ...(seekable ? [] : range), '-vn', '-c:a', 'libmp3lame', '-b:a', '192k', join(dir, name)]);
   return { file: join(dir, name), mime: 'audio/mpeg', name };
 }

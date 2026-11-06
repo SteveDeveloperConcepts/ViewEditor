@@ -33,7 +33,8 @@ export interface AppInfo {
   stopRecordingShortcut: string;
 }
 
-export type PickKind = 'media' | 'video' | 'audio' | 'image';
+/** 'sound' is anything with sound in it: audio files, and videos. */
+export type PickKind = 'media' | 'video' | 'audio' | 'image' | 'sound';
 
 export interface ImportTarget {
   scope: 'workspace' | 'project';

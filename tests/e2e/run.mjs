@@ -1452,6 +1452,16 @@ section('ai', async () => {
     const ends = doc.items.filter((i) => i.type === 'video').sort((x, y) => x.start - y.start);
     check(Math.abs(ends[2].start - (ends[1].start + ends[1].duration)) < 0.1, 'After the last clip builds a sequence instead', JSON.stringify(ends.map((i) => i.start)));
 
+    // A recording can be the sound for a talking photo.
+    await p.selectOption('select[aria-label="What to generate"]', 'talking-photo');
+    await p.waitForSelector('.ai-form select[aria-label="Audio"]');
+    const soundOptions = await p.$$eval('.ai-form select[aria-label="Audio"] option', (e) => e.map((o) => o.textContent));
+    check(soundOptions.includes('clip-a.mp4'), 'audio lists offer videos with sound', soundOptions.join());
+    await p.selectOption('.ai-form select[aria-label="Audio"]', { label: 'clip-a.mp4' });
+    await p.waitForSelector('.ai-form [aria-label="Use the sound from"]');
+    check(true, 'and the stretch to use can be set');
+    await p.selectOption('select[aria-label="What to generate"]', 'text-to-video');
+
     // A failure is explained, and can be retried
     await p.click('.rail-item:has-text("AI tools")');
     await p.waitForSelector('.ai-form');

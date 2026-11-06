@@ -162,6 +162,7 @@ export function registerIpc(s: Services): void {
     video: { name: 'Video', extensions: VIDEO_EXTS },
     audio: { name: 'Audio', extensions: AUDIO_EXTS },
     image: { name: 'Images', extensions: IMAGE_EXTS },
+    sound: { name: 'Audio and video', extensions: [...AUDIO_EXTS, ...VIDEO_EXTS] },
   };
 
   register('assets', {

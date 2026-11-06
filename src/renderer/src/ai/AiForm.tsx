@@ -20,8 +20,8 @@ import {
   type AiTask,
   type AiValue,
 } from '@shared/ai';
-import type { AssetKind, ID } from '@shared/types';
-import { Button, Field, FieldRow, IconButton, Notice, Spinner, Switch } from '@/components/ui';
+import type { Asset, AssetKind, ID } from '@shared/types';
+import { Button, Field, FieldRow, IconButton, Notice, Spinner, Switch, TimeInput } from '@/components/ui';
 import { api, errorMessage } from '@/lib/api';
 import { reportRejected } from '@/editor/importing';
 import { loadModels, useAi, useConnected, useModels } from '@/store/ai';
@@ -74,20 +74,43 @@ function initialChoices(model: AiModel, width: number, height: number, previous:
   };
 }
 
+/** Which part of a file's sound to use. */
+function SoundRange({ asset, value, onChange }: { asset: Asset; value: AiMediaRef; onChange: (ref: AiMediaRef) => void }): ReactNode {
+  const start = value.start ?? 0;
+  const end = value.end ?? asset.duration;
+  return (
+    <div className="form-grid">
+      <label className="field">
+        <span className="label">Use from</span>
+        <TimeInput label="Use the sound from" value={start} onCommit={(t) => onChange({ ...value, start: Math.max(0, Math.min(t, end - 0.1)) })} />
+      </label>
+      <label className="field">
+        <span className="label">To</span>
+        <TimeInput label="Use the sound up to" value={end} onCommit={(t) => onChange({ ...value, end: Math.min(asset.duration, Math.max(t, start + 0.1)) })} />
+      </label>
+    </div>
+  );
+}
+
 function MediaPick(props: { kind: AssetKind; label: string; value: AiMediaRef | null; projectId: ID | null; onChange: (ref: AiMediaRef | null) => void }): ReactNode {
   const { kind, label, value, projectId, onChange } = props;
   const assets = useLibrary((s) => s.lib?.assets);
   const [error, setError] = useState('');
-  const options = (assets ?? []).filter((a) => a.kind === kind && (a.scope === 'workspace' || a.projectId === projectId)).reverse();
+  // Sound can come from an audio file or from a video.
+  const sound = kind === 'audio';
+  const options = (assets ?? []).filter((a) => (sound ? a.hasAudio : a.kind === kind) && (a.scope === 'workspace' || a.projectId === projectId)).reverse();
+  const chosen = options.find((a) => a.id === value?.assetId);
 
   const upload = async (): Promise<void> => {
     setError('');
     try {
       const target = projectId ? ({ scope: 'project', projectId } as const) : ({ scope: 'workspace' } as const);
-      const result = await api.assets.pickAndImport(kind, target);
+      const result = await api.assets.pickAndImport(sound ? 'sound' : kind, target);
       if (!result) return;
       reportRejected(result);
-      if (result.assets[0]) onChange({ assetId: result.assets[0].id });
+      const added = result.assets[0];
+      if (added && sound && !added.hasAudio) setError(`${added.name} has no sound.`);
+      else if (added) onChange({ assetId: added.id });
     } catch (err) {
       setError(errorMessage(err));
     }
@@ -98,7 +121,7 @@ function MediaPick(props: { kind: AssetKind; label: string; value: AiMediaRef | 
       <span className="label">{label}</span>
       <div className="row">
         <select className="select" aria-label={label} value={value?.assetId ?? ''} onChange={(e) => onChange(e.target.value ? { assetId: e.target.value } : null)}>
-          <option value="">Choose…</option>
+          <option value="">{sound ? 'Choose audio or a video…' : 'Choose…'}</option>
           {options.map((a) => (
             <option key={a.id} value={a.id}>
               {a.name}
@@ -109,6 +132,7 @@ function MediaPick(props: { kind: AssetKind; label: string; value: AiMediaRef | 
           <Upload size={15} />
         </IconButton>
       </div>
+      {sound && value && chosen && <SoundRange asset={chosen} value={value} onChange={onChange} />}
       {error && <span className="hint">{error}</span>}
     </div>
   );

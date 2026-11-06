@@ -398,7 +398,7 @@ export function missingInput(model: AiModel, choices: AiChoices, has: { image: b
 /** A piece of media sent to a provider. */
 export interface AiMediaRef {
   assetId: ID;
-  /** For video: the stretch to send, in seconds of the source. */
+  /** For video and sound: the stretch to send, in seconds of the source. */
   start?: number;
   end?: number;
   /** For a still taken from a video: which moment, in seconds of the source. */
