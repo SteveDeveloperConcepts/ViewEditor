@@ -173,7 +173,7 @@ export class AssetManager {
   private async importOne(file: string, name: string, opts: ImportOptions): Promise<Asset> {
     const st = await stat(file).catch(() => null);
     if (!st) throw new Error('The file could not be found.');
-    if (st.isDirectory()) throw new Error('Folders cannot be uploaded. Open the folder and select the files inside it.');
+    if (st.isDirectory()) throw new Error('Folders cannot be added. Open the folder and select the files inside it.');
     const ext = extOf(name);
     if (!ALL_MEDIA_EXTS.includes(ext)) throw new Error(ext ? `.${ext} files are not supported.` : 'This file type is not supported.');
     if (st.size === 0) throw new Error('The file is empty.');

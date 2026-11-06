@@ -105,7 +105,7 @@ function MediaPick(props: { kind: AssetKind; label: string; value: AiMediaRef | 
             </option>
           ))}
         </select>
-        <IconButton label={`Upload ${kind === 'image' ? 'an image' : kind}`} onClick={() => void upload()}>
+        <IconButton label={`Add ${kind === 'image' ? 'an image' : kind} from your computer`} onClick={() => void upload()}>
           <Upload size={15} />
         </IconButton>
       </div>

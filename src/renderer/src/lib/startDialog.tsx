@@ -64,14 +64,14 @@ function StartBody({ place, close }: { place: ProjectPlace; close: () => void })
         <div className="dz-icon">
           <Upload size={18} />
         </div>
-        <strong>Upload files</strong>
+        <strong>Add files</strong>
         <span>Choose files or drag them here</span>
         <span className="faint">{SUPPORTED_SUMMARY}</span>
       </div>
       <div className="welcome-options">
         <button type="button" className="welcome-option" onClick={then(() => openPhoneDialog(null, place))}>
           <Smartphone size={20} />
-          <strong>Upload from phone</strong>
+          <strong>Add from phone</strong>
           <span>Send files over Wi-Fi</span>
         </button>
         <button type="button" className="welcome-option" onClick={then(() => void openRecorder({}))}>

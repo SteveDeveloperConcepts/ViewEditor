@@ -281,7 +281,7 @@ export function ScriptPage({ prefill }: { prefill?: ScriptOrigin | null }): Reac
                 'Background music',
                 { label: 'No music', checked: !settings.musicAssetId, onSelect: () => patch({ musicAssetId: null }) },
                 ...music.map((m) => ({ label: m.name, checked: m.id === settings.musicAssetId, onSelect: () => patch({ musicAssetId: m.id }) })),
-                !music.length && { label: 'Upload audio under Assets to use it here', disabled: true, onSelect: () => undefined },
+                !music.length && { label: 'Add audio under Media to use it here', disabled: true, onSelect: () => undefined },
               ]}
             />
             <Pill
@@ -292,14 +292,14 @@ export function ScriptPage({ prefill }: { prefill?: ScriptOrigin | null }): Reac
             <Pill
               icon={<Proportions size={13} />}
               label={settings.aspect}
-              entries={() => ['Aspect ratio', ...SIZE_PRESETS.map((p) => ({ label: `${p.label} · ${p.hint}`, checked: p.id === settings.aspect, onSelect: () => patch({ aspect: p.id }) }))]}
+              entries={() => ['Shape', ...SIZE_PRESETS.map((p) => ({ label: `${p.label} · ${p.hint}`, checked: p.id === settings.aspect, onSelect: () => patch({ aspect: p.id }) }))]}
             />
             {mode === 'topic' && !reviewing && (
               <>
                 <Pill
                   icon={<Clock size={13} />}
                   label={`${settings.targetDuration}s`}
-                  entries={() => ['Target duration', ...[15, 30, 45, 60, 90, 120].map((d) => ({ label: `${d} seconds`, checked: d === settings.targetDuration, onSelect: () => patch({ targetDuration: d }) }))]}
+                  entries={() => ['Length', ...[15, 30, 45, 60, 90, 120].map((d) => ({ label: `${d} seconds`, checked: d === settings.targetDuration, onSelect: () => patch({ targetDuration: d }) }))]}
                 />
                 <Pill
                   icon={<Users size={13} />}

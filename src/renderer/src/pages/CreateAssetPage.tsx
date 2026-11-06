@@ -121,7 +121,7 @@ function Designer(): ReactNode {
       const result = await api.assets.importData(`${label.replace(/[:/\\]/g, '-')}.png`, await canvasBytes(out, 'image/png'), { scope: 'workspace' });
       reportRejected(result);
       if (result.assets.length) {
-        toast('Saved to your assets.', { kind: 'success', action: { label: 'View', run: () => void navigate({ page: 'assets' }) } });
+        toast('Saved to Media.', { kind: 'success', action: { label: 'View', run: () => void navigate({ page: 'assets' }) } });
       }
     } catch (err) {
       toast(errorMessage(err), { kind: 'error' });
@@ -197,7 +197,7 @@ function Designer(): ReactNode {
               </div>
             </div>
           )}
-          <Field label="Size">
+          <Field label="Shape">
             <select className="select" value={aspect} onChange={(e) => setAspect(e.target.value)}>
               {SIZE_PRESETS.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -207,9 +207,9 @@ function Designer(): ReactNode {
             </select>
           </Field>
           <Button variant="primary" size="large" icon={<Save size={15} />} disabled={saving} onClick={() => void save()}>
-            Save to assets
+            Save to Media
           </Button>
-          <Notice icon={<Info size={14} />}>Made on this computer. Saved assets appear under Assets, ready to use in any project.</Notice>
+          <Notice icon={<Info size={14} />}>Made on this computer, and ready to use in any project.</Notice>
         </div>
       </div>
     </>

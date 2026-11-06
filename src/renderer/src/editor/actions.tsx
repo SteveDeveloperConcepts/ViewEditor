@@ -72,14 +72,14 @@ export function itemMenu(item: Item, projectId: ID): MenuEntry[] {
   const many = s.selection.length > 1;
   const range = selectionRange();
   return [
-    { label: 'Split element', icon: <Scissors size={15} />, hint: 'S', disabled: !inside, onSelect: () => void splitAtPlayhead() },
+    { label: 'Split clip', icon: <Scissors size={15} />, hint: 'S', disabled: !inside, onSelect: () => void splitAtPlayhead() },
     null,
     { label: 'Copy', icon: <Copy size={15} />, hint: `${MOD_LABEL}+C`, onSelect: () => void copySelection() },
     { label: 'Paste', icon: <ClipboardPaste size={15} />, hint: `${MOD_LABEL}+V`, disabled: !hasClipboard(), onSelect: () => paste() },
     { label: 'Duplicate', icon: <CopyPlus size={15} />, hint: `${MOD_LABEL}+D`, onSelect: duplicateSelection },
     item.type !== 'text' && !many && { label: 'Replace media…', icon: <Replace size={15} />, onSelect: () => void replaceMediaFor(item, projectId) },
     range && {
-      label: `Download section (${formatClock(range.start)} – ${formatClock(range.end)})`,
+      label: `Export section (${formatClock(range.start)} – ${formatClock(range.end)})`,
       icon: <Download size={15} />,
       onSelect: () => void downloadSection(),
     },

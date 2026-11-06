@@ -1,8 +1,9 @@
-// The Project Library: every project, by Space and folder, plus Trash.
+// Projects: everything you have made, by folder, plus Trash. Spaces stay out of sight until there is a second one.
 
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import {
+  ArrowLeft,
   Check,
   ChevronDown,
   ChevronRight,
@@ -78,17 +79,21 @@ function ProjectCard({ meta, selected, onToggle, showSelection }: { meta: Projec
   );
 }
 
+function newFolder(space: Space, folderId: ID | null): MenuEntry {
+  return {
+    label: 'New folder',
+    icon: <FolderPlus size={15} />,
+    onSelect: () => {
+      void promptDialog({ title: 'New folder', label: 'Folder name', confirmLabel: 'Create' }).then((name) => {
+        if (name) void attempt(() => api.library.createFolder(space.id, folderId, name));
+      });
+    },
+  };
+}
+
 function spaceMenu(space: Space, folderId: ID | null): MenuEntry[] {
   return [
-    {
-      label: 'New folder',
-      icon: <FolderPlus size={15} />,
-      onSelect: () => {
-        void promptDialog({ title: 'New folder', label: 'Folder name', confirmLabel: 'Create' }).then((name) => {
-          if (name) void attempt(() => api.library.createFolder(space.id, folderId, name));
-        });
-      },
-    },
+    newFolder(space, folderId),
     {
       label: 'Rename space',
       icon: <Pencil size={15} />,
@@ -150,8 +155,11 @@ function folderMenu(folder: Folder): MenuEntry[] {
   ];
 }
 
-export function LibraryPage({ view }: { view: LibraryView }): ReactNode {
+export function LibraryPage({ view: asked }: { view: LibraryView }): ReactNode {
   const lib = useLibrary((s) => s.lib)!;
+  const manySpaces = lib.spaces.length > 1;
+  // With one space there is nothing to choose between, so the page is simply your projects and folders.
+  const view: LibraryView = !manySpaces && asked.kind === 'all' ? { kind: 'space', spaceId: lib.spaces[0].id, folderId: null } : asked;
   const [query, setQuery] = useState('');
   const [picked, setPicked] = useState<Set<ID>>(new Set());
 
@@ -176,7 +184,7 @@ export function LibraryPage({ view }: { view: LibraryView }): ReactNode {
   const folders = view.kind === 'space' && !query ? lib.folders.filter((f) => f.spaceId === view.spaceId && (f.parentId ?? null) === folderId) : [];
   const live = new Set(projects.map((p) => p.id));
   const selected = [...picked].filter((id) => live.has(id));
-  const title = view.kind === 'trash' ? 'Trash' : view.kind === 'all' ? 'All Spaces' : (space?.name ?? 'Space');
+  const title = view.kind === 'trash' ? 'Trash' : view.kind === 'all' || !manySpaces ? 'Projects' : (space?.name ?? 'Space');
 
   const toggle = (id: ID): void => {
     setPicked((s) => {
@@ -188,30 +196,33 @@ export function LibraryPage({ view }: { view: LibraryView }): ReactNode {
   };
   const clear = (): void => setPicked(new Set());
 
+  const newSpace: MenuEntry = {
+    label: 'New space…',
+    icon: <Plus size={15} />,
+    onSelect: () => {
+      void promptDialog({ title: 'New space', label: 'Space name', confirmLabel: 'Create', placeholder: 'Marketing' }).then((name) => {
+        if (!name) return;
+        void attempt(async () => {
+          const created = await api.library.createSpace(name);
+          goTo({ kind: 'space', spaceId: created.id, folderId: null });
+        });
+      });
+    },
+  };
+  const trash: MenuEntry = { label: 'Trash', icon: <Trash2 size={15} />, checked: view.kind === 'trash', onSelect: () => goTo({ kind: 'trash' }) };
+
   const openSwitcher = (el: Element): void => {
     openMenuAt(el, [
-      { label: 'All Spaces', checked: view.kind === 'all', onSelect: () => goTo({ kind: 'all' }) },
+      { label: 'All projects', checked: view.kind === 'all', onSelect: () => goTo({ kind: 'all' }) },
       null,
       ...lib.spaces.map((s) => ({
         label: s.name,
         checked: view.kind === 'space' && view.spaceId === s.id,
         onSelect: () => goTo({ kind: 'space', spaceId: s.id, folderId: null }),
       })),
-      {
-        label: 'New space…',
-        icon: <Plus size={15} />,
-        onSelect: () => {
-          void promptDialog({ title: 'New space', label: 'Space name', confirmLabel: 'Create', placeholder: 'Marketing' }).then((name) => {
-            if (!name) return;
-            void attempt(async () => {
-              const created = await api.library.createSpace(name);
-              goTo({ kind: 'space', spaceId: created.id, folderId: null });
-            });
-          });
-        },
-      },
+      newSpace,
       null,
-      { label: 'Trash', icon: <Trash2 size={15} />, checked: view.kind === 'trash', onSelect: () => goTo({ kind: 'trash' }) },
+      trash,
     ]);
   };
 
@@ -221,12 +232,26 @@ export function LibraryPage({ view }: { view: LibraryView }): ReactNode {
   return (
     <div className="page">
       <header className="page-head">
-        <button type="button" className="space-switcher" onClick={(e) => openSwitcher(e.currentTarget)}>
-          <h1>{title}</h1>
-          <ChevronDown size={18} />
-        </button>
+        {manySpaces ? (
+          <button type="button" className="space-switcher" onClick={(e) => openSwitcher(e.currentTarget)}>
+            <h1>{title}</h1>
+            <ChevronDown size={18} />
+          </button>
+        ) : (
+          <>
+            {view.kind === 'trash' && (
+              <Button variant="ghost" icon={<ArrowLeft size={15} />} onClick={() => goTo({ kind: 'all' })}>
+                Projects
+              </Button>
+            )}
+            <h1>{title}</h1>
+          </>
+        )}
         {space && (
-          <IconButton label="Space options" onClick={(e) => openMenuAt(e.currentTarget, spaceMenu(space, folderId))}>
+          <IconButton
+            label={manySpaces ? 'Space options' : 'Project options'}
+            onClick={(e) => openMenuAt(e.currentTarget, manySpaces ? spaceMenu(space, folderId) : [newFolder(space, folderId), newSpace, null, trash])}
+          >
             <Ellipsis size={18} />
           </IconButton>
         )}
@@ -247,7 +272,7 @@ export function LibraryPage({ view }: { view: LibraryView }): ReactNode {
       {view.kind === 'space' && crumbs.length > 0 && (
         <nav className="crumbs" aria-label="Folder path">
           <button type="button" onClick={() => goTo({ kind: 'space', spaceId: view.spaceId, folderId: null })}>
-            {space?.name}
+            {manySpaces ? space?.name : 'Projects'}
           </button>
           {crumbs.map((c) => (
             <span key={c.id} className="row">

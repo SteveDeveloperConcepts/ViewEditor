@@ -368,8 +368,8 @@ function Toolbar({ onFit }: { onFit: () => void }): ReactNode {
           Split
         </Button>
         {range && (
-          <Button variant="ghost" size="small" icon={<Download size={14} />} title="Render only this part of the timeline" onClick={() => void downloadSection()}>
-            Download section <span className="faint tabular">({formatClock(range.start)} – {formatClock(range.end)})</span>
+          <Button variant="ghost" size="small" icon={<Download size={14} />} title="Export only this part of the timeline" onClick={() => void downloadSection()}>
+            Export section <span className="faint tabular">({formatClock(range.start)} – {formatClock(range.end)})</span>
           </Button>
         )}
         {selection.length > 1 && !selectionHasGroup(doc, selection) && (

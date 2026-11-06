@@ -1,4 +1,4 @@
-// Workspace settings, and the help sheet.
+// App settings, and the help sheet.
 
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
@@ -7,7 +7,7 @@ import { formatBytes } from '@shared/time';
 import type { ThemeSetting } from '@shared/types';
 import { openConnections } from '@/ai/ConnectionsDialog';
 import { Modal } from '@/components/Modal';
-import { Button, Field, Segmented } from '@/components/ui';
+import { Button, Segmented } from '@/components/ui';
 import { api, MOD_LABEL } from '@/lib/api';
 import { useLibrary } from '@/store/library';
 import { showModal } from '@/store/ui';
@@ -15,28 +15,14 @@ import { showModal } from '@/store/ui';
 function SettingsBody({ close }: { close: () => void }): ReactNode {
   const settings = useLibrary((s) => s.lib!.settings);
   const info = useLibrary((s) => s.info);
-  const [workspaceName, setWorkspaceName] = useState(settings.workspaceName);
-  const [profileName, setProfileName] = useState(settings.profileName);
   const [usage, setUsage] = useState<number | null>(null);
 
   useEffect(() => {
     void api.app.storageUsage().then(setUsage);
   }, []);
 
-  const saveNames = (): void => {
-    void api.library.updateSettings({ workspaceName, profileName });
-  };
-
   return (
     <Modal title="Settings" size="wide" onClose={close} footer={<Button variant="primary" onClick={close}>Done</Button>}>
-      <div className="form-grid">
-        <Field label="Workspace name">
-          <input className="input" value={workspaceName} maxLength={120} onChange={(e) => setWorkspaceName(e.target.value)} onBlur={saveNames} />
-        </Field>
-        <Field label="Your name">
-          <input className="input" value={profileName} maxLength={80} onChange={(e) => setProfileName(e.target.value)} onBlur={saveNames} />
-        </Field>
-      </div>
       <div className="field">
         <span className="label">Appearance</span>
         <Segmented<ThemeSetting>
@@ -92,13 +78,13 @@ export function openSettings(): void {
 const SHORTCUTS: [string, string][] = [
   ['Space', 'Play or pause'],
   ['S', 'Split at the playhead'],
-  ['Delete', 'Delete the selection, or close a selected gap'],
+  ['Delete', 'Delete the selected clips, or close a selected gap'],
   ['← →', 'Move one frame'],
   ['Shift + ← →', 'Move one second'],
   ['Home / End', 'Go to the start or the end'],
   ['+ / −', 'Zoom the timeline'],
   [`${MOD_LABEL} + wheel`, 'Zoom around the pointer'],
-  [`${MOD_LABEL} + click`, 'Select several elements'],
+  [`${MOD_LABEL} + click`, 'Select several clips'],
   [`${MOD_LABEL} + Z`, 'Undo'],
   [`${MOD_LABEL} + Shift + Z`, 'Redo'],
   [`${MOD_LABEL} + C / X / V`, 'Copy, cut, paste'],

@@ -1,4 +1,4 @@
-// Project settings: canvas size, export quality, background, duration, timeline view and frame rate.
+// Project settings: shape, export quality, background, length, timeline view and frame rate.
 
 import type { ReactNode } from 'react';
 import { useState } from 'react';
@@ -42,7 +42,7 @@ async function pickBackgroundImage(projectId: ID): Promise<void> {
   }
 }
 
-export function SizeSelect({ label = 'Canvas size', compact = false }: { label?: string; compact?: boolean }): ReactNode {
+export function SizeSelect({ label = 'Shape', compact = false }: { label?: string; compact?: boolean }): ReactNode {
   const doc = useEditor((s) => s.doc)!;
   const { width, height } = doc.settings;
   const match = SIZE_PRESETS.find((p) => Math.abs(p.width / p.height - width / height) < 0.01);
@@ -111,9 +111,9 @@ function AdvancedExport({ value, onChange }: { value: ExportAdvanced; onChange: 
           label="Encoding speed"
           value={value.speed}
           options={[
-            { value: 'fast', label: 'Fast', title: 'Quickest render, larger file' },
+            { value: 'fast', label: 'Fast', title: 'Quickest export, larger file' },
             { value: 'balanced', label: 'Balanced' },
-            { value: 'compact', label: 'Compact', title: 'Slowest render, smallest file' },
+            { value: 'compact', label: 'Compact', title: 'Slowest export, smallest file' },
           ]}
           onChange={(speed) => onChange({ speed })}
         />
@@ -140,10 +140,10 @@ export function SettingsPanel({ projectId }: { projectId: ID }): ReactNode {
       <h2 className="panel-title">Settings</h2>
 
       <section>
-        <h3>Size</h3>
+        <h3>Shape</h3>
         <SizeSelect />
         <p className="faint panel-note">
-          <Scaling size={12} /> {s.width} × {s.height} canvas
+          <Scaling size={12} /> {s.width} × {s.height} frame
         </p>
       </section>
 
@@ -198,13 +198,13 @@ export function SettingsPanel({ projectId }: { projectId: ID }): ReactNode {
       </section>
 
       <section>
-        <h3>Duration</h3>
+        <h3>Length</h3>
         <Segmented<'auto' | 'fixed'>
           fill
-          label="Project duration"
+          label="How the length is set"
           value={s.durationMode}
           options={[
-            { value: 'auto', label: 'Automatic', title: 'Ends with the last element' },
+            { value: 'auto', label: 'Automatic', title: 'Ends with the last clip' },
             { value: 'fixed', label: 'Fixed' },
           ]}
           onChange={(durationMode) => updateSettings({ durationMode, fixedDuration: durationMode === 'fixed' ? Math.max(1, contentEnd(doc)) : s.fixedDuration })}

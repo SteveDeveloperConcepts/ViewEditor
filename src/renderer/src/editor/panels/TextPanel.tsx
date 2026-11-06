@@ -62,7 +62,7 @@ export function TextPanel(): ReactNode {
           ))}
         </div>
       </section>
-      <p className="faint panel-note">Text appears at the playhead. Select it on the canvas or the timeline to change its words, font and colours.</p>
+      <p className="faint panel-note">Text appears at the playhead. Select it in the picture or on the timeline to change its words, font and colours.</p>
     </div>
   );
 }

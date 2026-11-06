@@ -1,4 +1,4 @@
-// The Video, Image and Audio panels: upload into the project, and add what is already in the library.
+// The Video, Image and Audio panels: add files to the project, and use what is already in Media.
 
 import type { DragEvent as ReactDragEvent, ReactNode } from 'react';
 import { useMemo, useState } from 'react';
@@ -105,7 +105,7 @@ export function MediaPanel({ kind, projectId }: { kind: AssetKind; projectId: ID
       >
         <Upload size={18} />
         <div>
-          <strong>Upload {kind === 'image' ? 'images' : kind}</strong>
+          <strong>Add {kind === 'image' ? 'images' : kind}</strong>
           <div className="faint">Drag and drop, or click to browse</div>
         </div>
       </div>
@@ -147,7 +147,7 @@ export function MediaPanel({ kind, projectId }: { kind: AssetKind; projectId: ID
       )}
       {workspace.length > 0 && (
         <section>
-          <h3>Asset library</h3>
+          <h3>Your media</h3>
           <div className="asset-grid">
             {workspace.map((a) => (
               <AssetTile key={a.id} asset={a} onAdd={onAdd} />

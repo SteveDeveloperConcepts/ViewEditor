@@ -125,22 +125,24 @@ function MoveBody({ ids, close }: { ids: ID[]; close: (moved?: boolean) => void 
         </>
       }
     >
-      <Field label="Space">
-        <select
-          className="select"
-          value={spaceId}
-          onChange={(e) => {
-            setSpaceId(e.target.value);
-            setFolderId('');
-          }}
-        >
-          {lib.spaces.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-      </Field>
+      {lib.spaces.length > 1 && (
+        <Field label="Space">
+          <select
+            className="select"
+            value={spaceId}
+            onChange={(e) => {
+              setSpaceId(e.target.value);
+              setFolderId('');
+            }}
+          >
+            {lib.spaces.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
       <Field label="Folder">
         <select className="select" value={folderId} onChange={(e) => setFolderId(e.target.value)}>
           <option value="">No folder</option>
@@ -196,7 +198,7 @@ function ResizeBody({ meta, close }: { meta: ProjectMeta; close: () => void }): 
   };
   return (
     <Modal
-      title="Resize for social"
+      title="Copy in a new shape"
       onClose={close}
       footer={
         <>
@@ -208,7 +210,7 @@ function ResizeBody({ meta, close }: { meta: ProjectMeta; close: () => void }): 
       }
     >
       <p>This makes a copy of the project in the new shape. The original stays as it is.</p>
-      <Field label="New size">
+      <Field label="New shape">
         <select className="select" value={presetId} onChange={(e) => setPresetId(e.target.value)}>
           {SIZE_PRESETS.map((p) => (
             <option key={p.id} value={p.id}>
@@ -266,7 +268,7 @@ export function projectMenu(meta: ProjectMeta): MenuEntry[] {
       },
     },
     exported && {
-      label: 'Resize for social',
+      label: 'Copy in a new shape',
       icon: <Proportions size={15} />,
       onSelect: () => void showModal<void>((close) => <ResizeBody meta={meta} close={() => close()} />),
     },
@@ -276,12 +278,12 @@ export function projectMenu(meta: ProjectMeta): MenuEntry[] {
       onSelect: () => void attempt(() => api.render.revealExport(meta.id)),
     },
     {
-      label: 'Download',
+      label: 'Save video',
       icon: <Download size={15} />,
       onSelect: () => {
         if (exported) void navigate({ page: 'video', projectId: meta.id });
         else {
-          toast('This project is still a draft. Export it first, then you can download it.', {
+          toast('This project is still a draft. Export it first, then you can save it.', {
             action: { label: 'Open', run: () => void navigate({ page: 'editor', projectId: meta.id }) },
           });
         }

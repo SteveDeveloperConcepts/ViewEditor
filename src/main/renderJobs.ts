@@ -55,7 +55,7 @@ export class RenderJobs {
   }
 
   async begin(projectId: ID, kind: 'export' | 'section', savePath: string | null): Promise<{ jobId: ID }> {
-    if (this.job) throw new Error('Another video is still rendering. Wait for it to finish or cancel it first.');
+    if (this.job) throw new Error('Another video is still exporting. Wait for it to finish or cancel it first.');
     this.lib.project(projectId);
     const id = newId('job');
     const dir = join(this.lib.paths.tmpDir, id);

@@ -1,4 +1,4 @@
-// Brand kits inside the editor: logos go on the canvas, colours and fonts apply to the selected text.
+// Brand kits inside the editor: logos go in the picture, colours and fonts apply to the selected text.
 
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
@@ -81,7 +81,7 @@ export function BrandPanel(): ReactNode {
                 <button key={c} type="button" className="swatch" style={{ background: c }} title={c} aria-label={`Use ${c}`} onClick={() => applyColor(c)} />
               ))}
             </div>
-            <p className="faint panel-note">Applies to the selected text, or to the canvas background when no text is selected.</p>
+            <p className="faint panel-note">Applies to the selected text, or to the background when no text is selected.</p>
           </>
         ) : (
           <p className="faint">No colours in this kit yet.</p>

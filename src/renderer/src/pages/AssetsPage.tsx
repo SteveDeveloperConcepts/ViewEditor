@@ -117,7 +117,7 @@ export function AssetsPage(): ReactNode {
         <h1>Media</h1>
         <div className="grow" />
         <Segmented<Filter>
-          label="Filter assets"
+          label="Filter media"
           value={filter}
           options={[
             { value: 'all', label: 'All' },
@@ -131,7 +131,7 @@ export function AssetsPage(): ReactNode {
           Make a background
         </Button>
         <Button variant="primary" icon={<Upload size={15} />} onClick={() => void upload()}>
-          Upload
+          Add files
         </Button>
       </header>
       <JobList projectId={null} />
@@ -150,8 +150,8 @@ export function AssetsPage(): ReactNode {
           ))}
         </div>
       ) : (
-        <EmptyState icon={<FolderUp size={22} />} title={filter === 'all' ? 'Your asset library is empty' : 'Nothing here yet'}>
-          <p>Files you add here are available in every project. Drag them onto this page or use Upload.</p>
+        <EmptyState icon={<FolderUp size={22} />} title={filter === 'all' ? 'No media yet' : 'Nothing here yet'}>
+          <p>Files you add here are available in every project. Drag them onto this page or use Add files.</p>
           <p className="faint">{SUPPORTED_SUMMARY}</p>
         </EmptyState>
       )}

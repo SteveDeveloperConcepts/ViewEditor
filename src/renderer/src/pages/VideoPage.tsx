@@ -1,4 +1,4 @@
-// The video page: where an export renders, plays back and is downloaded.
+// The video page: where an export runs, plays back and is saved.
 
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
@@ -13,7 +13,7 @@ import { navigate, toast } from '@/store/ui';
 
 function Rendering({ meta, render }: { meta: ProjectMeta; render: RenderProgress }): ReactNode {
   const thumb = projectThumbUrl(meta);
-  const label = render.state === 'preparing' ? 'Preparing…' : render.state === 'finishing' ? 'Finishing…' : `Rendering ${Math.round(render.progress * 100)}%`;
+  const label = render.state === 'preparing' ? 'Preparing…' : render.state === 'finishing' ? 'Finishing…' : `Exporting ${Math.round(render.progress * 100)}%`;
   return (
     <div className="render-card">
       <div className="render-picture">{thumb ? <img src={thumb} alt="" draggable={false} /> : <Spinner large />}</div>
@@ -25,13 +25,13 @@ function Rendering({ meta, render }: { meta: ProjectMeta; render: RenderProgress
           </Button>
         </div>
         <ProgressBar value={render.progress} />
-        <p className="faint">You can keep working. The render carries on in the background while the app is open.</p>
+        <p className="faint">You can keep working. The export carries on in the background while the app is open.</p>
       </div>
     </div>
   );
 }
 
-function DownloadButton({ meta, format, icon, title, hint }: { meta: ProjectMeta; format: 'mp4' | 'mp3' | 'gif'; icon: ReactNode; title: string; hint: string }): ReactNode {
+function SaveButton({ meta, format, icon, title, hint }: { meta: ProjectMeta; format: 'mp4' | 'mp3' | 'gif'; icon: ReactNode; title: string; hint: string }): ReactNode {
   const [busy, setBusy] = useState(false);
   const save = async (): Promise<void> => {
     setBusy(true);
@@ -123,10 +123,10 @@ export function VideoPage({ projectId }: { projectId: string }): ReactNode {
                 This project has changed since it was exported. Open it and press Export to export the changes.
               </Notice>
             )}
-            <h2>Download</h2>
-            <DownloadButton meta={meta} format="mp4" icon={<FileVideo size={18} />} title="MP4" hint="Video with sound" />
-            <DownloadButton meta={meta} format="mp3" icon={<FileAudio size={18} />} title="MP3" hint="Audio only" />
-            <DownloadButton meta={meta} format="gif" icon={<ImageIcon size={18} />} title="GIF" hint="Small, silent and looping" />
+            <h2>Save as</h2>
+            <SaveButton meta={meta} format="mp4" icon={<FileVideo size={18} />} title="MP4" hint="Video with sound" />
+            <SaveButton meta={meta} format="mp3" icon={<FileAudio size={18} />} title="MP3" hint="Audio only" />
+            <SaveButton meta={meta} format="gif" icon={<ImageIcon size={18} />} title="GIF" hint="Small, silent and looping" />
             <Button variant="ghost" icon={<FolderOpen size={15} />} onClick={() => void api.render.revealExport(projectId)}>
               Show in folder
             </Button>

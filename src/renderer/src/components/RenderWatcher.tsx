@@ -1,4 +1,4 @@
-// Keeps the user informed about a render when the video page is not on screen.
+// Keeps the user informed about an export when the video page is not on screen.
 
 import type { ReactNode } from 'react';
 import { useEffect, useRef } from 'react';
@@ -48,7 +48,7 @@ export function RenderWatcher(): ReactNode {
         <div className="render-toast" role="status">
           <div className="row">
             <strong className="grow tabular">
-              {render.kind === 'section' ? 'Rendering section' : 'Rendering'} {Math.round(render.progress * 100)}%
+              {render.kind === 'section' ? 'Exporting section' : 'Exporting'} {Math.round(render.progress * 100)}%
             </strong>
             <Button size="small" variant="ghost" onClick={() => void api.render.cancel()}>
               Cancel

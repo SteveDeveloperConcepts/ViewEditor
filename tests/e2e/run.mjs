@@ -176,8 +176,8 @@ section('timeline', async () => {
   await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2, { button: 'right' });
   await page.waitForSelector('.menu');
   const items = await page.$$eval('.menu-item span:first-of-type', (e) => e.map((x) => x.textContent));
-  for (const label of ['Split element', 'Copy', 'Paste', 'Replace media…', 'Delete']) check(items.includes(label), `right-click offers ${label}`);
-  check(items.some((i) => i.startsWith('Download section')), 'right-click offers Download section');
+  for (const label of ['Split clip', 'Copy', 'Paste', 'Replace media…', 'Delete']) check(items.includes(label), `right-click offers ${label}`);
+  check(items.some((i) => i.startsWith('Export section')), 'right-click offers Export section');
   await shot(page, '11-context-menu');
   await page.keyboard.press('Escape');
 
@@ -288,7 +288,7 @@ section('timeline', async () => {
   await page.mouse.click(g2.x + 30, g2.y + 20);
   await page.keyboard.up(MOD);
   await sleep(100);
-  check(await page.isVisible('.panel >> text=2 elements'), 'Ctrl or Cmd click selects several elements');
+  check(await page.isVisible('.panel >> text=2 clips'), 'Ctrl or Cmd click selects several elements');
   await page.click('.tl-toolbar button:has-text("Group")');
   await sleep(100);
   await page.keyboard.press('Escape');
@@ -464,7 +464,7 @@ section('text', async () => {
   await page.keyboard.press('Escape');
   await page.click('.rail-item:has-text("Subtitles")');
   await stubOpenDialog(app, [media('subs.srt')]);
-  await page.click('button:has-text("Import SRT/VTT")');
+  await page.click('button:has-text("Add SRT or VTT")');
   await page.waitForSelector('.cue', { timeout: 5000 });
   check((await page.$$('.cue')).length === 3, 'importing an SRT adds its cues', String((await page.$$('.cue')).length));
   await page.click('.subtitle-style:has-text("Boxed")');
@@ -581,10 +581,10 @@ section('export', async () => {
   const rb = await box(clipSel(right.id));
   await page.mouse.click(rb.x + 40, rb.y + 25);
   await sleep(120);
-  await page.click('.tl-toolbar button:has-text("Download section")');
+  await page.click('.tl-toolbar button:has-text("Export section")');
   await page.waitForSelector('.toast:has-text("Section saved")', { timeout: 60000 });
   const section2 = probe(target);
-  check(Math.abs(Number(section2.format.duration) - 3) < 0.2, 'Download section renders only the selected part', section2.format.duration);
+  check(Math.abs(Number(section2.format.duration) - 3) < 0.2, 'Export section renders only the selected part', section2.format.duration);
 });
 
 section('formats', async () => {
@@ -606,7 +606,7 @@ section('formats', async () => {
   await home();
   await page.click('.sidebar .nav-item:has-text("Media")');
   await stubOpenDialog(app, [media('notes.txt'), media('pic.webp'), media('pic.avif'), media('tone.flac')]);
-  await page.click('button:has-text("Upload")');
+  await page.click('button:has-text("Add files")');
   await page.waitForSelector('.toast.error', { timeout: 8000 });
   check((await page.textContent('.toast.error')).includes('notes.txt'), 'unsupported files are refused with a reason');
   await page.waitForFunction(() => ['pic.webp', 'pic.avif', 'tone.flac'].every((n) => [...document.querySelectorAll('.asset-card')].some((c) => c.textContent.includes(n))), null, { timeout: 8000 });
@@ -636,7 +636,7 @@ section('library', async () => {
   await card.locator('[aria-label^="More options"]').click();
   await page.waitForSelector('.menu');
   const labels = await page.$$eval('.menu-item span:first-of-type', (e) => e.map((x) => x.textContent));
-  for (const l of ['Edit', 'Rename', 'Duplicate', 'Move', 'Save as a template', 'Download', 'Move to Trash']) check(labels.includes(l), `the project menu has ${l}`);
+  for (const l of ['Edit', 'Rename', 'Duplicate', 'Move', 'Save as a template', 'Save video', 'Move to Trash']) check(labels.includes(l), `the project menu has ${l}`);
   await shot(page, '21-project-menu');
   await page.click('.menu-item:has-text("Rename")');
   await page.fill('.modal input', 'Launch film');
@@ -651,8 +651,9 @@ section('library', async () => {
   await page.waitForSelector('.project-card:has-text("Launch film copy")');
   check(true, 'projects can be duplicated');
 
-  // Spaces and folders
-  await page.click('.space-switcher');
+  // Spaces and folders: a second space is what brings spaces into view.
+  check((await page.textContent('.page-head h1')) === 'Projects' && !(await page.$('.space-switcher')), 'spaces stay out of sight while there is only one');
+  await page.click('[aria-label="Project options"]');
   await page.click('.menu-item:has-text("New space")');
   await page.fill('.modal input', 'Marketing');
   await page.keyboard.press('Enter');
@@ -666,7 +667,7 @@ section('library', async () => {
 
   // Move several at once
   await page.click('.space-switcher');
-  await page.click('.menu-item:has-text("All Spaces")');
+  await page.click('.menu-item:has-text("All projects")');
   await page.waitForSelector('.project-card');
   for (const text of [/Launch film copy/, /Launch film(?! copy)/]) {
     const c = page.locator('.project-card', { hasText: text }).first();
@@ -745,13 +746,13 @@ section('library', async () => {
 
   // Draft projects cannot be downloaded
   await page.click('.space-switcher');
-  await page.click('.menu-item:has-text("All Spaces")');
+  await page.click('.menu-item:has-text("All projects")');
   await page.waitForSelector('.project-card');
   const draft = (await library()).projects.find((p) => !p.trashedAt && !p.lastExport);
   const dc = page.locator('.project-card', { hasText: draft.name }).first();
   await dc.hover();
   await dc.locator('[aria-label^="More options"]').click();
-  await page.click('.menu-item:has-text("Download")');
+  await page.click('.menu-item:has-text("Save video")');
   await page.waitForSelector('.toast:has-text("still a draft")');
   check(true, 'a draft has to be exported before it can be downloaded');
 });
@@ -797,7 +798,7 @@ section('phone', async () => {
   await home();
   await page.click('.sidebar .nav-item:has-text("Edit my footage")');
   await page.waitForSelector('.modal');
-  await page.click('.welcome-option:has-text("Upload from phone")');
+  await page.click('.welcome-option:has-text("Add from phone")');
   await page.waitForSelector('.qr svg', { timeout: 8000 });
   await sleep(150);
   await shot(page, '24-phone');
@@ -929,7 +930,7 @@ section('brand', async () => {
   await page.keyboard.press('Enter');
   await page.waitForSelector('.kit-editor');
   await stubOpenDialog(app, [media('logo.png')]);
-  await page.locator('.kit-editor button:has-text("Upload")').first().click();
+  await page.locator('.kit-editor button:has-text("Add")').first().click();
   await page.waitForSelector('.kit-logo img', { timeout: 8000 });
   await page.fill('.kit-editor input[type=color]', '#ff6600');
   await page.click('button:has-text("Add colour")');
@@ -1044,20 +1045,20 @@ section('tools', async () => {
   const file = join(dir, 'library', 'exports', meta.id, meta.lastExport.file);
   check(Math.abs(Number(probe(file).format.duration) - 2) < 0.1, 'a fixed length decides the length of the export', probe(file).format.duration);
 
-  // Resize for social
+  // A copy in a new shape
   await page.click('.sidebar .nav-item:has-text("Projects")');
   await page.waitForSelector('.project-card');
   const card = page.locator('.project-card', { hasText: meta.name }).first();
   await card.hover();
   await card.locator('[aria-label^="More options"]').click();
-  await page.click('.menu-item:has-text("Resize for social")');
+  await page.click('.menu-item:has-text("Copy in a new shape")');
   await page.selectOption('.modal select', '9:16');
   await page.click('.modal-foot button:has-text("Create copy")');
   await page.waitForSelector('.editor');
   await page.waitForSelector('.clip');
   await sleep(300);
   doc = await storedDoc();
-  check(doc.settings.height > doc.settings.width, 'Resize for social makes a copy in the new shape', `${doc.settings.width}x${doc.settings.height}`);
+  check(doc.settings.height > doc.settings.width, 'Copy in a new shape makes a copy in the new shape', `${doc.settings.width}x${doc.settings.height}`);
   v = doc.items.find((i) => i.type === 'video');
   check(v.h >= doc.settings.height - 1, 'footage fills the new frame', JSON.stringify({ w: v.w, h: v.h }));
   await shot(page, '31-resized');

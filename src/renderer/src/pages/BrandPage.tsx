@@ -50,7 +50,7 @@ function KitEditor({ kit }: { kit: BrandKit }): ReactNode {
         <div className="row">
           <h2 className="grow">Logos</h2>
           <Button size="small" icon={<Upload size={13} />} onClick={addLogos}>
-            Upload
+            Add
           </Button>
         </div>
         {kit.logoAssetIds.length ? (
@@ -102,7 +102,7 @@ function KitEditor({ kit }: { kit: BrandKit }): ReactNode {
         <div className="row">
           <h2 className="grow">Fonts</h2>
           <Button size="small" icon={<Upload size={13} />} onClick={() => void attempt(() => api.library.pickBrandFonts(kit.id))}>
-            Upload
+            Add
           </Button>
         </div>
         {kit.fonts.length ? (

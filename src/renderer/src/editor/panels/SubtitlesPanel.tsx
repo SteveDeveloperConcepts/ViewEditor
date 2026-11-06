@@ -94,7 +94,7 @@ export function SubtitlesPanel({ projectName }: { projectName: string; projectId
           Add subtitle
         </Button>
         <Button icon={<FileUp size={14} />} onClick={() => void importFile()}>
-          Import SRT/VTT
+          Add SRT or VTT
         </Button>
       </div>
       {cues.length > 0 ? (
@@ -143,7 +143,7 @@ export function SubtitlesPanel({ projectName }: { projectName: string; projectId
           <div className="empty-icon">
             <Captions size={20} />
           </div>
-          <p>Add subtitles by hand or import an SRT or VTT file. Text to speech can add them for you too.</p>
+          <p>Add subtitles by hand or from an SRT or VTT file. Text to speech can add them for you too.</p>
         </div>
       )}
       {cues.length > 0 && <p className="faint panel-note">Total length {formatTimecode(itemEnd(cues[cues.length - 1]))}</p>}

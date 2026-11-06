@@ -102,7 +102,7 @@ export function registerIpc(s: Services): void {
     },
     storageUsage: () => folderSize(lib.paths.root),
     pickTextFile: async () => {
-      const r = await openDialog({ title: 'Import subtitles', properties: ['openFile'], filters: [{ name: 'Subtitles', extensions: ['srt', 'vtt'] }] });
+      const r = await openDialog({ title: 'Add subtitles', properties: ['openFile'], filters: [{ name: 'Subtitles', extensions: ['srt', 'vtt'] }] });
       if (r.canceled || !r.filePaths[0]) return null;
       const file = r.filePaths[0];
       if ((await stat(file)).size > 5 * 1024 * 1024) throw new Error('This subtitle file is too large.');
@@ -166,7 +166,7 @@ export function registerIpc(s: Services): void {
 
   register('assets', {
     pickAndImport: async (kind, target) => {
-      const r = await openDialog({ title: 'Upload files', properties: ['openFile', 'multiSelections'], filters: [filters[kind] ?? filters.media] });
+      const r = await openDialog({ title: 'Add files', properties: ['openFile', 'multiSelections'], filters: [filters[kind] ?? filters.media] });
       if (r.canceled || !r.filePaths.length) return null;
       return assets.importFiles(r.filePaths, importOptions(target));
     },
@@ -195,7 +195,7 @@ export function registerIpc(s: Services): void {
       let savePath: string | null = null;
       if (kind === 'section') {
         const r = await saveDialog({
-          title: 'Download section',
+          title: 'Save section',
           defaultPath: join(app.getPath('downloads'), `${safeFileName(suggestedName ?? 'section')}.mp4`),
           filters: [{ name: 'MP4 video', extensions: ['mp4'] }],
         });
@@ -213,7 +213,7 @@ export function registerIpc(s: Services): void {
       const label = { mp4: 'MP4 video', mp3: 'MP3 audio', gif: 'GIF' }[format];
       if (!label) throw new Error('Unknown format.');
       const r = await saveDialog({
-        title: `Download ${format.toUpperCase()}`,
+        title: `Save ${format.toUpperCase()}`,
         defaultPath: join(app.getPath('downloads'), `${safeFileName(meta.name)}.${format}`),
         filters: [{ name: label, extensions: [format] }],
       });

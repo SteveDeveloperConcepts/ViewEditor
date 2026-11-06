@@ -1,4 +1,4 @@
-// The side panel while an element is selected: everything that can be changed about it.
+// The side panel while a clip is selected: everything that can be changed about it.
 
 import type { ReactNode } from 'react';
 import { useEffect, useRef } from 'react';
@@ -263,7 +263,7 @@ export function Inspector({ projectId }: { projectId: ID }): ReactNode {
           <IconButton label="Back" onClick={clearSelection}>
             <ArrowLeft size={16} />
           </IconButton>
-          <h2 className="panel-title grow">{items.length} elements</h2>
+          <h2 className="panel-title grow">{items.length} clips</h2>
         </div>
         <div className="panel-actions">
           {grouped ? (
@@ -279,7 +279,7 @@ export function Inspector({ projectId }: { projectId: ID }): ReactNode {
             Delete
           </Button>
         </div>
-        <p className="faint panel-note">Grouped elements move together on the timeline and on the canvas.</p>
+        <p className="faint panel-note">Grouped clips move together on the timeline and in the picture.</p>
       </div>
     );
   }

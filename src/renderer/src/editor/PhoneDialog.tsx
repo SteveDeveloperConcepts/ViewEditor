@@ -1,4 +1,4 @@
-// "Upload from phone": shows a QR code for a page served on the local network.
+// "Add from phone": shows a QR code for a page served on the local network.
 
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
@@ -40,7 +40,7 @@ function PhoneBody({ projectId, place, close }: { projectId: ID | null; place: P
   }, [projectId]);
 
   return (
-    <Modal title="Upload from phone" onClose={close} footer={<Button variant="primary" onClick={close}>Done</Button>}>
+    <Modal title="Add from phone" onClose={close} footer={<Button variant="primary" onClick={close}>Done</Button>}>
       {error ? (
         <Notice kind="error" icon={<CircleAlert size={15} />}>
           {error}
