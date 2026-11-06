@@ -280,11 +280,11 @@ section('timeline', async () => {
   const g1 = await box(clipSel(parts[0].id));
   const g2 = await box(clipSel(audio.id));
   await page.mouse.click(g1.x + 30, g1.y + 25);
-  await page.keyboard.down('Control');
+  await page.keyboard.down(MOD);
   await page.mouse.click(g2.x + 30, g2.y + 20);
-  await page.keyboard.up('Control');
+  await page.keyboard.up(MOD);
   await sleep(100);
-  check(await page.isVisible('.panel >> text=2 elements'), 'Ctrl+click selects several elements');
+  check(await page.isVisible('.panel >> text=2 elements'), 'Ctrl or Cmd click selects several elements');
   await page.click('.tl-toolbar button:has-text("Group")');
   await sleep(100);
   await page.keyboard.press('Escape');
@@ -660,7 +660,13 @@ section('persistence', async () => {
   const name = await page.inputValue('.project-name');
   allErrors.push(...errors);
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].close());
-  await app.waitForEvent('close', { timeout: 10000 }).catch(() => undefined);
+  if (process.platform === 'darwin') {
+    // Closing the last window leaves a Mac app running, so it has to be quit as well.
+    await page.waitForEvent('close', { timeout: 10000 }).catch(() => undefined);
+    await app.close().catch(() => undefined);
+  } else {
+    await app.waitForEvent('close', { timeout: 10000 }).catch(() => undefined);
+  }
   ({ app, page, errors } = await launch(dir));
   const meta = (await library()).projects.find((p) => p.name === name);
   const doc = await page.evaluate((id) => window.api.library.loadProject(id), meta.id);
@@ -1438,8 +1444,10 @@ for (const name of order) {
     check(false, `section ${name} stopped`, err.message.split('\n')[0]);
     await shot(page, `fail-${name}`).catch(() => undefined);
     await page.keyboard.press('Escape').catch(() => undefined);
-    await page.evaluate(() => document.querySelectorAll('.modal-backdrop').length).catch(() => 0);
-    while (await page.$('.modal [aria-label="Close"]')) await page.click('.modal [aria-label="Close"]').catch(() => undefined);
+    // Tidy up for the next section. A window that has gone must not stop the rest of the run.
+    for (let i = 0; i < 5 && (await page.$('.modal [aria-label="Close"]').catch(() => null)); i++) {
+      await page.click('.modal [aria-label="Close"]', { timeout: 3000 }).catch(() => undefined);
+    }
   }
 }
 
