@@ -1043,7 +1043,7 @@ section('tools', async () => {
   await stubOpenDialog(app, [media('clip-b.mp4')]);
   await page.mouse.click(b.x + 40, b.y + 25, { button: 'right' });
   await page.click('.menu-item:has-text("Replace media")');
-  await page.waitForSelector('.modal .asset-tile');
+  await page.waitForSelector('.modal:has-text("Replace media")');
   check(true, 'Replace media offers what is in Media first');
   await page.click('.modal button:has-text("Add from your computer")');
   await page.waitForFunction(() => document.querySelector('.clip.video')?.textContent.includes('clip-b.mp4'), null, { timeout: 8000 });
