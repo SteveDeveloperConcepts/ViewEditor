@@ -12,6 +12,7 @@ import {
   Palette,
   Redo2,
   Settings,
+  Share,
   Smartphone,
   Sparkles,
   Speech,
@@ -129,7 +130,7 @@ function ProjectName(): ReactNode {
   );
 }
 
-function TopBar({ projectId, onDone, exporting }: { projectId: ID; onDone: () => void; exporting: boolean }): ReactNode {
+function TopBar({ projectId, onExport, exporting }: { projectId: ID; onExport: () => void; exporting: boolean }): ReactNode {
   const canUndo = useEditor((s) => s.canUndo);
   const canRedo = useEditor((s) => s.canRedo);
   const empty = useEditor((s) => (s.doc ? projectDuration(s.doc) <= 0 : true));
@@ -151,8 +152,8 @@ function TopBar({ projectId, onDone, exporting }: { projectId: ID; onDone: () =>
       <Button variant="ghost" icon={<Clapperboard size={15} />} onClick={() => void openRecorder({ projectId, addToTimeline: true })}>
         Record
       </Button>
-      <Button variant="primary" icon={exporting ? <Spinner /> : <Check size={15} />} disabled={empty || exporting} title={empty ? 'Add something to the timeline first' : 'Export this project'} onClick={onDone}>
-        Done
+      <Button variant="primary" icon={exporting ? <Spinner /> : <Share size={15} />} disabled={empty || exporting} title={empty ? 'Add something to the timeline first' : 'Export this project'} onClick={onExport}>
+        Export
       </Button>
     </header>
   );
@@ -383,7 +384,7 @@ export function EditorPage({ projectId, welcome, showAi }: { projectId: ID; welc
 
   const exporting = isRendering(render, projectId);
 
-  const done = async (): Promise<void> => {
+  const exportProject = async (): Promise<void> => {
     try {
       await saveAndThumbnail();
       const current = useEditor.getState().doc;
@@ -419,7 +420,7 @@ export function EditorPage({ projectId, welcome, showAi }: { projectId: ID; welc
 
   return (
     <div className="editor">
-      <TopBar projectId={projectId} onDone={() => void done()} exporting={exporting} />
+      <TopBar projectId={projectId} onExport={() => void exportProject()} exporting={exporting} />
       <div className="editor-main">
         <nav className="rail" aria-label="Editor tools">
           {RAIL.map((r) => (

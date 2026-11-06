@@ -462,7 +462,7 @@ section('export', async () => {
   await page.selectOption('.panel select[aria-label="Export quality"]', 'standard');
   await sleep(100);
 
-  await page.click('button:has-text("Done")');
+  await page.click('.editor-top button:has-text("Export")');
   await page.waitForSelector('.video-page', { timeout: 10000 });
   await page.waitForSelector('.video-player', { timeout: 60000 });
   await sleep(300);
@@ -974,7 +974,7 @@ section('tools', async () => {
 
   // Cancelling an export
   await page.selectOption('.panel select[aria-label="Export quality"]', '4k');
-  await page.click('button:has-text("Done")');
+  await page.click('.editor-top button:has-text("Export")');
   await page.waitForSelector('.render-card', { timeout: 10000 });
   await shot(page, '34-rendering');
   await page.click('.render-card button:has-text("Cancel")');
@@ -994,7 +994,7 @@ section('tools', async () => {
   await page.keyboard.press('Tab');
   await sleep(150);
   check(!!(await page.$('.tl-project-end')), 'a fixed length is marked on the timeline');
-  await page.click('button:has-text("Done")');
+  await page.click('.editor-top button:has-text("Export")');
   await page.waitForSelector('.video-player', { timeout: 60000 });
   const lib = await library();
   const meta = lib.projects.sort((x, y) => y.updatedAt - x.updatedAt).find((p) => p.lastExport);
@@ -1049,7 +1049,7 @@ section('rotation', async () => {
   check(photo.raster === 'ready', 'export uses the upright picture');
   const doc = await storedDoc();
   check(doc.settings.height > doc.settings.width, 'the canvas takes the upright shape', `${doc.settings.width}x${doc.settings.height}`);
-  await page.click('button:has-text("Done")');
+  await page.click('.editor-top button:has-text("Export")');
   await page.waitForSelector('.video-player', { timeout: 60000 });
   const meta = (await library()).projects.find((p) => p.assetIds.includes(photo.id));
   const file = join(dir, 'library', 'exports', meta.id, meta.lastExport.file);
@@ -1476,7 +1476,7 @@ section('ai', async () => {
     check(scenes.every((s) => s.h >= doc.settings.height - 1 && s.w >= doc.settings.width - 1), 'scenes fill the frame');
 
     // The whole thing still exports
-    await p.click('button:has-text("Done")');
+    await p.click('.editor-top button:has-text("Export")');
     await p.waitForSelector('.video-player', { timeout: 90000 });
     const l2 = await lib();
     const m = l2.projects.filter((x) => x.lastExport).sort((x, y) => y.updatedAt - x.updatedAt)[0];

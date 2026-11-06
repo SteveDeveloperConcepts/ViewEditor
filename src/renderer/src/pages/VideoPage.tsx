@@ -120,7 +120,7 @@ export function VideoPage({ projectId }: { projectId: string }): ReactNode {
           <aside className="video-side">
             {meta.editedSinceExport && (
               <Notice kind="warning" icon={<RefreshCw size={15} />}>
-                This project has changed since it was exported. Open it and press Done to export the changes.
+                This project has changed since it was exported. Open it and press Export to export the changes.
               </Notice>
             )}
             <h2>Download</h2>
@@ -151,7 +151,7 @@ export function VideoPage({ projectId }: { projectId: string }): ReactNode {
       ) : (
         <div className="empty">
           <h2>{ownRender?.state === 'cancelled' ? 'The export was cancelled' : 'This project has not been exported yet'}</h2>
-          <p>Open it in the editor and press Done. It can be downloaded once it has been exported.</p>
+          <p>Open it in the editor and press Export. It can be saved once it has been exported.</p>
           <Button variant="primary" onClick={() => void navigate({ page: 'editor', projectId })}>
             Open in editor
           </Button>
