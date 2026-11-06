@@ -16,7 +16,6 @@ import { generateScriptVideo, sceneCount } from '@/lib/scriptVideo';
 import { useAi, useConnected, useModels } from '@/store/ai';
 import { useLibrary } from '@/store/library';
 import { navigate, toast } from '@/store/ui';
-import { openSettings } from './SettingsDialog';
 
 const DEFAULTS: ScriptVideoSettings = {
   visuals: 'background',
@@ -367,9 +366,9 @@ export function HomePage({ prefill }: { prefill?: ScriptOrigin | null }): ReactN
         )}
         {mode === 'topic' && !hasKey && !reviewing && (
           <Notice icon={<KeyRound size={15} />}>
-            Drafting from a topic uses the Claude API with your own key.{' '}
-            <button type="button" className="link-btn inline" onClick={() => openSettings()}>
-              Add a key
+            Writing a script from a topic uses Claude, which has its own key, separate from any video service.{' '}
+            <button type="button" className="link-btn inline" onClick={() => void openConnections()}>
+              Connect Claude
             </button>{' '}
             or paste your own words on the Script tab, which needs no key.
           </Notice>

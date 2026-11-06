@@ -1020,20 +1020,22 @@ section('tools', async () => {
   await shot(page, '31-resized');
   await home();
 
-  // Key storage
+  // Key storage: Claude's key lives with the other AI keys.
   await page.click('.avatar');
   await page.click('.menu-item:has-text("Settings")');
   await page.waitForSelector('.modal');
   await shot(page, '32-settings');
+  check(!(await page.$('[aria-label="Anthropic API key"]')), 'Settings holds no AI keys of its own');
+  await page.click('.modal button:has-text("AI tools")');
   await page.fill('[aria-label="Anthropic API key"]', 'sk-ant-e2e-placeholder-value');
-  await page.click('.modal button:has-text("Save")');
-  await page.waitForSelector('.modal .badge:has-text("Key saved")');
+  await page.click('[data-provider="claude"] button:has-text("Connect")');
+  await page.waitForSelector('[data-provider="claude"] .badge:has-text("Connected")');
   const keyFile = join(dir, 'anthropic.key');
   check(existsSync(keyFile), 'the API key is stored');
   check(!readFileSync(keyFile).includes('sk-ant-e2e'), 'the stored key is encrypted');
   check(!JSON.stringify(await library()).includes('sk-ant-e2e'), 'the key never reaches the page');
-  await page.click('.modal button:has-text("Remove key")');
-  await page.waitForFunction(() => !document.querySelector('.modal .badge'));
+  await page.click('[data-provider="claude"] button:has-text("Disconnect")');
+  await page.waitForFunction(() => !document.querySelector('[data-provider="claude"] .badge'));
   check(!existsSync(keyFile), 'the key can be removed');
   await page.click('.modal-foot button:has-text("Done")');
 });
@@ -1205,7 +1207,7 @@ section('ai', async () => {
     // Connecting
     await p.click('.panel button:has-text("Connect AI tools")');
     await p.waitForSelector('.provider-card');
-    check((await p.$$('.provider-card')).length === 3, 'three services can be connected');
+    check((await p.$$('.provider-card')).length === 4, 'three video services and Claude can be connected');
     await p.fill('[aria-label="fal.ai API key"]', 'wrong-key');
     await p.click('[data-provider="fal"] button:has-text("Connect")');
     await p.waitForSelector('[data-provider="fal"] .notice.error');

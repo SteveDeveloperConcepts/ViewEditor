@@ -2,22 +2,21 @@
 
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
-import { FolderOpen, KeyRound, Laptop, Moon, Sparkles, Sun } from 'lucide-react';
+import { FolderOpen, Laptop, Moon, Sparkles, Sun } from 'lucide-react';
 import { formatBytes } from '@shared/time';
 import type { ThemeSetting } from '@shared/types';
 import { openConnections } from '@/ai/ConnectionsDialog';
 import { Modal } from '@/components/Modal';
 import { Button, Field, Segmented } from '@/components/ui';
-import { api, errorMessage, MOD_LABEL } from '@/lib/api';
+import { api, MOD_LABEL } from '@/lib/api';
 import { useLibrary } from '@/store/library';
-import { showModal, toast } from '@/store/ui';
+import { showModal } from '@/store/ui';
 
 function SettingsBody({ close }: { close: () => void }): ReactNode {
   const settings = useLibrary((s) => s.lib!.settings);
   const info = useLibrary((s) => s.info);
   const [workspaceName, setWorkspaceName] = useState(settings.workspaceName);
   const [profileName, setProfileName] = useState(settings.profileName);
-  const [key, setKey] = useState('');
   const [usage, setUsage] = useState<number | null>(null);
 
   useEffect(() => {
@@ -26,16 +25,6 @@ function SettingsBody({ close }: { close: () => void }): ReactNode {
 
   const saveNames = (): void => {
     void api.library.updateSettings({ workspaceName, profileName });
-  };
-
-  const saveKey = async (value: string | null): Promise<void> => {
-    try {
-      await api.ai.setKey(value);
-      setKey('');
-      toast(value ? 'API key saved.' : 'API key removed.', { kind: 'success' });
-    } catch (err) {
-      toast(errorMessage(err), { kind: 'error' });
-    }
   };
 
   return (
@@ -62,44 +51,20 @@ function SettingsBody({ close }: { close: () => void }): ReactNode {
         />
       </div>
       <div className="field">
-        <span className="label">AI video</span>
+        <span className="label">AI</span>
         <div className="row">
-          <span className="grow faint">Connect fal.ai, Runway or Replicate to generate and edit video with AI.</span>
+          <span className="grow faint">Your keys for AI video services and for Claude are all in one place.</span>
           <Button
             size="small"
             icon={<Sparkles size={13} />}
             onClick={() => {
               close();
-              openConnections();
+              void openConnections();
             }}
           >
             AI tools
           </Button>
         </div>
-      </div>
-      <div className="field">
-        <span className="label">Script writing</span>
-        {settings.hasApiKey ? (
-          <div className="row">
-            <span className="badge success">
-              <KeyRound size={11} /> Key saved
-            </span>
-            <span className="grow" />
-            <Button size="small" onClick={() => void saveKey(null)}>
-              Remove key
-            </Button>
-          </div>
-        ) : (
-          <>
-            <div className="row">
-              <input className="input" type="password" autoComplete="off" spellCheck={false} placeholder="Anthropic API key" aria-label="Anthropic API key" value={key} onChange={(e) => setKey(e.target.value)} />
-              <Button disabled={!key.trim()} onClick={() => void saveKey(key)}>
-                Save
-              </Button>
-            </div>
-            <span className="hint">Optional. Used only to draft scripts from a topic, and encrypted by your operating system. Everything else works without it.</span>
-          </>
-        )}
       </div>
       <div className="field">
         <span className="label">Library</span>

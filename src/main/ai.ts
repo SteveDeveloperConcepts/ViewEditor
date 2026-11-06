@@ -105,13 +105,13 @@ export class ScriptWriter {
       });
     } catch (err) {
       if (err instanceof Anthropic.AuthenticationError || err instanceof Anthropic.PermissionDeniedError) {
-        throw new Error('The Anthropic API key was not accepted. Check it under Settings.');
+        throw new Error('The Anthropic API key was not accepted. Check it under AI connections.');
       }
       if (err instanceof Anthropic.RateLimitError) throw new Error('The Anthropic API is rate limiting this key right now. Try again in a moment.');
       if (err instanceof Anthropic.APIConnectionError) throw new Error('Could not reach the Anthropic API. Check your internet connection.');
       if (err instanceof Anthropic.APIError) throw new Error(`The Anthropic API returned an error (${err.status ?? 'unknown'}): ${err.message}`);
       // With no saved key, this is the SDK finding no credentials to send.
-      if (!this.hasKey()) throw new Error('Add an Anthropic API key under Settings to draft scripts from a topic, or paste your own script instead.');
+      if (!this.hasKey()) throw new Error('Add an Anthropic API key under AI connections to write scripts from a topic, or paste your own script instead.');
       throw err;
     }
 
