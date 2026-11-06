@@ -341,6 +341,13 @@ section('review', async () => {
   await page.keyboard.press('s');
   await page.waitForSelector('.toast:has-text("no clip under the playhead")', { timeout: 3000 });
   check(true, 'Split says why when there is nothing to cut');
+
+  list = await videos();
+  const lastPiece = await box(clipSel(list[2].id));
+  await page.mouse.click(lastPiece.x + 20, lastPiece.y + 20);
+  await page.keyboard.press('Delete');
+  await sleep(150);
+  check(Math.abs(seconds(await readout()) - 4) < 0.1, 'the playhead comes back to the new end after a delete', await readout());
 });
 
 section('text', async () => {

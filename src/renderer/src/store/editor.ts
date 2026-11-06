@@ -146,6 +146,8 @@ function commit(next: ProjectDoc): void {
     selection,
     gap: null,
     inspecting: s.inspecting && selection.length > 0,
+    // A trim or a delete can leave the playhead beyond the end. During a drag it waits for the drop.
+    playhead: gestureBase ? s.playhead : Math.min(s.playhead, timelineEnd(next)),
     canUndo: past.length > 0 || gestureBase !== null,
     canRedo: future.length > 0,
     saveState: 'dirty',
