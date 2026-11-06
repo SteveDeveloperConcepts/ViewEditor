@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { startApplyingJobs } from '@/ai/applyJobs';
+import { useHelpShortcut } from '@/components/HelpDialog';
 import { MenuHost } from '@/components/Menu';
 import { ModalHost } from '@/components/Modal';
 import { RenderWatcher } from '@/components/RenderWatcher';
@@ -83,6 +84,7 @@ function Dashboard({ route }: { route: Route }): ReactNode {
 export function App(): ReactNode {
   const route = useUi((s) => s.route);
   const ready = useLibrary((s) => !!s.lib);
+  useHelpShortcut();
 
   useEffect(() => {
     const stopIntake = startIntake();

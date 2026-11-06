@@ -5,6 +5,7 @@ import {
   Captions,
   Check,
   CircleAlert,
+  CircleHelp,
   Clapperboard,
   Group,
   Images,
@@ -23,6 +24,8 @@ import { projectDuration } from '@shared/timeline';
 import type { Asset, ID } from '@shared/types';
 import { closeClipAi } from '@/ai/clipActions';
 import { forgetDrafts } from '@/ai/drafts';
+import { helpMenu } from '@/components/HelpDialog';
+import { openMenuAt } from '@/components/Menu';
 import { Button, IconButton, Spinner } from '@/components/ui';
 import { api, errorMessage, isMod, isTyping, MOD_LABEL } from '@/lib/api';
 import { loadBrandFonts } from '@/lib/fonts';
@@ -141,6 +144,9 @@ function TopBar({ projectId, onExport, exporting }: { projectId: ID; onExport: (
         <Redo2 size={16} />
       </IconButton>
       <div className="grow" />
+      <IconButton label="Help" onClick={(e) => openMenuAt(e.currentTarget, helpMenu(`${MOD_LABEL}+K`), 'end')}>
+        <CircleHelp size={16} />
+      </IconButton>
       <IconButton label="Project settings" onClick={() => openProjectSettings(projectId)}>
         <Settings size={16} />
       </IconButton>

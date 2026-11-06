@@ -1058,3 +1058,47 @@ button.asset-card-picture {
   background: var(--accent-soft);
   color: var(--accent-text);
 }
+
+.help-search {
+  width: 100%;
+}
+.help-search .input {
+  width: 100%;
+}
+.help-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.help-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-s);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 550;
+  cursor: pointer;
+}
+.help-action:hover {
+  border-color: var(--accent);
+}
+.help-topics {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.help-topics summary {
+  padding: 6px 2px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.help-topics ol {
+  margin: 0;
+  padding: 2px 0 8px 24px;
+  color: var(--text-2);
+  line-height: 1.5;
+}

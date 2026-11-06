@@ -92,6 +92,7 @@ const SHORTCUTS: [string, string][] = [
   [`${MOD_LABEL} + G`, 'Group'],
   [`${MOD_LABEL} + Shift + G`, 'Ungroup'],
   ['Alt while dragging', 'Turn snapping off'],
+  [`${MOD_LABEL} + K`, 'How do I… and search for an action'],
 ];
 
 export function openShortcuts(): void {

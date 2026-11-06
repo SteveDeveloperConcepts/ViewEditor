@@ -354,6 +354,21 @@ section('start', async () => {
 });
 
 section('review', async () => {
+  // Help can find an action by the word you would use for it, and run it.
+  await page.keyboard.press(`${MOD}+k`);
+  await page.waitForSelector('.modal .help-search input');
+  check((await page.$$('.help-topics details')).length >= 6, 'How do I lists the common jobs');
+  await page.fill('.modal .help-search input', 'accounts');
+  await page.waitForSelector('.help-action:has-text("AI connections")');
+  check(true, 'it finds actions by other words for them');
+  await page.fill('.modal .help-search input', 'extract audio');
+  await page.waitForSelector('.help-topics summary:has-text("Take the sound out of a video")');
+  check(true, 'and how-to topics');
+  await page.fill('.modal .help-search input', 'templates');
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('.page-head h1:has-text("Templates")');
+  check(true, 'Enter runs the first action found');
+
   // Files dropped on the dashboard start a project.
   await home();
   await page.evaluate(() => {

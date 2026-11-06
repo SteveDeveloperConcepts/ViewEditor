@@ -3,17 +3,19 @@
 
 import type { ReactNode } from 'react';
 import { useMemo } from 'react';
-import { CircleDot, CircleHelp, FileText, Film, Images, KeyRound, Keyboard, LayoutTemplate, Palette, Scissors, Settings, Sparkles, Video } from 'lucide-react';
+import { CircleDot, CircleHelp, FileText, Film, Images, KeyRound, LayoutTemplate, Palette, Scissors, Settings, Sparkles, Video } from 'lucide-react';
 import { APP_NAME } from '@shared/constants';
 import { openConnections } from '@/ai/ConnectionsDialog';
 import { openRecorder } from '@/recorder/openRecorder';
+import { MOD_LABEL } from '@/lib/api';
 import { projectThumbUrl } from '@/lib/media';
 import { startBlankProject } from '@/lib/projects';
 import { openStartDialog } from '@/lib/startDialog';
-import { openSettings, openShortcuts } from '@/pages/SettingsDialog';
+import { openSettings } from '@/pages/SettingsDialog';
 import { useAi } from '@/store/ai';
 import { useLibrary } from '@/store/library';
 import { navigate, useUi, type Route } from '@/store/ui';
+import { helpMenu } from './HelpDialog';
 import { openMenuAt } from './Menu';
 import { IconButton } from './ui';
 
@@ -82,12 +84,7 @@ export function Sidebar(): ReactNode {
 export function DashTop(): ReactNode {
   return (
     <div className="dash-top">
-      <IconButton
-        label="Help"
-        onClick={(e) =>
-          openMenuAt(e.currentTarget, [{ label: 'Keyboard shortcuts', icon: <Keyboard size={15} />, onSelect: openShortcuts }], 'end')
-        }
-      >
+      <IconButton label="Help" onClick={(e) => openMenuAt(e.currentTarget, helpMenu(`${MOD_LABEL}+K`), 'end')}>
         <CircleHelp size={17} />
       </IconButton>
     </div>
