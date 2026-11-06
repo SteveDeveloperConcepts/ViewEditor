@@ -1174,6 +1174,28 @@ section('ai', async () => {
   };
 
   try {
+    // Choosing AI scenes with nothing connected goes through connecting, and the choice is not lost.
+    await p.click('.sidebar .nav-item:has-text("Create video")');
+    await p.click('.pill:has-text("Colour background")');
+    await p.click('.menu-item:has-text("AI scenes")');
+    await p.waitForSelector('.provider-card');
+    await p.click('.modal-foot button:has-text("Done")');
+    await wait(100);
+    check(await p.isVisible('.pill:has-text("Colour background")'), 'leaving without connecting changes nothing');
+    await p.click('.pill:has-text("Colour background")');
+    await p.click('.menu-item:has-text("AI scenes")');
+    await p.fill('[aria-label="Runway API key"]', KEYS.runway);
+    await p.click('[data-provider="runway"] button:has-text("Connect")');
+    await p.waitForSelector('[data-provider="runway"] .badge:has-text("Connected")');
+    await p.click('.modal-foot button:has-text("Done")');
+    await p.waitForSelector('.pill:has-text("AI scenes")', { timeout: 3000 });
+    check(true, 'AI scenes is applied once a service is connected');
+    await p.click('.avatar');
+    await p.click('.menu-item:has-text("AI tools")');
+    await p.click('[data-provider="runway"] button:has-text("Disconnect")');
+    await p.waitForSelector('[aria-label="Runway API key"]');
+    await p.click('.modal-foot button:has-text("Done")');
+
     // Not connected yet
     await blank();
     await p.click('.rail-item:has-text("AI tools")');

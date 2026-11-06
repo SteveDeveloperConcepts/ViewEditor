@@ -117,6 +117,15 @@ export function HomePage({ prefill }: { prefill?: ScriptOrigin | null }): ReactN
   }, []);
 
   const patch = (p: Partial<ScriptVideoSettings>): void => setSettings((s) => ({ ...s, ...p }));
+  /** Choosing AI visuals with no service connected goes through connecting one, and the choice waits for that. */
+  const chooseVisuals = (visuals: ScriptVideoSettings['visuals']): void => {
+    if (aiConnected) patch({ visuals, visualModelKey: null });
+    else {
+      void openConnections().then(() => {
+        if (useAi.getState().providers.some((p) => p.connected)) patch({ visuals, visualModelKey: null });
+      });
+    }
+  };
   const music = useMemo(() => (assets ?? []).filter((a) => a.kind === 'audio' && a.scope === 'workspace'), [assets]);
   const voiceName = voices?.find((v) => v.id === settings.voice)?.name ?? 'Voice';
   const subtitleName = SUBTITLE_STYLES.find((s) => s.id === settings.subtitleStyle)?.label ?? 'Subtitles';
@@ -230,10 +239,10 @@ export function HomePage({ prefill }: { prefill?: ScriptOrigin | null }): ReactN
               entries={() => [
                 'What fills the picture',
                 { label: 'Colour background', checked: settings.visuals === 'background', onSelect: () => patch({ visuals: 'background' }) },
-                { label: 'AI scenes', checked: settings.visuals === 'ai-scenes', onSelect: () => (aiConnected ? patch({ visuals: 'ai-scenes', visualModelKey: null }) : openConnections()) },
-                { label: 'Talking character', checked: settings.visuals === 'talking-character', onSelect: () => (aiConnected ? patch({ visuals: 'talking-character', visualModelKey: null }) : openConnections()) },
+                { label: 'AI scenes', checked: settings.visuals === 'ai-scenes', onSelect: () => chooseVisuals('ai-scenes') },
+                { label: 'Talking character', checked: settings.visuals === 'talking-character', onSelect: () => chooseVisuals('talking-character') },
                 !aiConnected && null,
-                !aiConnected && { label: 'Connect AI tools…', onSelect: openConnections },
+                !aiConnected && { label: 'Connect AI tools…', onSelect: () => void openConnections() },
               ]}
             />
             {usingAi && visualModels && visualModels.length > 0 && (

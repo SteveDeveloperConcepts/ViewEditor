@@ -108,6 +108,7 @@ function ConnectionsBody({ close }: { close: () => void }): ReactNode {
   );
 }
 
-export function openConnections(): void {
-  void showModal<void>((close) => <ConnectionsBody close={() => close()} />);
+/** Resolves when the dialog closes. */
+export async function openConnections(): Promise<void> {
+  await showModal<void>((close) => <ConnectionsBody close={() => close()} />);
 }
