@@ -230,6 +230,40 @@ export function insertTrack(doc: ProjectDoc, index: number): { doc: ProjectDoc; 
   return { doc: { ...doc, tracks }, trackId: track.id };
 }
 
+/** What goes in a row's name: what is on it. */
+function rowKind(doc: ProjectDoc, t: Track): string {
+  const items = itemsOnTrack(doc, t.id);
+  if (!items.length) return 'Empty row';
+  if (items.every((it) => it.type === 'audio')) return 'Audio';
+  if (items.every((it) => it.type === 'text')) return items.every((it) => it.type === 'text' && it.subtitle) ? 'Subtitles' : 'Text';
+  return items.some((it) => it.type === 'video') ? 'Video' : 'Picture';
+}
+
+/** The names beside the timeline rows: your own, or what is on the row, numbered from the bottom when there are several. */
+export function trackNames(doc: ProjectDoc): Map<ID, string> {
+  const kinds = doc.tracks.map((t) => rowKind(doc, t));
+  const seen = new Map<string, number>();
+  const names = new Map<ID, string>();
+  for (let i = doc.tracks.length - 1; i >= 0; i--) {
+    const kind = kinds[i];
+    const n = (seen.get(kind) ?? 0) + 1;
+    seen.set(kind, n);
+    const several = kinds.filter((k) => k === kind).length > 1 && kind !== 'Empty row';
+    names.set(doc.tracks[i].id, doc.tracks[i].name || (several ? `${kind} ${n}` : kind));
+  }
+  return names;
+}
+
+/** Moves a row up (a negative step) or down. Higher rows cover lower ones. */
+export function moveTrack(doc: ProjectDoc, id: ID, step: number): ProjectDoc {
+  const from = trackIndex(doc, id);
+  const to = from + step;
+  if (from < 0 || to < 0 || to >= doc.tracks.length) return doc;
+  const tracks = doc.tracks.slice();
+  tracks.splice(to, 0, tracks.splice(from, 1)[0]);
+  return { ...doc, tracks };
+}
+
 /** Drops tracks that hold nothing, always keeping at least one. */
 export function pruneEmptyTracks(doc: ProjectDoc): ProjectDoc {
   const used = new Set(doc.items.map((it) => it.trackId));

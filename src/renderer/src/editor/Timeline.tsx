@@ -5,6 +5,8 @@ import type { DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent, Pointe
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Download,
+  Eye,
+  EyeOff,
   Group,
   Image as ImageIcon,
   Link2,
@@ -19,6 +21,7 @@ import {
   Type,
   Ungroup,
   Video,
+  Volume2,
   VolumeX,
   ZoomIn,
   ZoomOut,
@@ -36,6 +39,7 @@ import {
   snapClip,
   snapPoints,
   snapValue,
+  trackNames,
   trimEndTo,
   trimStartTo,
   updateItems,
@@ -43,6 +47,7 @@ import {
 import type { Asset, ID, Item, ProjectDoc } from '@shared/types';
 import { isBeingReplaced } from '@/ai/clipActions';
 import { openContextMenu, type MenuEntry } from '@/components/Menu';
+import { promptDialog } from '@/components/Modal';
 import { Button, IconButton, Slider, Spinner } from '@/components/ui';
 import { isMod, MOD_LABEL } from '@/lib/api';
 import { trackPointer } from '@/lib/drag';
@@ -57,6 +62,7 @@ import {
   endGesture,
   groupSelection,
   hasClipboard,
+  moveRow,
   paste,
   select,
   selectGap,
@@ -67,6 +73,7 @@ import {
   splitAtPlayhead,
   timelineEnd,
   ungroupSelection,
+  updateTrack,
   useEditor,
   type Placement,
 } from '@/store/editor';
@@ -183,6 +190,8 @@ interface ClipProps {
   height: number;
   k: number;
   selected: boolean;
+  /** Its row is hidden or muted. */
+  dimmed: boolean;
   /** An AI generation is on its way to take this element's place. */
   busy: boolean;
   waves: boolean;
@@ -194,14 +203,14 @@ interface ClipProps {
 }
 
 const Clip = memo(function Clip(props: ClipProps): ReactNode {
-  const { item, asset, top, height, k, selected, busy, waves, viewFrom, viewTo, onDown, onTrim, onMenu } = props;
+  const { item, asset, top, height, k, selected, dimmed, busy, waves, viewFrom, viewTo, onDown, onTrim, onMenu } = props;
   const left = LEFT_PAD + item.start * k;
   const width = Math.max(3, item.duration * k);
   const muted = (item.type === 'video' || item.type === 'audio') && item.muted;
   const label = clipLabel(item, asset);
   return (
     <div
-      className={`clip ${item.type}${selected ? ' selected' : ''}`}
+      className={`clip ${item.type}${selected ? ' selected' : ''}${dimmed ? ' dimmed' : ''}`}
       style={{ left, top, width, height }}
       data-clip={item.id}
       title={`${label} · ${formatTimecode(item.duration)}`}
@@ -263,6 +272,63 @@ function PendingBlocks({ jobs, doc, rows, k }: { jobs: AiJob[]; doc: ProjectDoc;
     );
   }
   return <>{blocks}</>;
+}
+
+// ---------------------------------------------------------------- row headers
+
+/** Names each row and offers hiding its picture and muting its sound. This is what makes layers discoverable. */
+function RowHeads({ doc, rows, inner }: { doc: ProjectDoc; rows: Rows; inner: React.RefObject<HTMLDivElement | null> }): ReactNode {
+  const names = trackNames(doc);
+  const rename = (id: ID, name: string): void => {
+    void promptDialog({ title: 'Rename row', label: 'Row name', value: name }).then((next) => {
+      if (next) updateTrack(id, { name: next });
+    });
+  };
+  return (
+    <div className="tl-heads">
+      <div className="tl-heads-top" title="Where rows overlap, the higher row covers the lower one">
+        Top row shows in front
+      </div>
+      <div className="tl-heads-clip">
+        <div ref={inner} className="tl-heads-rows" style={{ height: rows.total + ZONE * 2 }}>
+          {doc.tracks.map((t, i) => {
+            const items = doc.items.filter((it) => it.trackId === t.id);
+            const name = names.get(t.id) ?? '';
+            const picture = items.some((it) => it.type !== 'audio');
+            const sound = items.some((it) => it.type === 'audio' || it.type === 'video');
+            return (
+              <div
+                key={t.id}
+                className="tl-head"
+                style={{ top: ZONE + (rows.tops.get(t.id) ?? 0), height: rows.heights.get(t.id) }}
+                onContextMenu={(e) =>
+                  openContextMenu(e, [
+                    { label: 'Rename row…', onSelect: () => rename(t.id, name) },
+                    { label: 'Move up', disabled: i === 0, onSelect: () => moveRow(t.id, -1) },
+                    { label: 'Move down', disabled: i === doc.tracks.length - 1, onSelect: () => moveRow(t.id, 1) },
+                  ])
+                }
+              >
+                <span className="tl-head-name truncate" title={name}>
+                  {name}
+                </span>
+                {picture && (
+                  <button type="button" className="tl-head-btn" aria-pressed={!!t.hidden} aria-label={`${t.hidden ? 'Show' : 'Hide'} the picture of ${name}`} title={t.hidden ? 'Show this row' : 'Hide this row'} onClick={() => updateTrack(t.id, { hidden: !t.hidden })}>
+                    {t.hidden ? <EyeOff size={13} /> : <Eye size={13} />}
+                  </button>
+                )}
+                {sound && (
+                  <button type="button" className="tl-head-btn" aria-pressed={!!t.muted} aria-label={`${t.muted ? 'Unmute' : 'Mute'} ${name}`} title={t.muted ? 'Unmute this row' : 'Mute this row'} onClick={() => updateTrack(t.id, { muted: !t.muted })}>
+                    {t.muted ? <VolumeX size={13} /> : <Volume2 size={13} />}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------- ruler and playheads
@@ -434,6 +500,7 @@ export function Timeline({ projectId }: { projectId: ID }): ReactNode {
 
   const scroller = useRef<HTMLDivElement>(null);
   const rowsEl = useRef<HTMLDivElement>(null);
+  const heads = useRef<HTMLDivElement>(null);
   const pendingScroll = useRef<number | null>(null);
   const hadContent = useRef(false);
   const [view, setView] = useState({ from: 0, to: 2048, width: 1000 });
@@ -443,6 +510,7 @@ export function Timeline({ projectId }: { projectId: ID }): ReactNode {
   const rowsRef = useRef(rows);
   rowsRef.current = rows;
   const selected = new Set(selection);
+  const quiet = new Set(doc.tracks.filter((t) => t.hidden || t.muted).map((t) => t.id));
   const end = timelineEnd(doc);
   const contentWidth = Math.max(view.width, LEFT_PAD + end * k + Math.max(240, view.width * 0.3));
 
@@ -777,13 +845,20 @@ export function Timeline({ projectId }: { projectId: ID }): ReactNode {
 
   const projectEnd = doc.settings.durationMode === 'fixed' ? projectDuration(doc) : null;
 
+  const onScroll = (): void => {
+    measure();
+    if (heads.current && scroller.current) heads.current.style.transform = `translateY(${-scroller.current.scrollTop}px)`;
+  };
+
   return (
     <div className="timeline">
       <Toolbar onFit={fit} />
+      <div className="tl-main">
+      <RowHeads doc={doc} rows={rows} inner={heads} />
       <div
         ref={scroller}
         className="tl-scroll"
-        onScroll={measure}
+        onScroll={onScroll}
         onDragOver={onDragOver}
         onDragLeave={() => useEditor.setState({ newTrackHint: null })}
         onDrop={onDrop}
@@ -807,6 +882,7 @@ export function Timeline({ projectId }: { projectId: ID }): ReactNode {
                   height={rows.heights.get(it.trackId) ?? 40}
                   k={k}
                   selected={selected.has(it.id)}
+                  dimmed={quiet.has(it.trackId)}
                   busy={isBeingReplaced(projectJobs, it)}
                   waves={showWaves}
                   viewFrom={view.from}
@@ -836,6 +912,7 @@ export function Timeline({ projectId }: { projectId: ID }): ReactNode {
           {showGhost && <GhostPlayhead scroller={scroller} />}
           <Playhead scroller={scroller} />
         </div>
+      </div>
       </div>
     </div>
   );

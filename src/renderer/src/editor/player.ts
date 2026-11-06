@@ -64,10 +64,11 @@ function sync(): void {
   if (!doc) return;
   const t = s.playhead;
   const byId = new Map(doc.items.map((it) => [it.id, it]));
+  const rows = new Map(doc.tracks.map((row) => [row.id, row]));
 
   for (const [id, el] of visuals) {
     const it = byId.get(id);
-    const visible = !!it && t >= it.start - EDGE && t < itemEnd(it) - EDGE ? 'visible' : 'hidden';
+    const visible = !!it && !rows.get(it.trackId)?.hidden && t >= it.start - EDGE && t < itemEnd(it) - EDGE ? 'visible' : 'hidden';
     if (el.style.visibility !== visible) el.style.visibility = visible;
   }
 
@@ -87,7 +88,8 @@ function sync(): void {
     }
     const target = it.trimStart + (t - it.start) * it.speed;
     if (el.playbackRate !== it.speed) el.playbackRate = it.speed;
-    if (el.muted !== it.muted) el.muted = it.muted;
+    const muted = it.muted || !!rows.get(it.trackId)?.muted;
+    if (el.muted !== muted) el.muted = muted;
     const volume = Math.max(0, Math.min(1, it.volume * fadeGain(it, t)));
     if (Math.abs(el.volume - volume) > 0.005) el.volume = volume;
 

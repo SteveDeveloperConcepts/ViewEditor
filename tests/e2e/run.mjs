@@ -280,6 +280,28 @@ section('timeline', async () => {
   await page.keyboard.press(`${MOD}+z`);
   await sleep(150);
 
+  // Named rows
+  const rowNames = await page.$$eval('.tl-head-name', (e) => e.map((x) => x.textContent));
+  check(rowNames.includes('Video') && rowNames.includes('Audio') && rowNames.includes('Picture'), 'each row is named after what is on it', rowNames.join());
+  await page.click('[aria-label="Hide the picture of Video"]');
+  await sleep(150);
+  await seekTo(1);
+  await sleep(150);
+  check((await page.$eval('.stage video', (v) => v.style.visibility)) === 'hidden', 'a row can be hidden');
+  doc = await storedDoc();
+  check(doc.tracks.some((t) => t.hidden), 'and that is saved with the project');
+  await page.click('[aria-label="Show the picture of Video"]');
+  await page.click('[aria-label="Mute Video"]');
+  await sleep(150);
+  check(await page.$eval('.stage video', (v) => v.muted), 'a row can be muted');
+  await page.click('[aria-label="Unmute Video"]');
+  await page.click('.tl-head:has-text("Video")', { button: 'right' });
+  await page.click('.menu-item:has-text("Rename row")');
+  await page.fill('.modal input', 'Main');
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('.tl-head-name:has-text("Main")');
+  check(true, 'a row can be renamed');
+
   // Grouping
   const g1 = await box(clipSel(parts[0].id));
   const g2 = await box(clipSel(audio.id));

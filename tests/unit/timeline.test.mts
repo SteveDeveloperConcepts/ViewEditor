@@ -14,6 +14,7 @@ import {
   makeImageItem,
   makeTextItem,
   makeVideoItem,
+  moveTrack,
   nearestFreeStart,
   newProjectDoc,
   pasteItems,
@@ -29,6 +30,7 @@ import {
   snapValue,
   splitAt,
   splitItemAt,
+  trackNames,
   trimEndTo,
   trimStartTo,
   ungroupItems,
@@ -92,6 +94,26 @@ test('a piece of a replaced clip no longer offers to restore the whole of it', (
   const clip = { ...doc.items[0], restore: doc.items[0] } as VideoItem;
   const parts = splitItemAt(clip, 2, 'right')!;
   assert.ok(parts.every((p) => !('restore' in p)));
+});
+
+test('rows are named after what is on them, and your own names win', () => {
+  const doc = docWith(clipAt(0, 5));
+  const upper = insertTrack(doc, 0);
+  const lower = insertTrack(upper.doc, 2);
+  const three = { ...lower.doc, items: [...lower.doc.items, clipAt(0, 5)(lower.doc, upper.trackId), makeAudioItem(asset({ kind: 'audio' }), lower.trackId, 0)] };
+  const names = trackNames(three);
+  assert.equal(names.get(upper.trackId), 'Video 2', 'numbered from the bottom');
+  assert.equal(names.get(three.tracks[1].id), 'Video 1');
+  assert.equal(names.get(lower.trackId), 'Audio');
+  const own = { ...three, tracks: three.tracks.map((t) => (t.id === upper.trackId ? { ...t, name: 'B-roll' } : t)) };
+  assert.equal(trackNames(own).get(upper.trackId), 'B-roll');
+});
+
+test('a row can move up and down, but not off the ends', () => {
+  const doc = docWith(clipAt(0, 5));
+  const two = insertTrack(doc, 0);
+  assert.equal(moveTrack(two.doc, two.trackId, 1).tracks[1].id, two.trackId);
+  assert.equal(moveTrack(two.doc, two.trackId, -1), two.doc);
 });
 
 test('project length is the end of the last element unless fixed', () => {

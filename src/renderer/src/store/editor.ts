@@ -21,6 +21,7 @@ import {
   makeImageItem,
   makeTextItem,
   makeVideoItem,
+  moveTrack,
   nearestFreeStart,
   neighbourBounds,
   pasteItems,
@@ -798,6 +799,16 @@ export function selectionIsGroup(doc: ProjectDoc, selection: ID[]): boolean {
 export function selectionHasGroup(doc: ProjectDoc, selection: ID[]): boolean {
   const set = new Set(selection);
   return doc.items.some((it) => set.has(it.id) && it.groupId);
+}
+
+// ---------------------------------------------------------------- rows
+
+export function updateTrack(id: ID, patch: Partial<Track>): void {
+  apply((doc) => ({ ...doc, tracks: doc.tracks.map((t) => (t.id === id ? { ...t, ...patch } : t)) }));
+}
+
+export function moveRow(id: ID, step: number): void {
+  apply((doc) => moveTrack(doc, id, step));
 }
 
 // ---------------------------------------------------------------- project settings

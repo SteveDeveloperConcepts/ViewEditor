@@ -212,6 +212,12 @@ export interface ProjectSettings {
 
 export interface Track {
   id: ID;
+  /** A name of your own, instead of the one worked out from what is on the row. */
+  name?: string;
+  /** The row's picture is left out, though its sound still plays. */
+  hidden?: boolean;
+  /** The row's sound is left out. */
+  muted?: boolean;
 }
 
 export type ItemType = 'video' | 'image' | 'audio' | 'text';

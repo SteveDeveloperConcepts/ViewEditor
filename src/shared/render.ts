@@ -161,6 +161,7 @@ export function planLayers(doc: ProjectDoc, window: TimeWindow): LayerPlan {
   const runTexts: TextItem[][] = [];
   let open: TextItem[] | null = null;
   for (let i = doc.tracks.length - 1; i >= 0; i--) {
+    if (doc.tracks[i].hidden) continue;
     const onTrack = items.filter((it) => it.trackId === doc.tracks[i].id).sort((a, b) => a.start - b.start);
     const media = onTrack.filter((it): it is VideoItem | ImageItem => it.type === 'video' || it.type === 'image');
     const texts = onTrack.filter((it): it is TextItem => it.type === 'text' && it.text.trim().length > 0);
@@ -458,12 +459,13 @@ export const AUDIO_FADE_SECONDS = 0.5;
 function buildAudio(input: BuildInput, plan: LayerPlan): { args: string[]; out: string } {
   const { sources, workDir } = input;
   const duration = plan.duration;
+  const silent = new Set(input.doc.tracks.filter((t) => t.muted).map((t) => t.id));
   const inputs: string[] = ['-f', 'lavfi', '-t', num(duration), '-i', 'anullsrc=r=48000:cl=stereo'];
   const graph: string[] = [];
   const labels: string[] = ['[0:a]'];
   let n = 1;
   for (const it of plan.items) {
-    if (!isTimed(it) || it.muted || it.volume <= 0.001) continue;
+    if (!isTimed(it) || it.muted || silent.has(it.trackId) || it.volume <= 0.001) continue;
     const src = sources[it.assetId];
     if (!src || !src.hasAudio) continue;
     const span = it.duration * it.speed;

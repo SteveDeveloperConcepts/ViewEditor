@@ -33,6 +33,21 @@ function withClip(patch: Partial<Asset> = {}, duration = 10): { doc: ProjectDoc;
   return { doc, a };
 }
 
+test('a hidden row leaves the picture but keeps its sound, and a muted row the other way round', () => {
+  const { doc } = withClip({ hasAudio: true, audioChannels: 2 });
+  const window = { start: 0, end: 10 };
+  const hidden = { ...doc, tracks: [{ ...doc.tracks[0], hidden: true }] };
+  assert.equal(planLayers(hidden, window).ops.length, 0);
+  assert.equal(planLayers(doc, window).ops.length, 1);
+  const spec = resolveOutputSpec(doc, {});
+  const source: RenderSource = { path: 'a.mp4', kind: 'video', hasAudio: true, audioChannels: 2, hasAlpha: false, isHdr: false, colorMatrix: 'bt709', videoCodec: 'h264', seekable: true };
+  const build = (d: ProjectDoc) => buildRenderCommands({ doc: d, window, spec, sources: { a1: source }, workDir: 'w', outputPath: 'o.mp4', caps: { tonemap: false } });
+  assert.ok(build(hidden).audio.args.includes('a.mp4'), 'the sound of a hidden row still plays');
+  const muted = { ...doc, tracks: [{ ...doc.tracks[0], muted: true }] };
+  assert.ok(!build(muted).audio.args.includes('a.mp4'));
+  assert.ok(build(muted).chunks[0].args.includes('a.mp4'), 'the picture of a muted row still shows');
+});
+
 test('export size follows the short side, for any shape', () => {
   assert.deepEqual(exportSize(1920, 1080, 720), { width: 1280, height: 720 });
   assert.deepEqual(exportSize(1080, 1920, 720), { width: 720, height: 1280 });
