@@ -337,7 +337,7 @@ export function Inspector({ projectId }: { projectId: ID }): ReactNode {
         <section>
           <h3>AI</h3>
           {actionsFor(item).map((action) => (
-            <Button key={action} size="small" icon={<Sparkles size={13} />} onClick={() => (connected ? openClipAi(item, action, projectId) : openConnections())}>
+            <Button key={action} size="small" icon={<Sparkles size={13} />} onClick={() => (connected ? openClipAi(item, action) : openConnections())}>
               {actionLabel(action)}
             </Button>
           ))}

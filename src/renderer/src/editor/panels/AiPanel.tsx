@@ -1,4 +1,4 @@
-// The AI tools panel: generate clips and pictures straight into the project.
+// The AI tools panel: every AI tool in one place. A clip's own AI actions open here with the clip filled in.
 
 import type { ReactNode } from 'react';
 import { useState } from 'react';
@@ -7,6 +7,7 @@ import type { AiPlacement, AiTask } from '@shared/ai';
 import type { ID } from '@shared/types';
 import { Field, IconButton } from '@/components/ui';
 import { AiForm } from '@/ai/AiForm';
+import { ClipAiForm, useClipAi } from '@/ai/clipActions';
 import { openConnections } from '@/ai/ConnectionsDialog';
 import { draftTask, saveDraftTask } from '@/ai/drafts';
 import { JobList } from '@/ai/JobList';
@@ -18,12 +19,15 @@ const TASKS: { task: AiTask; label: string; placeholder: string; hint?: string }
   { task: 'text-to-image', label: 'Text to image', placeholder: 'A clean product photo on a warm background' },
   { task: 'talking-photo', label: 'Talking photo', placeholder: '', hint: 'Pick a portrait, and audio or a video with sound. Text to speech under Audio can make a voice-over.' },
   { task: 'edit-video', label: 'Edit a video', placeholder: 'Change the jacket to red leather', hint: 'To edit a clip on the timeline, select it and choose Edit with AI.' },
+  { task: 'lip-sync', label: 'Lip-sync a video', placeholder: '', hint: 'Pick a video, and the sound it should speak.' },
 ];
 
 type Where = 'playhead' | 'end';
 
 export function AiPanel({ projectId }: { projectId: ID }): ReactNode {
   const doc = useEditor((s) => s.doc)!;
+  const request = useClipAi((s) => s.request);
+  const clip = request && doc.items.find((it) => it.id === request.itemId);
   const [task, setTask] = useState<AiTask>(() => draftTask(projectId) ?? 'text-to-video');
   const [where, setWhere] = useState<Where>('playhead');
   const current = TASKS.find((t) => t.task === task)!;
@@ -40,34 +44,40 @@ export function AiPanel({ projectId }: { projectId: ID }): ReactNode {
           <Settings2 size={15} />
         </IconButton>
       </div>
-      <select className="select" aria-label="What to generate" value={task} onChange={(e) => choose(e.target.value as AiTask)}>
-        {TASKS.map((t) => (
-          <option key={t.task} value={t.task}>
-            {t.label}
-          </option>
-        ))}
-      </select>
-      {current.hint && <p className="faint panel-note">{current.hint}</p>}
-      <AiForm
-        key={task}
-        task={task}
-        draftKey={`${projectId}:${task}`}
-        projectId={projectId}
-        placement={placement}
-        width={doc.settings.width}
-        height={doc.settings.height}
-        promptPlaceholder={current.placeholder}
-        extra={
-          doc.items.length > 0 && (
-            <Field label="Place it">
-              <select className="select" aria-label="Where to place the result" value={where} onChange={(e) => setWhere(e.target.value as Where)}>
-                <option value="playhead">At the playhead, over the video</option>
-                <option value="end">After the last clip</option>
-              </select>
-            </Field>
-          )
-        }
-      />
+      {clip && request ? (
+        <ClipAiForm item={clip} action={request.action} projectId={projectId} />
+      ) : (
+        <>
+          <select className="select" aria-label="What to generate" value={task} onChange={(e) => choose(e.target.value as AiTask)}>
+            {TASKS.map((t) => (
+              <option key={t.task} value={t.task}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+          {current.hint && <p className="faint panel-note">{current.hint}</p>}
+          <AiForm
+            key={task}
+            task={task}
+            draftKey={`${projectId}:${task}`}
+            projectId={projectId}
+            placement={placement}
+            width={doc.settings.width}
+            height={doc.settings.height}
+            promptPlaceholder={current.placeholder}
+            extra={
+              doc.items.length > 0 && (
+                <Field label="Place it">
+                  <select className="select" aria-label="Where to place the result" value={where} onChange={(e) => setWhere(e.target.value as Where)}>
+                    <option value="playhead">At the playhead, over the video</option>
+                    <option value="end">After the last clip</option>
+                  </select>
+                </Field>
+              )
+            }
+          />
+        </>
+      )}
       <JobList projectId={projectId} />
     </div>
   );

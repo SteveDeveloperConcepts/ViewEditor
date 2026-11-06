@@ -1,13 +1,15 @@
-// AI actions on one element of the timeline: edit it, extend it, animate it, make it talk.
+// AI actions on one clip of the timeline: edit it, extend it, animate it, make it talk. They open the AI
+// panel with the clip already filled in, so there is one place for every AI tool.
 
 import type { ReactNode } from 'react';
+import { X } from 'lucide-react';
+import { create } from 'zustand';
 import { formatClock } from '@shared/time';
 import type { AiTask } from '@shared/ai';
 import type { ID, Item } from '@shared/types';
-import { Modal } from '@/components/Modal';
-import { useEditor } from '@/store/editor';
+import { IconButton } from '@/components/ui';
+import { setPanel, useEditor } from '@/store/editor';
 import { getAssets } from '@/store/library';
-import { showModal } from '@/store/ui';
 import { AiForm, type AiFormProps } from './AiForm';
 
 export type ClipAction = 'edit' | 'extend' | 'animate' | 'talk' | 'lip-sync';
@@ -66,12 +68,32 @@ function formProps(item: Item, action: ClipAction): Partial<AiFormProps> {
   };
 }
 
-function ClipBody({ item, action, projectId, close }: { item: Item; action: ClipAction; projectId: ID; close: () => void }): ReactNode {
+/** The clip action the AI panel is showing, if any. */
+export const useClipAi = create<{ request: { itemId: ID; action: ClipAction } | null }>(() => ({ request: null }));
+
+export function openClipAi(item: Item, action: ClipAction): void {
+  useClipAi.setState({ request: { itemId: item.id, action } });
+  setPanel('ai');
+}
+
+export function closeClipAi(): void {
+  useClipAi.setState({ request: null });
+}
+
+/** The AI form with a clip filled in, as the AI panel shows it. */
+export function ClipAiForm({ item, action, projectId }: { item: Item; action: ClipAction; projectId: ID }): ReactNode {
   const doc = useEditor((s) => s.doc);
   const info = ACTIONS[action];
   return (
-    <Modal title={info.title} onClose={close}>
+    <>
+      <div className="row">
+        <h3 className="grow">{info.title}</h3>
+        <IconButton small label="Back to all AI tools" onClick={closeClipAi}>
+          <X size={14} />
+        </IconButton>
+      </div>
       <AiForm
+        key={`${item.id}:${action}`}
         task={info.task}
         projectId={projectId}
         placement={{ kind: 'timeline' }}
@@ -80,15 +102,11 @@ function ClipBody({ item, action, projectId, close }: { item: Item; action: Clip
         promptLabel={info.promptLabel}
         promptPlaceholder={info.placeholder}
         submitLabel={info.submit}
-        onSubmitted={close}
+        onSubmitted={closeClipAi}
         {...formProps(item, action)}
       />
-    </Modal>
+    </>
   );
-}
-
-export function openClipAi(item: Item, action: ClipAction, projectId: ID): void {
-  void showModal<void>((close) => <ClipBody item={item} action={action} projectId={projectId} close={() => close()} />);
 }
 
 /** True while this element is waiting on a generation that will replace it. */

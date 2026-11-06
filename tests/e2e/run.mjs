@@ -590,7 +590,14 @@ section('export', async () => {
   // The Export dialog: nothing starts until it has been filled in.
   await page.click('.editor-top button:has-text("Export")');
   await page.waitForSelector('.modal select[aria-label="Export quality"]');
+  await sleep(300);
   await shot(page, '16-export-dialog');
+  const onTop = await page.evaluate(() => {
+    // Nothing from the canvas may show through a dialog.
+    const b = document.querySelector('.modal').getBoundingClientRect();
+    return !!document.elementFromPoint(b.left + b.width / 2, b.top + b.height - 4)?.closest('.modal');
+  });
+  check(onTop, 'dialogs sit above the canvas');
   const options = await page.$$eval('.modal select[aria-label="Export quality"] option', (e) => e.map((x) => x.textContent));
   check(options.some((o) => o.startsWith('YouTube 1080p')), 'YouTube presets are offered');
   check((await page.inputValue('.modal select[aria-label="Export quality"]')) === 'match', 'it starts from the size of the footage');
@@ -1471,24 +1478,18 @@ section('ai', async () => {
 
     // Edit with AI
     await p.click('.inspector button:has-text("Edit with AI")');
-    await p.waitForSelector('.modal .ai-form select[aria-label="Model"]');
-    const onTop = await p.evaluate(() => {
-      // Nothing from the canvas may show through a dialog.
-      const box = document.querySelector('.modal').getBoundingClientRect();
-      const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height - 4);
-      return !!hit?.closest('.modal');
-    });
-    check(onTop, 'dialogs sit above the canvas');
-    const editModels = await p.$$eval('.modal select[aria-label="Model"] option', (e) => e.map((o) => o.value));
+    await p.waitForSelector('.panel .ai-form select[aria-label="Model"]');
+    check(!(await p.$('.modal')) && !(await p.$('.panel select[aria-label="What to generate"]')), 'a clip action opens in the AI panel, with the clip filled in');
+    const editModels = await p.$$eval('.panel select[aria-label="Model"] option', (e) => e.map((o) => o.value));
     check(editModels.includes('runway:edit-video:aleph2'), 'video editing models are offered');
-    await p.selectOption('.modal select[aria-label="Model"]', 'runway:edit-video:aleph2');
+    await p.selectOption('.panel select[aria-label="Model"]', 'runway:edit-video:aleph2');
     await wait(100);
-    await shot(p, '44-ai-edit-dialog');
+    await shot(p, '44-ai-edit-panel');
     const before = (await stored()).items[0];
     fake.pollsToFinish = 6;
-    await p.fill('.modal textarea', 'Make it golden hour');
-    await p.click('.modal button:has-text("Edit this clip")');
-    await p.waitForFunction(() => !document.querySelector('.modal'));
+    await p.fill('.panel .ai-form textarea', 'Make it golden hour');
+    await p.click('.panel button:has-text("Edit this clip")');
+    await p.waitForSelector('.panel select[aria-label="What to generate"]');
     await p.waitForSelector('.clip-busy', { timeout: 5000 });
     check(true, 'the clip shows that AI is working on it');
     fake.pollsToFinish = 2;
@@ -1515,12 +1516,12 @@ section('ai', async () => {
     // Extend with AI
     await selectClip(first.id);
     await p.click('.inspector button:has-text("Extend with AI")');
-    await p.waitForSelector('.modal .ai-form select[aria-label="Model"]');
-    await p.selectOption('.modal select[aria-label="Model"]', 'fal:image-to-video:kling/v4/image-to-video');
+    await p.waitForSelector('.panel button:has-text("Extend this clip")');
+    await p.selectOption('.panel select[aria-label="Model"]', 'fal:image-to-video:kling/v4/image-to-video');
     await wait(100);
-    await p.fill('.modal textarea', 'The boat drifts on');
+    await p.fill('.panel .ai-form textarea', 'The boat drifts on');
     fake.pollsToFinish = 6;
-    await p.click('.modal button:has-text("Extend this clip")');
+    await p.click('.panel button:has-text("Extend this clip")');
     await p.waitForSelector('.tl-pending', { timeout: 5000 });
     check(true, 'the timeline shows where the new shot will land');
     await shot(p, '45-ai-pending');
@@ -1536,11 +1537,11 @@ section('ai', async () => {
     list = await pclips();
     await selectClip(list[0].id);
     await p.click('.inspector button:has-text("Animate with AI")');
-    await p.waitForSelector('.modal .ai-form select[aria-label="Model"]');
-    await p.selectOption('.modal select[aria-label="Model"]', 'fal:image-to-video:kling/v4/image-to-video');
+    await p.waitForSelector('.panel button:has-text("Animate this image")');
+    await p.selectOption('.panel select[aria-label="Model"]', 'fal:image-to-video:kling/v4/image-to-video');
     await wait(100);
-    await p.fill('.modal textarea', 'A slow push in');
-    await p.click('.modal button:has-text("Animate this image")');
+    await p.fill('.panel .ai-form textarea', 'A slow push in');
+    await p.click('.panel button:has-text("Animate this image")');
     await p.waitForSelector('.clip.video', { timeout: 15000 });
     await wait(300);
     check((await pclips()).length === 1, 'the animation replaces the image');
@@ -1578,6 +1579,9 @@ section('ai', async () => {
     await p.selectOption('.ai-form select[aria-label="Audio"]', { label: 'clip-a.mp4' });
     await p.waitForSelector('.ai-form [aria-label="Use the sound from"]');
     check(true, 'and the stretch to use can be set');
+    await p.selectOption('select[aria-label="What to generate"]', 'lip-sync');
+    await p.waitForSelector('.panel .notice, .panel .ai-form');
+    check(true, 'lip-sync is in the AI panel with the other tools');
     await p.selectOption('select[aria-label="What to generate"]', 'text-to-video');
 
     // A failure is explained, and can be retried

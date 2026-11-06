@@ -21,6 +21,7 @@ import {
 import { isActive } from '@shared/ai';
 import { projectDuration } from '@shared/timeline';
 import type { Asset, ID } from '@shared/types';
+import { closeClipAi } from '@/ai/clipActions';
 import { forgetDrafts } from '@/ai/drafts';
 import { Button, IconButton, Spinner } from '@/components/ui';
 import { api, errorMessage, isMod, isTyping, MOD_LABEL } from '@/lib/api';
@@ -289,6 +290,7 @@ export function EditorPage({ projectId, showAi, add }: { projectId: ID; showAi?:
       off();
       pause();
       forgetDrafts(projectId);
+      closeClipAi();
       const closing = useEditor.getState().doc;
       void closeProject(projectId).then(() => discardIfUnused(closing?.id === projectId ? closing : null));
     };

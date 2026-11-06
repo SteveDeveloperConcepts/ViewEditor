@@ -131,7 +131,7 @@ export function itemMenu(item: Item, projectId: ID): MenuEntry[] {
     ...(many ? [] : actionsFor(item)).map((action) => ({
       label: actionLabel(action),
       icon: <Sparkles size={15} />,
-      onSelect: () => (useAi.getState().providers.some((p) => p.connected) ? openClipAi(item, action, projectId) : openConnections()),
+      onSelect: () => (useAi.getState().providers.some((p) => p.connected) ? openClipAi(item, action) : openConnections()),
     })),
     (many || selectionHasGroup(doc, s.selection)) && null,
     many && { label: 'Group', icon: <Group size={15} />, hint: `${MOD_LABEL}+G`, onSelect: groupSelection },
