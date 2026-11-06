@@ -24,6 +24,8 @@ import {
   rangeFree,
   removeItems,
   resizeCanvas,
+  setPlaysFrom,
+  setPlaysTo,
   setSourceRange,
   snapClip,
   snapPoints,
@@ -122,6 +124,18 @@ test('a row can move up and down, but not off the ends', () => {
   const two = insertTrack(doc, 0);
   assert.equal(moveTrack(two.doc, two.trackId, 1).tracks[1].id, two.trackId);
   assert.equal(moveTrack(two.doc, two.trackId, -1), two.doc);
+});
+
+test('typing past the other end of a clip moves the stretch instead of collapsing it', () => {
+  const doc = docWith(clipAt(0, 3, 0));
+  const clip = doc.items[0] as VideoItem;
+  const later = setPlaysFrom(doc, clip, 5, asset());
+  assert.deepEqual({ trimStart: later.trimStart, duration: later.duration }, { trimStart: 5, duration: 3 }, 'From past To keeps the length');
+  assert.equal(setPlaysFrom(doc, clip, 1, asset()).duration, 2, 'From before To trims');
+  const at8 = { ...clip, trimStart: 8 };
+  const earlier = setPlaysTo(doc, at8, 4, asset());
+  assert.deepEqual({ trimStart: earlier.trimStart, duration: earlier.duration }, { trimStart: 1, duration: 3 }, 'To before From keeps the length');
+  assert.equal(setPlaysTo(doc, at8, 9, asset()).duration, 1, 'To after From trims');
 });
 
 test('project length is the end of the last element unless fixed', () => {

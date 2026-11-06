@@ -341,6 +341,17 @@ export function setSourceRange(doc: ProjectDoc, it: MediaItem, from: number, to:
   return { ...it, trimStart, duration: Math.max(MIN_ITEM_DURATION, Math.min(wanted, nextStart - it.start)) };
 }
 
+/** Moves where a clip starts playing its file. Going past its end carries the whole stretch along, instead of collapsing it. */
+export function setPlaysFrom(doc: ProjectDoc, it: MediaItem, from: number, asset: Asset | undefined): MediaItem {
+  const to = it.trimStart + it.duration * it.speed;
+  return setSourceRange(doc, it, from, from < to ? to : from + (to - it.trimStart), asset);
+}
+
+/** Moves where a clip stops playing its file. Going back past its start carries the whole stretch along. */
+export function setPlaysTo(doc: ProjectDoc, it: MediaItem, to: number, asset: Asset | undefined): MediaItem {
+  return setSourceRange(doc, it, to > it.trimStart ? it.trimStart : Math.max(0, to - it.duration * it.speed), to, asset);
+}
+
 /**
  * Puts sound on a row of its own, lined up with a video clip, and mutes the clip. The sound is the clip's
  * own stretch of `sound` unless `stretch` says otherwise. The row is the first sound-only row below the

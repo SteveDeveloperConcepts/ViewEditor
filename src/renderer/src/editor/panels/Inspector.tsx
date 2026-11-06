@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { FONT_FAMILIES } from '@shared/constants';
 import { formatClock } from '@shared/time';
-import { isTimed, itemEnd, nearestFreeStart, setSourceRange, trimEndTo, updateItems } from '@shared/timeline';
+import { isTimed, itemEnd, nearestFreeStart, setPlaysFrom, setPlaysTo, trimEndTo, updateItems } from '@shared/timeline';
 import type { Asset, Item, MediaItem, ProjectDoc, TextItem, TextStyle } from '@shared/types';
 import { Button, ColorField, FieldRow, IconButton, Notice, NumberInput, Segmented, Slider, Switch, TimeInput } from '@/components/ui';
 import { actionLabel, actionsFor, openClipAi } from '@/ai/clipActions';
@@ -80,7 +80,7 @@ function Timing({ item, asset }: { item: Item; asset: Asset | undefined }): Reac
               <TimeInput
                 label="Plays from"
                 value={item.trimStart}
-                onCommit={(t) => change((doc, it) => (isTimed(it) ? setSourceRange(doc, it, t, it.trimStart + it.duration * it.speed, asset) : it))}
+                onCommit={(t) => change((doc, it) => (isTimed(it) ? setPlaysFrom(doc, it, t, asset) : it))}
               />
             </label>
             <label className="field">
@@ -88,7 +88,7 @@ function Timing({ item, asset }: { item: Item; asset: Asset | undefined }): Reac
               <TimeInput
                 label="Plays to"
                 value={item.trimStart + item.duration * item.speed}
-                onCommit={(t) => change((doc, it) => (isTimed(it) ? setSourceRange(doc, it, it.trimStart, t, asset) : it))}
+                onCommit={(t) => change((doc, it) => (isTimed(it) ? setPlaysTo(doc, it, t, asset) : it))}
               />
             </label>
           </div>
