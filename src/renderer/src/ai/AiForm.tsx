@@ -53,11 +53,19 @@ function chooseFrom(option: AiOption | null, current: AiValue | undefined): AiVa
   return option.default ?? option.values?.[0] ?? undefined;
 }
 
-function initialChoices(model: AiModel, width: number, height: number, previous: AiChoices): AiChoices {
-  const seconds = typeof previous.duration === 'number' ? previous.duration : 5;
+/** The length to start from: what was chosen already if this model has it, then the clip's own length, then the model's default. */
+function lengthFor(model: AiModel, previous: AiChoices, seconds: number | undefined): AiValue | undefined {
+  const option = model.duration;
+  if (!option) return undefined;
+  if (previous.duration !== undefined && (!option.values || option.values.includes(previous.duration))) return previous.duration;
+  if (seconds !== undefined) return pickDuration(option, seconds);
+  return chooseFrom(option, undefined) ?? pickDuration(option, typeof previous.duration === 'number' ? previous.duration : 5);
+}
+
+function initialChoices(model: AiModel, width: number, height: number, previous: AiChoices, seconds: number | undefined): AiChoices {
   return {
     prompt: previous.prompt,
-    duration: model.duration ? (chooseFrom(model.duration, previous.duration) ?? pickDuration(model.duration, seconds)) : undefined,
+    duration: lengthFor(model, previous, seconds),
     aspect: model.aspect ? pickAspect(model.aspect, width, height) : undefined,
     resolution: chooseFrom(model.resolution, previous.resolution),
     sound: model.sound ? (previous.sound ?? model.sound.default) : undefined,
@@ -115,6 +123,8 @@ export interface AiFormProps {
   /** The frame the result should suit. */
   width: number;
   height: number;
+  /** The length to aim for, such as that of the clip being edited. */
+  seconds?: number;
   promptLabel?: string;
   promptPlaceholder?: string;
   submitLabel?: string;
@@ -124,7 +134,7 @@ export interface AiFormProps {
 }
 
 export function AiForm(props: AiFormProps): ReactNode {
-  const { task, projectId, placement, width, height, promptLabel = 'Prompt', promptPlaceholder, submitLabel = 'Generate', note, onSubmitted } = props;
+  const { task, projectId, placement, width, height, seconds, promptLabel = 'Prompt', promptPlaceholder, submitLabel = 'Generate', note, onSubmitted } = props;
   const models = useModels(task);
   const providers = useAi((s) => s.providers);
   const connected = useConnected();
@@ -142,14 +152,14 @@ export function AiForm(props: AiFormProps): ReactNode {
 
   useEffect(() => {
     if (!model) return;
-    setChoices((c) => initialChoices(model, width, height, c));
+    setChoices((c) => initialChoices(model, width, height, c, seconds));
     setPrice(null);
     let live = true;
     void api.ai.price(model.key).then((p) => live && setPrice(p));
     return () => {
       live = false;
     };
-  }, [model, width, height]);
+  }, [model, width, height, seconds]);
 
   const groups = useMemo(() => {
     const byProvider = new Map<string, AiModel[]>();

@@ -60,8 +60,9 @@ function formProps(item: Item, action: ClipAction): Partial<AiFormProps> {
   }
   return {
     video: { assetId: item.assetId, start, end },
+    seconds: item.duration,
     placement: { kind: 'replace', itemId: item.id },
-    note: `The ${length} of footage in this clip is sent to the service. The result replaces it on the timeline, and undo brings the original back. Most models accept 10 to 30 seconds, so split longer clips first.`,
+    note: `The ${length} of footage in this clip is sent to the service. The result replaces it on the timeline, and undo brings the original back. If a model refuses a clip this long, split it and edit one piece at a time.`,
   };
 }
 
