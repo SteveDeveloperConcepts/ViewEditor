@@ -73,7 +73,7 @@ function SpeechBody({ projectId, place, close }: { projectId: ID | null; place: 
 
   return (
     <Modal
-      title="Text to speech"
+      title="Type a voice-over"
       size="wide"
       onClose={close}
       dismissable={!busy}

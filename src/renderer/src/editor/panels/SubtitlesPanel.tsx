@@ -187,7 +187,7 @@ export function SubtitlesPanel({ projectName }: { projectName: string; projectId
           <div className="empty-icon">
             <Captions size={20} />
           </div>
-          <p>Make them from the speech in your video, add them by hand, or use an SRT or VTT file. Text to speech adds its own.</p>
+          <p>Make them from the speech in your video, add them by hand, or use an SRT or VTT file. A typed voice-over adds its own.</p>
         </div>
       )}
       {cues.length > 0 && <p className="faint panel-note">Total length {formatTimecode(itemEnd(cues[cues.length - 1]))}</p>}

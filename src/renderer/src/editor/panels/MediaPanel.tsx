@@ -153,10 +153,10 @@ export function MediaPanel({ kind, projectId }: { kind: 'media' | 'audio'; proje
       {kind === 'audio' && (
         <div className="panel-actions">
           <Button icon={<Mic size={14} />} onClick={() => void openRecorder({ projectId, addToTimeline: true, mode: 'audio' })}>
-            Voice-over
+            Record a voice
           </Button>
           <Button icon={<Speech size={14} />} onClick={() => openSpeechDialog(projectId)}>
-            Text to speech
+            Type a voice
           </Button>
           <Button className="span-2" icon={<AudioLines size={14} />} onClick={(e) => openMenuAt(e.currentTarget, extractEntries(assets ?? [], projectId))}>
             Extract audio from a video

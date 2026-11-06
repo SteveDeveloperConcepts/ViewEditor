@@ -1140,7 +1140,7 @@ section('tools', async () => {
   // Text to speech inside a project
   await newProject([media('clip-a.mp4')]);
   await page.click('.rail-item:has-text("Audio")');
-  await page.click('.panel button:has-text("Text to speech")');
+  await page.click('.panel button:has-text("Type a voice")');
   await page.waitForSelector('.modal textarea');
   await page.fill('.modal textarea', 'Hello there. This line was spoken by the computer.');
   await page.click('.modal-foot button:has-text("Add voice-over")');
@@ -1663,7 +1663,7 @@ section('ai', async () => {
     await blank([media('tone.mp3')]);
     const toneClip = (await pclips())[0];
     await selectClip(toneClip.id);
-    await p.click('.inspector button:has-text("Generate a picture for this")');
+    await p.click('.inspector button:has-text("Generate video for this sound")');
     await p.waitForSelector('.ai-form .sound-window');
     check((await p.inputValue('.ai-form select[aria-label="Sound from"]')).length > 0, 'a piece of sound opens the AI form with that sound chosen');
     check(await p.isVisible('.ai-form .segmented button[aria-pressed="true"]:has-text("My media")'), 'and the Sound row set to it');

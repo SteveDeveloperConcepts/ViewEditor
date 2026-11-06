@@ -97,7 +97,7 @@ const TOPICS: { title: string; words: string; steps: string[] }[] = [
   {
     title: 'Replace the sound of a video with a voice-over',
     words: 'narration text to speech mute microphone',
-    steps: ['Open Audio in the editor, and choose Voice-over or Text to speech.', 'When it lands, the app asks whether to mute the sound underneath.'],
+    steps: ['Open Audio in the editor, and choose Record a voice or Type a voice.', 'When it lands, the app asks whether to mute the sound underneath.'],
   },
   {
     title: 'Use something in another project',

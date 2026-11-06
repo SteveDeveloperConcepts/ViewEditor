@@ -175,7 +175,7 @@ function AudioControls({ item, asset }: { item: MediaItem; asset: Asset | undefi
           )}
           {item.type === 'audio' && asset && (
             <Button size="small" icon={<Sparkles size={13} />} onClick={() => void generatePictureFor(asset, item.trimStart, item.duration * item.speed)}>
-              Generate a picture for this
+              Generate video for this sound
             </Button>
           )}
         </section>

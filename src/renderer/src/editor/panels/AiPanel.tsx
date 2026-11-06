@@ -17,7 +17,7 @@ const TASKS: { task: AiTask; label: string; placeholder: string; hint?: string }
   { task: 'text-to-video', label: 'Text to video', placeholder: 'A slow aerial shot over a coastline at sunrise' },
   { task: 'image-to-video', label: 'Image to video', placeholder: 'The camera drifts forward as the scene comes to life' },
   { task: 'text-to-image', label: 'Text to image', placeholder: 'A clean product photo on a warm background' },
-  { task: 'talking-photo', label: 'Talking photo', placeholder: '', hint: 'Pick a portrait, and audio or a video with sound. Text to speech under Audio can make a voice-over.' },
+  { task: 'talking-photo', label: 'Talking photo', placeholder: '', hint: 'Pick a portrait, and audio or a video with sound. Type a voice under Audio makes a voice-over.' },
   { task: 'edit-video', label: 'Edit a video', placeholder: 'Change the jacket to red leather', hint: 'To edit a clip on the timeline, select it and choose Edit with AI.' },
   { task: 'lip-sync', label: 'Lip-sync a video', placeholder: '', hint: 'Pick a video, and the sound it should speak.' },
 ];

@@ -92,7 +92,7 @@ function waysToUse(asset: Asset): MediaAction[] {
   if (asset.kind === 'video' && asset.hasAudio) {
     actions.push({ label: 'Extract audio', icon: <AudioLines size={15} />, run: () => void (open ? addSoundOf(asset) : extractToMedia(asset)) });
   }
-  if (asset.hasAudio) actions.push({ label: 'Generate a picture for this', icon: <Sparkles size={15} />, run: () => void generatePictureFor(asset) });
+  if (asset.hasAudio) actions.push({ label: 'Generate video for this sound', icon: <Sparkles size={15} />, run: () => void generatePictureFor(asset) });
   return actions;
 }
 
@@ -121,11 +121,11 @@ function PreviewBody({ asset, close }: { asset: Asset; close: () => void }): Rea
         {asset.kind === 'image' ? (
           <img src={assetUrl(asset, 'original')} alt="" draggable={false} />
         ) : asset.kind === 'video' ? (
-          <video src={assetUrl(asset, 'preview')} controls autoPlay playsInline />
+          <video src={assetUrl(asset, 'preview')} controls playsInline />
         ) : (
           <div className="preview-sound">
             {asset.hasWave && <img src={assetUrl(asset, 'wave')} alt="" draggable={false} />}
-            <audio src={assetUrl(asset, 'preview')} controls autoPlay />
+            <audio src={assetUrl(asset, 'preview')} controls />
           </div>
         )}
       </div>

@@ -130,7 +130,7 @@ export function ScriptPage({ prefill }: { prefill?: ScriptOrigin | null }): Reac
   };
   const music = useMemo(() => (assets ?? []).filter((a) => a.kind === 'audio'), [assets]);
   const voiceName = voices?.find((v) => v.id === settings.voice)?.name ?? 'Voice';
-  const subtitleName = SUBTITLE_STYLES.find((s) => s.id === settings.subtitleStyle)?.label ?? 'Subtitles';
+  const subtitleName = `Subtitles: ${SUBTITLE_STYLES.find((s) => s.id === settings.subtitleStyle)?.label ?? 'Clean'}`;
   const musicName = music.find((m) => m.id === settings.musicAssetId)?.name ?? 'No music';
   const busy = writing || !!stage;
 
