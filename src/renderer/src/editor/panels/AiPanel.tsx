@@ -62,6 +62,7 @@ export function AiPanel({ projectId }: { projectId: ID }): ReactNode {
             draftKey={`${projectId}:${task}`}
             projectId={projectId}
             placement={placement}
+            newClip={task === 'text-to-video' || task === 'image-to-video'}
             width={doc.settings.width}
             height={doc.settings.height}
             promptPlaceholder={current.placeholder}

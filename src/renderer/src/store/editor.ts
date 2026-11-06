@@ -10,6 +10,7 @@ import {
   canvasTextScale,
   closeGap,
   contentEnd,
+  detachAudio,
   fitBox,
   type Gap,
   groupItems,
@@ -639,7 +640,18 @@ export function placeGenerated(asset: Asset, placement: AiPlacement): ID | null 
   const doc = get().doc;
   if (!doc) return null;
   if (placement.kind === 'none') return null;
-  if (placement.kind === 'timeline') return reveal(addAsset(asset, placement.sequence ? {} : { atPlayhead: true, at: placement.at }));
+  if (placement.kind === 'timeline') {
+    const where: Placement = placement.sequence ? {} : { atPlayhead: true, at: placement.at };
+    const { sound } = placement;
+    const file = sound && getAssets()[sound.assetId];
+    if (!sound || !file) return reveal(addAsset(asset, where));
+    // The clip and its sound land together, as one step to undo.
+    beginGesture();
+    const id = addAsset(asset, where);
+    if (id) apply((d) => detachAudio(d, id, file, sound)?.doc ?? d);
+    endGesture({ snapToFrames: true });
+    return reveal(id);
+  }
 
   if (placement.kind === 'after') {
     const item = doc.items.find((it) => it.id === placement.itemId);

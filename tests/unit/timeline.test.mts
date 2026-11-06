@@ -71,6 +71,14 @@ test('extracting audio lines the sound up under the clip, and mutes the clip', (
   assert.equal(second.doc.tracks.length, 2, 'an existing sound row with room is used');
 });
 
+test('a chosen stretch of sound can go under a clip instead of its own', () => {
+  const sound = asset({ id: 'a2', kind: 'audio', duration: 20 });
+  const doc = docWith(clipAt(4, 3));
+  const result = detachAudio(doc, doc.items[0].id, sound, { start: 5, duration: 3 })!;
+  const audio = result.doc.items.find((i) => i.id === result.audioId) as VideoItem;
+  assert.deepEqual({ start: audio.start, duration: audio.duration, trimStart: audio.trimStart }, { start: 4, duration: 3, trimStart: 5 });
+});
+
 test('extracted sound stops where the file does, and only video has any to give', () => {
   const sound = asset({ id: 'a2', kind: 'audio', duration: 4 });
   const doc = docWith(clipAt(0, 6));

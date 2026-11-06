@@ -1584,6 +1584,37 @@ section('ai', async () => {
     check(true, 'lip-sync is in the AI panel with the other tools');
     await p.selectOption('select[aria-label="What to generate"]', 'text-to-video');
 
+    // The whole job in one form: an AI clip with the sound of a recording.
+    await toHome();
+    await p.click('.sidebar .nav-item:has-text("Generate with AI")');
+    await p.waitForSelector('.panel .ai-form textarea');
+    await p.selectOption('.ai-form select[aria-label="Model"]', 'fal:text-to-video:minimax/h3-max/text-to-video');
+    await wait(150);
+    await p.click('.ai-form .segmented button:has-text("My media")');
+    check(await p.isDisabled('.ai-form button:has-text("Generate")'), 'My media needs a choice before generating');
+    await p.selectOption('.ai-form select[aria-label="Sound from"]', { label: 'clip-a.mp4' });
+    await p.waitForSelector('.ai-form .sound-window');
+    await p.fill('.ai-form [aria-label="Sound starts at"]', '00:01.0');
+    await p.keyboard.press('Tab');
+    await p.fill('.ai-form textarea', 'A paper boat in the rain');
+    await shot(p, '52-ai-sound-row');
+    await p.click('.ai-form button:has-text("Generate")');
+    await p.waitForSelector('.clip.video', { timeout: 15000 });
+    await p.waitForSelector('.clip.audio', { timeout: 5000 });
+    await wait(300);
+    doc = await stored();
+    const made = doc.items.find((i) => i.type === 'video');
+    const under = doc.items.find((i) => i.type === 'audio');
+    check(made.muted && under.start === made.start && Math.abs(under.trimStart - 1) < 0.05, 'the clip and the chosen sound land together, lined up', JSON.stringify({ s: under.start, t: under.trimStart, d: under.duration, v: made.duration }));
+    await p.keyboard.press(`${MOD}+z`);
+    await wait(200);
+    check((await pclips()).length === 0, 'and they are one step to undo');
+    await p.keyboard.press(`${MOD}+Shift+z`);
+    await wait(200);
+    await blank([media('clip-a.mp4')]);
+    await p.click('.rail-item:has-text("AI tools")');
+    await p.waitForSelector('.ai-form textarea');
+
     // A failure is explained, and can be retried
     await p.click('.rail-item:has-text("AI tools")');
     await p.waitForSelector('.ai-form');

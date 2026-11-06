@@ -9,7 +9,7 @@ import { formatClock } from '@shared/time';
 import { contentEnd } from '@shared/timeline';
 import type { EncodeSpeed, ExportAdvanced, ID, RateControl } from '@shared/types';
 import { Modal } from '@/components/Modal';
-import { Button, Field, FieldRow, Notice, NumberInput, Segmented, Slider, Spinner, TimeInput } from '@/components/ui';
+import { Button, FieldRow, Notice, NumberInput, Segmented, Slider, Spinner, TimeInput } from '@/components/ui';
 import { errorMessage } from '@/lib/api';
 import { startRender } from '@/lib/exporter';
 import { updateSettings, useEditor } from '@/store/editor';
@@ -132,7 +132,8 @@ function ExportBody({ projectId, part: asked, close }: { projectId: ID; part: Pa
         </>
       }
     >
-      <Field label="Make a">
+      <div className="field">
+        <span className="label">Make a</span>
         <Segmented<ExportFormat>
           fill
           label="Format"
@@ -144,8 +145,9 @@ function ExportBody({ projectId, part: asked, close }: { projectId: ID; part: Pa
           ]}
           onChange={setFormat}
         />
-      </Field>
-      <Field label="From">
+      </div>
+      <div className="field">
+        <span className="label">From</span>
         <Segmented<Part>
           fill
           label="How much of the project"
@@ -157,7 +159,7 @@ function ExportBody({ projectId, part: asked, close }: { projectId: ID; part: Pa
           ]}
           onChange={setPart}
         />
-      </Field>
+      </div>
       {part === 'custom' && (
         <div className="form-grid">
           <label className="field">

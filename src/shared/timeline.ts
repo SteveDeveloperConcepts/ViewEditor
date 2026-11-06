@@ -342,13 +342,16 @@ export function setSourceRange(doc: ProjectDoc, it: MediaItem, from: number, to:
 }
 
 /**
- * Puts a video clip's sound on a row of its own, lined up with the clip, and mutes the clip. The row is
- * the first sound-only row below the clip with room, or a new one straight below it.
+ * Puts sound on a row of its own, lined up with a video clip, and mutes the clip. The sound is the clip's
+ * own stretch of `sound` unless `stretch` says otherwise. The row is the first sound-only row below the
+ * clip with room, or a new one straight below it.
  */
-export function detachAudio(doc: ProjectDoc, itemId: ID, sound: Asset): { doc: ProjectDoc; audioId: ID } | null {
+export function detachAudio(doc: ProjectDoc, itemId: ID, sound: Asset, stretch?: { start: number; duration: number }): { doc: ProjectDoc; audioId: ID } | null {
   const it = findItem(doc, itemId);
   if (!it || it.type !== 'video') return null;
-  const duration = Math.min(it.duration, (sound.duration - it.trimStart) / it.speed);
+  const trimStart = stretch?.start ?? it.trimStart;
+  const speed = stretch ? 1 : it.speed;
+  const duration = Math.min(stretch?.duration ?? it.duration, (sound.duration - trimStart) / speed);
   if (duration <= EPS) return null;
   const below = doc.tracks.slice(trackIndex(doc, it.trackId) + 1);
   const home = below.find((t) => {
@@ -356,7 +359,7 @@ export function detachAudio(doc: ProjectDoc, itemId: ID, sound: Asset): { doc: P
     return items.length > 0 && items.every((o) => o.type === 'audio') && rangeFree(doc, t.id, it.start, it.start + duration);
   });
   const made = home ? { doc, trackId: home.id } : insertTrack(doc, trackIndex(doc, it.trackId) + 1);
-  const audio: AudioItem = { ...makeAudioItem(sound, made.trackId, it.start), duration, trimStart: it.trimStart, speed: it.speed, volume: it.volume, fadeAudio: it.fadeAudio };
+  const audio: AudioItem = { ...makeAudioItem(sound, made.trackId, it.start), duration, trimStart, speed, volume: it.volume, fadeAudio: it.fadeAudio };
   const next = updateItems(made.doc, [it.id], (x) => ({ ...x, muted: true }) as Item);
   return { doc: { ...next, items: [...next.items, audio] }, audioId: audio.id };
 }

@@ -4,6 +4,9 @@
 import type { AiChoices, AiMediaRef, AiTask } from '@shared/ai';
 import type { ID } from '@shared/types';
 
+/** Where a new clip's sound comes from: nowhere, the model, or something in Media. */
+export type SoundMode = 'none' | 'ai' | 'mine';
+
 export interface AiFormDraft {
   choices: AiChoices;
   /** The shape was picked by hand, so it should no longer follow the project's frame. */
@@ -11,6 +14,9 @@ export interface AiFormDraft {
   image: AiMediaRef | null;
   video: AiMediaRef | null;
   audio: AiMediaRef | null;
+  soundMode: SoundMode;
+  /** The sound chosen from Media. */
+  mine: AiMediaRef | null;
 }
 
 const forms = new Map<string, AiFormDraft>();

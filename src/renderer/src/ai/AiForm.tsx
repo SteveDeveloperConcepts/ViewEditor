@@ -1,13 +1,14 @@
 // One form for every kind of generation. What it shows comes from the chosen model: a model without a
 // duration setting shows none, and a model that offers 4, 6 and 8 seconds offers exactly those.
 
-import type { ReactNode } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CircleAlert, RefreshCw, Sparkles, Upload } from 'lucide-react';
 import {
   aspectLabel,
   durationChoices,
   durationLabel,
+  durationSeconds,
   missingInput,
   pickAspect,
   pickDuration,
@@ -20,14 +21,17 @@ import {
   type AiTask,
   type AiValue,
 } from '@shared/ai';
+import { formatTimecode } from '@shared/time';
 import type { Asset, AssetKind, ID } from '@shared/types';
-import { Button, Field, FieldRow, IconButton, Notice, Spinner, Switch, TimeInput } from '@/components/ui';
+import { Button, Field, FieldRow, IconButton, Notice, Segmented, Spinner, Switch, TimeInput } from '@/components/ui';
 import { api, errorMessage } from '@/lib/api';
+import { trackPointer } from '@/lib/drag';
+import { assetUrl } from '@/lib/media';
 import { reportRejected } from '@/editor/importing';
 import { loadModels, useAi, useConnected, useModels } from '@/store/ai';
 import { useLibrary } from '@/store/library';
 import { openConnections } from './ConnectionsDialog';
-import { formDraft, saveFormDraft } from './drafts';
+import { formDraft, saveFormDraft, type SoundMode } from './drafts';
 
 const LAST_MODEL = 'vieweditor.ai.model.';
 
@@ -92,8 +96,41 @@ function SoundRange({ asset, value, onChange }: { asset: Asset; value: AiMediaRe
   );
 }
 
-function MediaPick(props: { kind: AssetKind; label: string; value: AiMediaRef | null; projectId: ID | null; onChange: (ref: AiMediaRef | null) => void }): ReactNode {
-  const { kind, label, value, projectId, onChange } = props;
+/** Sound of a set length: a window to drag along the waveform, as wide as the clip it goes with. */
+function SoundWindow({ asset, value, seconds, onChange }: { asset: Asset; value: AiMediaRef; seconds: number; onChange: (ref: AiMediaRef) => void }): ReactNode {
+  const bar = useRef<HTMLDivElement>(null);
+  const length = Math.min(seconds, asset.duration);
+  const latest = Math.max(0, asset.duration - length);
+  const start = Math.min(value.start ?? 0, latest);
+  const move = (t: number): void => onChange({ ...value, start: Math.max(0, Math.min(t, latest)) });
+  const onDown = (e: ReactPointerEvent): void => {
+    e.preventDefault();
+    const x = e.clientX;
+    const scale = asset.duration / (bar.current?.clientWidth || 1);
+    trackPointer(
+      (ev) => move(start + (ev.clientX - x) * scale),
+      () => undefined,
+    );
+  };
+  return (
+    <>
+      <div ref={bar} className="sound-window" style={{ backgroundImage: asset.hasWave ? `url("${assetUrl(asset, 'wave')}")` : undefined }}>
+        <div className="sound-window-pick" style={{ left: `${(start / asset.duration) * 100}%`, width: `${(length / asset.duration) * 100}%` }} onPointerDown={onDown} />
+      </div>
+      <label className="field">
+        <span className="label">Sound starts at</span>
+        <TimeInput label="Sound starts at" value={start} onCommit={move} />
+      </label>
+      <span className="hint tabular">
+        Using {formatTimecode(start)} to {formatTimecode(start + length)}. Drag the window to choose.
+        {length < seconds ? ' This sound is shorter than the clip.' : ''}
+      </span>
+    </>
+  );
+}
+
+function MediaPick(props: { kind: AssetKind; label: string; value: AiMediaRef | null; projectId: ID | null; seconds?: number | null; onChange: (ref: AiMediaRef | null) => void }): ReactNode {
+  const { kind, label, value, projectId, seconds, onChange } = props;
   const assets = useLibrary((s) => s.lib?.assets);
   const [error, setError] = useState('');
   // Sound can come from an audio file or from a video.
@@ -132,7 +169,7 @@ function MediaPick(props: { kind: AssetKind; label: string; value: AiMediaRef | 
           <Upload size={15} />
         </IconButton>
       </div>
-      {sound && value && chosen && <SoundRange asset={chosen} value={value} onChange={onChange} />}
+      {sound && value && chosen && (seconds ? <SoundWindow asset={chosen} value={value} seconds={seconds} onChange={onChange} /> : <SoundRange asset={chosen} value={value} onChange={onChange} />)}
       {error && <span className="hint">{error}</span>}
     </div>
   );
@@ -156,6 +193,8 @@ export interface AiFormProps {
   seconds?: number;
   /** Keeps what was entered for as long as the project is open. Forms that come and go should have one. */
   draftKey?: string;
+  /** The result lands as a clip of its own, so it can be given sound from Media. */
+  newClip?: boolean;
   promptLabel?: string;
   promptPlaceholder?: string;
   submitLabel?: string;
@@ -176,6 +215,8 @@ export function AiForm(props: AiFormProps): ReactNode {
   const [image, setImage] = useState<AiMediaRef | null>(props.image ?? draft?.image ?? null);
   const [video, setVideo] = useState<AiMediaRef | null>(props.video ?? draft?.video ?? null);
   const [audio, setAudio] = useState<AiMediaRef | null>(props.audio ?? draft?.audio ?? null);
+  const [soundMode, setSoundMode] = useState<SoundMode>(draft?.soundMode ?? 'none');
+  const [mine, setMine] = useState<AiMediaRef | null>(draft?.mine ?? null);
   const [price, setPrice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -197,8 +238,8 @@ export function AiForm(props: AiFormProps): ReactNode {
   }, [model, width, height, seconds]);
 
   useEffect(() => {
-    if (draftKey) saveFormDraft(draftKey, { choices, shapePicked, image, video, audio });
-  }, [draftKey, choices, shapePicked, image, video, audio]);
+    if (draftKey) saveFormDraft(draftKey, { choices, shapePicked, image, video, audio, soundMode, mine });
+  }, [draftKey, choices, shapePicked, image, video, audio, soundMode, mine]);
 
   const groups = useMemo(() => {
     const byProvider = new Map<string, AiModel[]>();
@@ -238,21 +279,32 @@ export function AiForm(props: AiFormProps): ReactNode {
   }
 
   const set = (patch: AiChoices): void => setChoices((c) => ({ ...c, ...patch }));
-  const missing = missingInput(model, choices, { image: !!image, video: !!video, audio: !!audio });
+  const mode: SoundMode = soundMode === 'ai' && !model.sound ? 'none' : soundMode;
+  const clipSeconds = choices.duration !== undefined ? durationSeconds(choices.duration) : null;
+  const missing = missingInput(model, choices, { image: !!image, video: !!video, audio: !!audio }) ?? (props.newClip && mode === 'mine' && !mine ? 'Choose the sound to use.' : null);
   const providerName = providers.find((p) => p.id === model.provider)?.name ?? model.provider;
 
   const submit = async (): Promise<void> => {
     setBusy(true);
     setError('');
     try {
+      let lands = typeof placement === 'function' ? placement() : placement;
+      if (props.newClip && mode === 'mine' && mine && lands.kind === 'timeline') {
+        const source = useLibrary.getState().assetsById[mine.assetId];
+        if (!source) throw new Error('That sound is no longer in Media.');
+        // A video's sound has to become a file of its own to go on a row of its own.
+        const file = source.kind === 'video' ? await api.assets.extractAudio(source.id) : source;
+        const length = Math.min(clipSeconds ?? file.duration, file.duration);
+        lands = { ...lands, sound: { assetId: file.id, start: Math.min(mine.start ?? 0, Math.max(0, file.duration - length)), duration: length } };
+      }
       const request: AiRequest = {
         modelKey: model.key,
-        choices,
+        choices: props.newClip && model.sound ? { ...choices, sound: mode === 'ai' } : choices,
         image: model.image ? image : null,
         video: model.video ? video : null,
         audio: model.audio ? audio : null,
         target: projectId ? { scope: 'project', projectId } : { scope: 'workspace' },
-        placement: typeof placement === 'function' ? placement() : placement,
+        placement: lands,
       };
       await api.ai.generate(request);
       set({ prompt: '' });
@@ -376,10 +428,26 @@ export function AiForm(props: AiFormProps): ReactNode {
         )}
       </div>
 
-      {model.sound && (
-        <FieldRow label="Generate sound">
-          <Switch label="Generate sound" checked={!!choices.sound} onChange={(sound) => set({ sound })} />
-        </FieldRow>
+      {props.newClip ? (
+        <>
+          <div className="field">
+            <span className="label">Sound</span>
+            <Segmented<SoundMode>
+              fill
+              label="Sound"
+              value={mode}
+              options={[{ value: 'none', label: 'None' }, ...(model.sound ? [{ value: 'ai' as const, label: 'AI-made' }] : []), { value: 'mine', label: 'My media' }]}
+              onChange={setSoundMode}
+            />
+          </div>
+          {mode === 'mine' && <MediaPick kind="audio" label="Sound from" value={mine} projectId={projectId} seconds={clipSeconds} onChange={setMine} />}
+        </>
+      ) : (
+        model.sound && (
+          <FieldRow label="Generate sound">
+            <Switch label="Generate sound" checked={!!choices.sound} onChange={(sound) => set({ sound })} />
+          </FieldRow>
+        )
       )}
 
       {props.extra}

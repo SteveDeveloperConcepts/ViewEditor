@@ -678,3 +678,24 @@ input[type='range'].slider::-webkit-slider-thumb {
 .dropzone strong {
   color: var(--text);
 }
+
+.sound-window {
+  position: relative;
+  height: 44px;
+  overflow: hidden;
+  border-radius: var(--radius-s);
+  background-color: #26303f;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+.sound-window-pick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  min-width: 6px;
+  border: 2px solid var(--accent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+  cursor: grab;
+  touch-action: none;
+}
