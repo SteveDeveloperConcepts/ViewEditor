@@ -2,12 +2,12 @@
 
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
-import { Keyboard, Search, Sparkles } from 'lucide-react';
+import { CircleHelp, Search, Sparkles } from 'lucide-react';
 import { openConnections } from '@/ai/ConnectionsDialog';
 import { extractAudioFrom } from '@/editor/actions';
 import { openExportDialog } from '@/editor/ExportDialog';
 import { openProjectSettings } from '@/editor/ProjectSettings';
-import { isMod } from '@/lib/api';
+import { isMod, MOD_LABEL } from '@/lib/api';
 import { startBlankProject } from '@/lib/projects';
 import { openStartDialog } from '@/lib/startDialog';
 import { openSettings, openShortcuts } from '@/pages/SettingsDialog';
@@ -15,7 +15,7 @@ import { openRecorder } from '@/recorder/openRecorder';
 import { addText, redo, selectedItems, setPanel, splitAtPlayhead, undo, useEditor } from '@/store/editor';
 import { navigate, showModal, toast, useUi } from '@/store/ui';
 import { Modal } from './Modal';
-import type { MenuEntry } from './Menu';
+import { Button } from './ui';
 
 interface Action {
   label: string;
@@ -71,7 +71,7 @@ const TOPICS: { title: string; words: string; steps: string[] }[] = [
       'Under Sound, choose My media, and pick your recording. If it is not there yet, use the button beside the list to add it.',
       'Drag the window along the waveform to choose which part of the sound to use.',
       'Press Generate. The clip and the sound land on the timeline together, lined up.',
-      'Press Export.',
+      'Press Export, and Export again in the dialog. On the page that follows, choose MP4 under Save as.',
     ],
   },
   {
@@ -111,14 +111,36 @@ const TOPICS: { title: string; words: string; steps: string[] }[] = [
   },
 ];
 
-const matches = (text: string, query: string): boolean => query.split(/\s+/).every((word) => text.toLowerCase().includes(word));
+/** Words that say nothing about what someone wants to do. */
+const FILLER = new Set(['a', 'an', 'and', 'can', 'do', 'for', 'from', 'how', 'i', 'in', 'into', 'is', 'it', 'me', 'my', 'of', 'on', 'or', 'that', 'the', 'this', 'to', 'use', 'want', 'with']);
+
+function wordsIn(query: string): string[] {
+  return [...new Set(query.split(/[^\p{L}\p{N}]+/u))].filter((w) => w && !FILLER.has(w));
+}
+
+/** How many of the words a text has. Long words also count by their stem, so "extracted" finds "extract". */
+function score(text: string, words: string[]): number {
+  const lower = text.toLowerCase();
+  return words.filter((w) => lower.includes(w) || (w.length > 5 && lower.includes(w.slice(0, -2)))).length;
+}
+
+/** The best matches for a sentence in someone's own words, best first. Weak matches go when there are strong ones. */
+function ranked<T>(list: T[], textOf: (item: T) => string, words: string[]): T[] {
+  const scored = list.map((item) => ({ item, points: score(textOf(item), words) })).filter((s) => s.points > 0);
+  const best = Math.max(0, ...scored.map((s) => s.points));
+  return scored
+    .filter((s) => s.points >= best * 0.6)
+    .sort((a, b) => b.points - a.points)
+    .map((s) => s.item);
+}
 
 function HelpBody({ close }: { close: () => void }): ReactNode {
   const [query, setQuery] = useState('');
   const q = query.trim().toLowerCase();
   const list = useMemo(() => actions(), []);
-  const found = q ? list.filter((a) => matches(`${a.label} ${a.words}`, q)).slice(0, 6) : [];
-  const topics = TOPICS.filter((t) => !q || matches(`${t.title} ${t.words} ${t.steps.join(' ')}`, q));
+  const words = wordsIn(q);
+  const found = ranked(list, (a) => `${a.label} ${a.words}`, words).slice(0, 6);
+  const topics = q ? ranked(TOPICS, (t) => `${t.title} ${t.words} ${t.steps.join(' ')}`, words) : TOPICS;
   const run = (a: Action): void => {
     close();
     a.run();
@@ -174,12 +196,13 @@ export function openHelp(): void {
   void showModal<void>((close) => <HelpBody close={() => close()} />);
 }
 
-/** The Help button's menu, on the dashboard and in the editor. */
-export function helpMenu(hint: string): MenuEntry[] {
-  return [
-    { label: 'How do I…', icon: <Search size={15} />, hint, onSelect: openHelp },
-    { label: 'Keyboard shortcuts', icon: <Keyboard size={15} />, onSelect: openShortcuts },
-  ];
+/** The way into Help, with its name on it, on the dashboard and in the editor. */
+export function HelpButton(): ReactNode {
+  return (
+    <Button variant="ghost" size="small" icon={<CircleHelp size={15} />} title={`Search for what you want to do (${MOD_LABEL}+K)`} onClick={openHelp}>
+      How do I…
+    </Button>
+  );
 }
 
 /** Ctrl or Cmd + K opens it from anywhere. */

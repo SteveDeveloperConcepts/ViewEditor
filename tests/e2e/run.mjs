@@ -370,6 +370,9 @@ section('review', async () => {
   await page.fill('.modal .help-search input', 'extract audio');
   await page.waitForSelector('.help-topics summary:has-text("Take the sound out of a video")');
   check(true, 'and how-to topics');
+  await page.fill('.modal .help-search input', 'use ai to create a 3 second video with the audio extracted from an existing video I recorded');
+  await page.waitForSelector('.help-topics summary:has-text("Make an AI clip with the sound of a recording")');
+  check((await page.textContent('.help-topics summary')).startsWith('Make an AI clip'), 'a whole sentence in your own words finds the right topic first', await page.textContent('.help-topics'));
   await page.fill('.modal .help-search input', 'templates');
   await page.keyboard.press('Enter');
   await page.waitForSelector('.page-head h1:has-text("Templates")');
