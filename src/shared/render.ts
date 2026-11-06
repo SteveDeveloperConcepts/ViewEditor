@@ -72,7 +72,8 @@ export function sourceResolution(doc: ProjectDoc, assets: Record<ID, Asset | und
 export function resolveOutputSpec(doc: ProjectDoc, assets: Record<ID, Asset | undefined>): OutputSpec {
   const adv = effectiveAdvanced(doc);
   const fps = effectiveFps(doc, assets);
-  const { width, height } = exportSize(doc.settings.width, doc.settings.height, adv.resolution);
+  const short = adv.resolution || Math.min(2160, sourceResolution(doc, assets) || Math.min(doc.settings.width, doc.settings.height));
+  const { width, height } = exportSize(doc.settings.width, doc.settings.height, short);
   const preset = getPreset(doc.settings.exportPresetId);
   return {
     width,
@@ -93,6 +94,8 @@ export interface TimeWindow {
   start: number;
   end: number;
 }
+
+export type ExportFormat = 'mp4' | 'mp3' | 'gif';
 
 /** The part of an item inside a time window, re-based so the window starts at 0. */
 export function windowItem<T extends Item>(it: T, w: TimeWindow): T | null {

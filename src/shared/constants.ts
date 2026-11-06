@@ -77,6 +77,12 @@ export interface ExportPreset {
 
 export const EXPORT_PRESETS: ExportPreset[] = [
   {
+    // A resolution of 0 means the size of the footage, whatever that is.
+    id: 'match', label: 'Match your footage', group: 'Quality', resolution: 0,
+    description: 'the same size as what you filmed',
+    rateControl: 'vbr', crf: 20, bitrateKbps: 0, bitrateKbpsHfr: 0, speed: 'balanced',
+  },
+  {
     id: 'draft', label: 'Draft', group: 'Quality', resolution: 480,
     description: '480p · smallest file, quick to render',
     rateControl: 'vbr', crf: 28, bitrateKbps: 0, bitrateKbpsHfr: 0, speed: 'fast',
@@ -118,8 +124,8 @@ export const EXPORT_PRESETS: ExportPreset[] = [
   },
 ];
 
-export const DEFAULT_EXPORT_PRESET = 'hd';
-export const RESOLUTION_OPTIONS = [480, 720, 1080, 1440, 2160];
+export const DEFAULT_EXPORT_PRESET = 'match';
+export const RESOLUTION_OPTIONS = [0, 480, 720, 1080, 1440, 2160];
 
 export function getPreset(id: string): ExportPreset {
   return EXPORT_PRESETS.find((p) => p.id === id) ?? EXPORT_PRESETS.find((p) => p.id === DEFAULT_EXPORT_PRESET)!;
@@ -143,6 +149,7 @@ export function defaultBitrate(resolution: number, fps: number): number {
 }
 
 export function resolutionLabel(res: number): string {
+  if (!res) return 'Match footage';
   return res >= 2160 ? '4K' : `${res}p`;
 }
 

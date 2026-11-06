@@ -48,6 +48,15 @@ test('a hidden row leaves the picture but keeps its sound, and a muted row the o
   assert.ok(build(muted).chunks[0].args.includes('a.mp4'), 'the picture of a muted row still shows');
 });
 
+test('by default the export matches the size of the footage', () => {
+  const { doc, a } = withClip({ width: 1280, height: 720 });
+  doc.settings.width = 1280;
+  doc.settings.height = 720;
+  const spec = resolveOutputSpec(doc, { a1: a });
+  assert.deepEqual({ w: spec.width, h: spec.height }, { w: 1280, h: 720 });
+  assert.equal(resolveOutputSpec(newProjectDoc('p', 'Text only'), {}).height, 1080, 'with no footage, the frame decides');
+});
+
 test('export size follows the short side, for any shape', () => {
   assert.deepEqual(exportSize(1920, 1080, 720), { width: 1280, height: 720 });
   assert.deepEqual(exportSize(1080, 1920, 720), { width: 720, height: 1280 });
