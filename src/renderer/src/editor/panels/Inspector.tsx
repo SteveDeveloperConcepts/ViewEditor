@@ -1,4 +1,4 @@
-// The side panel while a clip is selected: everything that can be changed about it.
+// The panel on the right while a clip is selected: everything that can be changed about it.
 
 import type { ReactNode } from 'react';
 import { useEffect, useRef } from 'react';
@@ -6,7 +6,6 @@ import {
   AlignCenter,
   AlignLeft,
   AlignRight,
-  ArrowLeft,
   AudioLines,
   Bold,
   CaseUpper,
@@ -20,6 +19,7 @@ import {
   Trash2,
   Undo2,
   Ungroup,
+  X,
 } from 'lucide-react';
 import { FONT_FAMILIES } from '@shared/constants';
 import { formatClock } from '@shared/time';
@@ -287,10 +287,10 @@ export function Inspector({ projectId }: { projectId: ID }): ReactNode {
     return (
       <div className="panel-body">
         <div className="inspector-head">
-          <IconButton label="Back" onClick={clearSelection}>
-            <ArrowLeft size={16} />
-          </IconButton>
           <h2 className="panel-title grow">{items.length} clips</h2>
+          <IconButton label="Close clip settings" onClick={clearSelection}>
+            <X size={16} />
+          </IconButton>
         </div>
         <div className="panel-actions">
           {grouped ? (
@@ -316,14 +316,14 @@ export function Inspector({ projectId }: { projectId: ID }): ReactNode {
   return (
     <div className="panel-body">
       <div className="inspector-head">
-        <IconButton label="Back" onClick={clearSelection}>
-          <ArrowLeft size={16} />
-        </IconButton>
         <h2 className="panel-title grow truncate" title={asset?.name}>
           {item.type === 'text' ? (item.subtitle ? 'Subtitle' : 'Text') : (asset?.name ?? TITLES[item.type])}
         </h2>
         <IconButton label="Delete" onClick={deleteSelection}>
           <Trash2 size={15} />
+        </IconButton>
+        <IconButton label="Close clip settings" onClick={clearSelection}>
+          <X size={16} />
         </IconButton>
       </div>
       {asset && (

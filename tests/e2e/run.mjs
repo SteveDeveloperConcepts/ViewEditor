@@ -178,7 +178,7 @@ section('timeline', async () => {
   await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
   await sleep(100);
   check((await clips(page)).find((c) => c.id === video.id).selected, 'clicking an element selects it');
-  check(await page.isVisible('.panel >> text=Speed'), 'selecting an element opens its options');
+  check(await page.isVisible('.inspector >> text=Speed'), 'selecting an element opens its options');
   await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2, { button: 'right' });
   await page.waitForSelector('.menu');
   const items = await page.$$eval('.menu-item span:first-of-type', (e) => e.map((x) => x.textContent));
@@ -316,7 +316,7 @@ section('timeline', async () => {
   await page.mouse.click(g2.x + 30, g2.y + 20);
   await page.keyboard.up(MOD);
   await sleep(100);
-  check(await page.isVisible('.panel >> text=2 clips'), 'Ctrl or Cmd click selects several elements');
+  check(await page.isVisible('.inspector >> text=2 clips'), 'Ctrl or Cmd click selects several elements');
   await page.click('.tl-toolbar button:has-text("Group")');
   await sleep(100);
   await page.keyboard.press('Escape');
@@ -534,7 +534,7 @@ section('text', async () => {
   await sleep(200);
   check(!!(await page.$('.clip.text')), 'adding text puts an element on the timeline');
   check(await page.isVisible('.stage-selection'), 'the new text is selected on the canvas');
-  await page.fill('.panel textarea', 'Launch day');
+  await page.fill('.inspector textarea', 'Launch day');
   await sleep(100);
   const sel = await box('.stage-selection');
   const frame = await box('.stage-frame');
@@ -552,8 +552,8 @@ section('text', async () => {
   await page.keyboard.press(`${MOD}+z`);
   await sleep(150);
   // Back at the centre: colour it so the export can be checked pixel by pixel.
-  await page.selectOption('.panel select[aria-label="Font"]', 'Impact');
-  await page.fill('.panel [aria-label="Text colour hex value"]', '#ffee00');
+  await page.selectOption('.inspector select[aria-label="Font"]', 'Impact');
+  await page.fill('.inspector [aria-label="Text colour hex value"]', '#ffee00');
   await page.keyboard.press('Tab');
   await sleep(100);
   await shot(page, '14-text');
@@ -582,8 +582,8 @@ section('export', async () => {
   await page.click('.rail-item:has-text("Text")');
   await page.click('button:has-text("Add a heading")');
   await sleep(150);
-  await page.fill('.panel textarea', 'EXPORT');
-  await page.fill('.panel [aria-label="Text colour hex value"]', '#ff00ff');
+  await page.fill('.inspector textarea', 'EXPORT');
+  await page.fill('.inspector [aria-label="Text colour hex value"]', '#ff00ff');
   await page.keyboard.press('Tab');
   await page.keyboard.press('Escape');
 
@@ -893,7 +893,7 @@ section('persistence', async () => {
   // Closing the window straight after an edit, inside the autosave delay, must not lose it.
   await page.click('.rail-item:has-text("Text")');
   await page.click('button:has-text("Add a heading")');
-  await page.fill('.panel textarea', 'Written just before closing');
+  await page.fill('.inspector textarea', 'Written just before closing');
   const name = await page.inputValue('.project-name');
   allErrors.push(...errors);
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].close());
@@ -1090,7 +1090,7 @@ section('tools', async () => {
   const video = list.find((c) => c.type === 'video');
   let b = await box(clipSel(video.id));
   await page.mouse.click(b.x + 40, b.y + 25);
-  await page.waitForSelector('.panel >> text=Speed');
+  await page.waitForSelector('.inspector >> text=Speed');
   await page.click('.segmented button:has-text("2x")');
   await sleep(150);
   let doc = await storedDoc();
@@ -1445,27 +1445,30 @@ section('ai', async () => {
     // It is an ordinary clip: trim it
     const first = list[0];
     await selectClip(first.id);
-    check((await p.textContent('.panel')).includes('A paper boat on a stream'), 'a generated clip remembers its prompt');
+    check((await p.textContent('.inspector')).includes('A paper boat on a stream'), 'a generated clip remembers its prompt');
     await p.keyboard.press('Home');
     await wait(100);
 
-    // Looking at a clip must not cost what was typed into the form.
-    await p.click('.rail-item:has-text("AI tools")');
+    // Looking at a clip leaves the left side alone, and looking elsewhere does not cost what was typed.
     await p.waitForSelector('.ai-form textarea');
     await p.fill('.ai-form textarea', 'Still here after looking at a clip');
     const shortest = await p.$eval('.ai-form select[aria-label="Length"] option', (o) => o.value);
     await p.selectOption('.ai-form select[aria-label="Length"]', shortest);
+    await p.keyboard.press('Escape');
     await selectClip(first.id);
+    check(await p.isVisible('.panel .ai-form textarea'), 'clicking a clip leaves the left panel as it was');
+    check(await p.isVisible('.inspector >> text=Speed'), 'its settings open on the right');
+    await p.click('.rail-item:has-text("Text")');
     await p.click('.rail-item:has-text("AI tools")');
     await p.waitForSelector('.ai-form textarea');
     await wait(150);
-    check((await p.inputValue('.ai-form textarea')) === 'Still here after looking at a clip', 'the AI form keeps its prompt when a clip is clicked');
+    check((await p.inputValue('.ai-form textarea')) === 'Still here after looking at a clip', 'the AI form keeps its prompt when you go elsewhere and back');
     check((await p.inputValue('.ai-form select[aria-label="Length"]')) === shortest, 'and its length');
     await p.fill('.ai-form textarea', '');
     await selectClip(first.id);
 
     // Edit with AI
-    await p.click('.panel button:has-text("Edit with AI")');
+    await p.click('.inspector button:has-text("Edit with AI")');
     await p.waitForSelector('.modal .ai-form select[aria-label="Model"]');
     const onTop = await p.evaluate(() => {
       // Nothing from the canvas may show through a dialog.
@@ -1500,7 +1503,7 @@ section('ai', async () => {
     await p.keyboard.press(`${MOD}+Shift+z`);
     await wait(200);
     await selectClip(first.id);
-    await p.click('.panel button:has-text("Restore original")');
+    await p.click('.inspector button:has-text("Restore original")');
     await wait(200);
     doc = await stored();
     check(doc.items[0].assetId === before.assetId, 'Restore original brings it back, even after leaving the editor');
@@ -1509,7 +1512,7 @@ section('ai', async () => {
 
     // Extend with AI
     await selectClip(first.id);
-    await p.click('.panel button:has-text("Extend with AI")');
+    await p.click('.inspector button:has-text("Extend with AI")');
     await p.waitForSelector('.modal .ai-form select[aria-label="Model"]');
     await p.selectOption('.modal select[aria-label="Model"]', 'fal:image-to-video:kling/v4/image-to-video');
     await wait(100);
@@ -1530,7 +1533,7 @@ section('ai', async () => {
     await blank([media('photo.jpg')]);
     list = await pclips();
     await selectClip(list[0].id);
-    await p.click('.panel button:has-text("Animate with AI")');
+    await p.click('.inspector button:has-text("Animate with AI")');
     await p.waitForSelector('.modal .ai-form select[aria-label="Model"]');
     await p.selectOption('.modal select[aria-label="Model"]', 'fal:image-to-video:kling/v4/image-to-video');
     await wait(100);

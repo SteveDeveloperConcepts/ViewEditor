@@ -101,6 +101,18 @@
   background: var(--surface);
   overflow-y: auto;
 }
+.inspector {
+  width: 280px;
+  flex: none;
+  border-left: 1px solid var(--border);
+  background: var(--surface);
+  overflow-y: auto;
+}
+@media (max-width: 1180px) {
+  .editor-main.inspecting .panel {
+    display: none;
+  }
+}
 .panel-body {
   display: flex;
   flex-direction: column;
@@ -147,7 +159,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  margin: -2px 0 -6px -6px;
+  margin: -2px -6px -6px 0;
 }
 .fixed {
   width: 110px;

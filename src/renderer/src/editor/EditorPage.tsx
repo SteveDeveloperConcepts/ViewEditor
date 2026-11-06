@@ -330,19 +330,17 @@ export function EditorPage({ projectId, showAi, add }: { projectId: ID; showAi?:
   return (
     <div className="editor">
       <TopBar projectId={projectId} onExport={() => openExportDialog(projectId)} exporting={exporting} />
-      <div className="editor-main">
+      <div className={`editor-main${inspecting ? ' inspecting' : ''}`}>
         <nav className="rail" aria-label="Editor tools">
           {RAIL.map((r) => (
-            <button key={r.id} type="button" className="rail-item" aria-pressed={!inspecting && panel === r.id} onClick={() => setPanel(r.id)}>
+            <button key={r.id} type="button" className="rail-item" aria-pressed={panel === r.id} onClick={() => setPanel(r.id)}>
               {r.icon}
               <span>{r.label}</span>
             </button>
           ))}
         </nav>
         <aside className="panel" aria-label="Tool panel">
-          {inspecting ? (
-            <Inspector projectId={projectId} />
-          ) : panel === 'ai' ? (
+          {panel === 'ai' ? (
             <AiPanel projectId={projectId} />
           ) : panel === 'text' ? (
             <TextPanel />
@@ -360,6 +358,11 @@ export function EditorPage({ projectId, showAi, add }: { projectId: ID; showAi?:
           <Stage projectId={projectId} />
           <StageBar />
         </main>
+        {inspecting && (
+          <aside className="inspector" aria-label="Clip settings">
+            <Inspector projectId={projectId} />
+          </aside>
+        )}
       </div>
       <TimelineResizer />
       <div className="editor-timeline" style={{ height: timelineHeight }}>

@@ -55,7 +55,7 @@ export interface EditorState {
   playing: boolean;
   pxPerSec: number;
   panel: PanelId;
-  /** True while the side panel shows the properties of the selected element. */
+  /** True while the panel on the right shows the settings of the selected clip. */
   inspecting: boolean;
   canUndo: boolean;
   canRedo: boolean;
@@ -832,7 +832,9 @@ export function renameProject(name: string): void {
 // ---------------------------------------------------------------- view
 
 export function setPanel(panel: PanelId): void {
-  set({ panel, inspecting: false });
+  // In a small window the two side panels take turns, so the picture keeps its room.
+  const narrow = window.matchMedia('(max-width: 1180px)').matches;
+  set({ panel, inspecting: get().inspecting && !narrow });
 }
 
 export function setZoom(pxPerSec: number): void {
