@@ -227,6 +227,13 @@ export function registerIpc(s: Services): void {
       const file = jobs.exportPath(projectId);
       if (file) shell.showItemInFolder(file);
     },
+    addToMedia: async (projectId) => {
+      const file = jobs.exportPath(projectId);
+      if (!file) throw new Error('This project has not been exported yet.');
+      const result = await assets.importFiles([file], { scope: 'workspace', names: [`${safeFileName(lib.project(projectId).name)}.mp4`] });
+      if (!result.assets.length) throw new Error(result.rejected[0]?.reason ?? 'The video could not be added to Media.');
+      return result.assets[0];
+    },
   });
 
   register('recorder', {

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
-import { ArrowLeft, CircleAlert, Download, FileAudio, FileVideo, FolderOpen, Image as ImageIcon, Plus, RefreshCw, Scissors, Type } from 'lucide-react';
+import { ArrowLeft, CircleAlert, Download, FileAudio, FileVideo, FolderOpen, Image as ImageIcon, Images, Plus, RefreshCw, Scissors, Type } from 'lucide-react';
 import { formatBytes, formatClock, formatRelative } from '@shared/time';
 import type { ProjectMeta, RenderProgress } from '@shared/types';
 import { Button, Notice, ProgressBar, Spinner } from '@/components/ui';
@@ -54,6 +54,15 @@ function SaveButton({ meta, format, icon, title, hint }: { meta: ProjectMeta; fo
       <Download size={15} />
     </button>
   );
+}
+
+async function addToMedia(projectId: string): Promise<void> {
+  try {
+    const asset = await api.render.addToMedia(projectId);
+    toast(`${asset.name} is in Media, ready to use in another project.`, { kind: 'success', action: { label: 'View', run: () => void navigate({ page: 'assets' }) } });
+  } catch (err) {
+    toast(errorMessage(err), { kind: 'error' });
+  }
 }
 
 export function VideoPage({ projectId }: { projectId: string }): ReactNode {
@@ -129,6 +138,9 @@ export function VideoPage({ projectId }: { projectId: string }): ReactNode {
             <SaveButton meta={meta} format="gif" icon={<ImageIcon size={18} />} title="GIF" hint="Small, silent and looping" />
             <Button variant="ghost" icon={<FolderOpen size={15} />} onClick={() => void api.render.revealExport(projectId)}>
               Show in folder
+            </Button>
+            <Button variant="ghost" icon={<Images size={15} />} onClick={() => void addToMedia(projectId)}>
+              Add to Media
             </Button>
             {origin && (
               <>

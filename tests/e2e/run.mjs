@@ -652,6 +652,11 @@ section('export', async () => {
     if (format === 'gif') check(stream === 'gif', 'GIF is a GIF', stream);
   }
 
+  // A finished video can go back into Media, ready for another project.
+  await page.click('.video-side button:has-text("Add to Media")');
+  await page.waitForSelector('.toast:has-text("is in Media")', { timeout: 8000 });
+  check((await library()).assets.some((a) => a.name === `${meta.name}.mp4`), 'an export can be added to Media');
+
   // Further edits make the export stale
   await page.click('.page-head button:has-text("Edit")');
   await page.waitForSelector('.clip');

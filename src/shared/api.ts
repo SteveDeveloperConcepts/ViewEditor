@@ -125,6 +125,8 @@ export interface Api {
     download(projectId: ID, format: 'mp4' | 'mp3' | 'gif'): Promise<string | null>;
     /** Shows the project's exported file in Explorer or Finder. */
     revealExport(projectId: ID): Promise<void>;
+    /** Puts a copy of the project's exported video in Media. */
+    addToMedia(projectId: ID): Promise<Asset>;
   };
   recorder: {
     sources(): Promise<CaptureSource[]>;
@@ -198,7 +200,7 @@ export const API_METHODS: { [N in Namespace]: (keyof Api[N])[] } = {
     'createBrandKit', 'updateBrandKit', 'deleteBrandKit', 'pickBrandFonts', 'removeBrandFont', 'updateSettings',
   ],
   assets: ['pickAndImport', 'importPaths', 'importData', 'extractAudio', 'remove', 'usage', 'requestProxy', 'markPreviewChecked', 'putImageDerivatives'],
-  render: ['begin', 'putOverlay', 'run', 'cancel', 'current', 'download', 'revealExport'],
+  render: ['begin', 'putOverlay', 'run', 'cancel', 'current', 'download', 'revealExport', 'addToMedia'],
   recorder: ['sources', 'prepare', 'begin', 'chunk', 'finish', 'discard', 'setActive'],
   voice: ['list', 'speak'],
   ai: ['setKey', 'writeScript', 'writeScenePrompts', 'providers', 'connect', 'disconnect', 'models', 'price', 'generate', 'cancel', 'dismiss', 'markApplied'],
