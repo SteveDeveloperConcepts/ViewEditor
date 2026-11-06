@@ -8,6 +8,7 @@ import type { ID } from '@shared/types';
 import { Button, IconButton, Spinner } from '@/components/ui';
 import { api, errorMessage } from '@/lib/api';
 import { assetUrl } from '@/lib/media';
+import { startProjectWithAsset } from '@/lib/projects';
 import { addAsset, useEditor } from '@/store/editor';
 import { useLibrary } from '@/store/library';
 import { toast } from '@/store/ui';
@@ -61,6 +62,11 @@ function JobRow({ job }: { job: AiJob }): ReactNode {
         <IconButton small label="Add to the timeline again" onClick={() => void addAsset(asset)}>
           <Plus size={14} />
         </IconButton>
+      )}
+      {job.state === 'done' && asset && !docOpen && (
+        <Button size="small" onClick={() => void startProjectWithAsset(asset, job.name).catch((err) => toast(errorMessage(err), { kind: 'error' }))}>
+          Use in a project
+        </Button>
       )}
       {job.state === 'failed' && (
         <IconButton small label="Try again" onClick={() => void retry(job)}>

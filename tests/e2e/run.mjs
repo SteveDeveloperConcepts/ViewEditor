@@ -1470,6 +1470,8 @@ section('ai', async () => {
     await shot(p, '51-ai-create-asset');
     await p.click('.create-controls button:has-text("Generate")');
     await p.waitForSelector('.create-jobs .ai-job[data-job-state="done"]', { timeout: 15000 });
+    await p.waitForSelector('.toast:has-text("is ready") button:has-text("View")', { timeout: 3000 });
+    check(await p.isVisible('.create-jobs button:has-text("Use in a project")'), 'a finished picture offers the next step');
     await p.click('.sidebar .nav-item:has-text("Assets")');
     await p.waitForSelector('.asset-card:has-text("A lighthouse at dusk")', { timeout: 8000 });
     check(true, 'generated pictures land in the asset library');
