@@ -541,6 +541,25 @@ section('review', async () => {
   check(!(await page.$('.notice.warning')), 'a warning offers to end text with the video');
   check(Math.abs((await storedDoc()).items.find((i) => i.type === 'text').duration - footage) < 0.05, 'and does it');
 
+  // Trimming the front of the only clip leaves no black at the start of the video.
+  await page.keyboard.press('Escape');
+  await page.click('.tl-toolbar button:has-text("Fit")');
+  await sleep(100);
+  const textClip = (await clips(page)).find((c) => c.type === 'text');
+  const tb = await box(clipSel(textClip.id));
+  await page.click(clipSel(textClip.id));
+  await page.keyboard.press('Delete');
+  await sleep(120);
+  const lone = (await videos())[0];
+  const lb = await box(clipSel(lone.id));
+  await drag(lb.x + 3, lb.y + 20, lb.x + 3 + 1 * (await pxPerSec()), lb.y + 20);
+  await sleep(120);
+  const trimmedFront = (await storedDoc()).items.find((i) => i.type === 'video');
+  check(trimmedFront.start === 0 && trimmedFront.trimStart > 0.5, 'trimming the front of the first clip leaves no gap', JSON.stringify({ s: trimmedFront.start, t: trimmedFront.trimStart, tb: tb.width }));
+  await page.keyboard.press(`${MOD}+z`);
+  await page.keyboard.press(`${MOD}+z`);
+  await sleep(150);
+
   // Moving and trimming are separate, and say which is which.
   const video = (await videos())[0];
   await page.click(clipSel(video.id));

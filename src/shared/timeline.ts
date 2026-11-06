@@ -375,6 +375,18 @@ export function detachAudio(doc: ProjectDoc, itemId: ID, sound: Asset, stretch?:
   return { doc: { ...next, items: [...next.items, audio] }, audioId: audio.id };
 }
 
+/**
+ * Trimming the front of the first clip of a project would leave the cut as empty time at the start of the
+ * video, so everything moves back by that much. Anything that starts earlier keeps the timing as it is.
+ */
+export function closeLeadIn(doc: ProjectDoc, id: ID, startedAt: number): ProjectDoc {
+  const it = findItem(doc, id);
+  if (!it) return doc;
+  const shift = it.start - startedAt;
+  if (shift <= EPS || doc.items.some((o) => o.id !== id && o.start < it.start - EPS)) return doc;
+  return { ...doc, items: doc.items.map((o) => ({ ...o, start: o.start - shift }) as Item) };
+}
+
 // ---------------------------------------------------------------- gaps
 
 export interface Gap {

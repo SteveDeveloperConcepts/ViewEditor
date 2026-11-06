@@ -29,6 +29,7 @@ import {
 import { durationSeconds, isActive, type AiJob } from '@shared/ai';
 import { clamp, formatClock, formatTimecode, snapToFrame } from '@shared/time';
 import {
+  closeLeadIn,
   gapAt,
   type Gap,
   insertTrack,
@@ -729,8 +730,12 @@ export function Timeline({ projectId }: { projectId: ID }): ReactNode {
       },
       (_ev, cancelled) => {
         if (!started) return;
-        if (cancelled) cancelGesture();
-        else endGesture({ snapToFrames: true });
+        if (cancelled) {
+          cancelGesture();
+          return;
+        }
+        if (edge === 'start') apply((d) => closeLeadIn(d, item.id, original.start));
+        endGesture({ snapToFrames: true });
       },
     );
   }, []);

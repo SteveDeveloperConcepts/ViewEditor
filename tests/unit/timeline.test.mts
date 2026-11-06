@@ -4,6 +4,7 @@ import {
   canvasForMedia,
   cloneItems,
   closeGap,
+  closeLeadIn,
   detachAudio,
   fitBox,
   gapAt,
@@ -136,6 +137,15 @@ test('typing past the other end of a clip moves the stretch instead of collapsin
   const earlier = setPlaysTo(doc, at8, 4, asset());
   assert.deepEqual({ trimStart: earlier.trimStart, duration: earlier.duration }, { trimStart: 1, duration: 3 }, 'To before From keeps the length');
   assert.equal(setPlaysTo(doc, at8, 9, asset()).duration, 1, 'To after From trims');
+});
+
+test('trimming the front of the first clip leaves no empty time at the start', () => {
+  const doc = docWith(clipAt(3, 5), clipAt(9, 2));
+  const moved = closeLeadIn(doc, doc.items[0].id, 0);
+  assert.deepEqual(moved.items.map((i) => i.start), [0, 6], 'and the rest stay in step');
+  const lower = insertTrack(doc, 1);
+  const withEarlier = { ...lower.doc, items: [...lower.doc.items, clipAt(1, 2)(lower.doc, lower.trackId)] };
+  assert.equal(closeLeadIn(withEarlier, doc.items[0].id, 0), withEarlier, 'with something earlier, nothing moves');
 });
 
 test('project length is the end of the last element unless fixed', () => {
