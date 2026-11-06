@@ -11,6 +11,7 @@
 }
 .shell {
   display: flex;
+  position: relative;
   height: 100%;
 }
 .shell-main {
@@ -949,4 +950,20 @@
 
 .welcome-blank {
   align-self: center;
+}
+
+.shell.dropping::after {
+  content: 'Drop to start a project';
+  position: absolute;
+  inset: 8px;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius-m);
+  background: color-mix(in srgb, var(--accent-soft) 80%, transparent);
+  color: var(--accent-text);
+  font-size: 18px;
+  font-weight: 650;
+  pointer-events: none;
 }

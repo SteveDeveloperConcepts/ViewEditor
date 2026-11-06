@@ -100,6 +100,7 @@ export function AssetsPage(): ReactNode {
       onDragOver={(e) => {
         if (!hasFiles(e.dataTransfer)) return;
         e.preventDefault();
+        e.stopPropagation();
         setOver(true);
       }}
       onDragLeave={(e) => {
@@ -107,6 +108,7 @@ export function AssetsPage(): ReactNode {
       }}
       onDrop={(e) => {
         e.preventDefault();
+        e.stopPropagation();
         setOver(false);
         void api.assets.importPaths(droppedPaths(e.dataTransfer), { scope: 'workspace' }).then(reportRejected, (err) => toast(errorMessage(err), { kind: 'error' }));
       }}

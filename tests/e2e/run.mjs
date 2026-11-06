@@ -320,6 +320,28 @@ section('timeline', async () => {
 
 // Behaviour that came out of the design review of 0.1.0.
 section('review', async () => {
+  // Files dropped on the dashboard start a project.
+  await home();
+  await page.evaluate(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.id = 'drop-source';
+    input.hidden = true;
+    document.body.append(input);
+  });
+  await page.setInputFiles('#drop-source', media('clip-b.mp4'));
+  await page.evaluate(() => {
+    const input = document.getElementById('drop-source');
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(input.files[0]);
+    const target = document.querySelector('.shell-main');
+    target.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer }));
+    target.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer }));
+    input.remove();
+  });
+  await page.waitForSelector('.editor .clip.video', { timeout: 10000 });
+  check((await page.inputValue('.project-name')).startsWith('clip-b'), 'a file dropped on the dashboard starts a project with it');
+
   // Nothing is created until there is something to put in it.
   await home();
   const projectCount = async () => (await library()).projects.length;

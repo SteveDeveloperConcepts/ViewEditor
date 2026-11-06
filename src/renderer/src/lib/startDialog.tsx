@@ -92,6 +92,18 @@ function StartBody({ place, close }: { place: ProjectPlace; close: () => void })
   );
 }
 
+/** Files dropped on the dashboard: the same thing as choosing them in the start dialog. */
+export async function startFromFiles(paths: string[]): Promise<void> {
+  if (!paths.length) return;
+  try {
+    const result = await api.assets.importPaths(paths, { scope: 'workspace' });
+    reportRejected(result);
+    await startProjectWith(result.assets);
+  } catch (err) {
+    toast(errorMessage(err), { kind: 'error' });
+  }
+}
+
 export function openStartDialog(place: ProjectPlace = {}): void {
   void showModal<void>((close) => <StartBody place={place} close={() => close()} />);
 }

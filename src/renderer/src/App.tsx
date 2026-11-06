@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { startApplyingJobs } from '@/ai/applyJobs';
 import { MenuHost } from '@/components/Menu';
 import { ModalHost } from '@/components/Modal';
@@ -9,9 +9,11 @@ import { Toasts } from '@/components/Toasts';
 import { Spinner } from '@/components/ui';
 import { UpdateBanner } from '@/components/UpdateBanner';
 import { EditorPage, saveAndThumbnail } from '@/editor/EditorPage';
+import { droppedPaths, hasFiles } from '@/editor/importing';
 import { api } from '@/lib/api';
 import { startIntake } from '@/lib/intake';
 import { discardIfUnused } from '@/lib/projects';
+import { startFromFiles } from '@/lib/startDialog';
 import { AssetsPage } from '@/pages/AssetsPage';
 import { BrandPage } from '@/pages/BrandPage';
 import { CreateAssetPage } from '@/pages/CreateAssetPage';
@@ -43,6 +45,35 @@ function Page({ route }: { route: Route }): ReactNode {
     case 'editor':
       return null;
   }
+}
+
+/** The dashboard. Files dropped anywhere on it start a project, unless the page has a use for them itself. */
+function Dashboard({ route }: { route: Route }): ReactNode {
+  const [over, setOver] = useState(false);
+  return (
+    <div
+      className={`shell${over ? ' dropping' : ''}`}
+      onDragOver={(e) => {
+        if (!hasFiles(e.dataTransfer)) return;
+        e.preventDefault();
+        setOver(true);
+      }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOver(false);
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        setOver(false);
+        void startFromFiles(droppedPaths(e.dataTransfer));
+      }}
+    >
+      <Sidebar />
+      <div className="shell-main">
+        <DashTop />
+        <Page route={route} />
+      </div>
+    </div>
+  );
 }
 
 export function App(): ReactNode {
@@ -87,13 +118,7 @@ export function App(): ReactNode {
         {route.page === 'editor' ? (
           <EditorPage key={route.projectId} projectId={route.projectId} showAi={route.showAi} add={route.add} />
         ) : (
-          <div className="shell">
-            <Sidebar />
-            <div className="shell-main">
-              <DashTop />
-              <Page route={route} />
-            </div>
-          </div>
+          <Dashboard route={route} />
         )}
       </div>
       <RenderWatcher />
