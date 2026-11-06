@@ -18,7 +18,11 @@ import { startBlankProject, startProjectWith, type ProjectPlace } from './projec
 
 function StartBody({ place, close }: { place: ProjectPlace; close: () => void }): ReactNode {
   const assets = useLibrary((s) => s.lib?.assets);
-  const recent = useMemo(() => (assets ?? []).slice(-4).reverse(), [assets]);
+  // Footage first, since that is what a project usually starts from, and never sound taken from it.
+  const recent = useMemo(() => {
+    const usable = (assets ?? []).filter((a) => a.source !== 'extracted').reverse();
+    return [...usable.filter((a) => a.kind === 'video'), ...usable.filter((a) => a.kind !== 'video')].slice(0, 4);
+  }, [assets]);
   const [over, setOver] = useState(false);
   const then = (action: () => void) => () => {
     close();

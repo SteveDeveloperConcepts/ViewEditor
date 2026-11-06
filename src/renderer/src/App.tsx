@@ -5,7 +5,7 @@ import { useHelpShortcut } from '@/components/HelpDialog';
 import { MenuHost } from '@/components/Menu';
 import { ModalHost } from '@/components/Modal';
 import { RenderWatcher } from '@/components/RenderWatcher';
-import { DashTop, Sidebar } from '@/components/Shell';
+import { Sidebar } from '@/components/Shell';
 import { Toasts } from '@/components/Toasts';
 import { Spinner } from '@/components/ui';
 import { UpdateBanner } from '@/components/UpdateBanner';
@@ -74,7 +74,6 @@ function Dashboard({ route }: { route: Route }): ReactNode {
     >
       <Sidebar />
       <div className="shell-main">
-        <DashTop />
         <Page route={route} />
       </div>
     </div>
