@@ -1796,6 +1796,7 @@ section('ai', async () => {
     await p.waitForSelector('.modal');
     const offer = await p.textContent('.modal h2');
     check(/Generate about \d+ scene/.test(offer), 'the number of scenes is shown before anything is spent', offer);
+    check(/about \$\d+\.\d\d in all/.test(await p.textContent('.modal')), 'and what they come to', await p.textContent('.modal'));
     fake.pollsToFinish = 8;
     await p.click('.modal-foot button:has-text("Generate")');
     await p.waitForSelector('.editor', { timeout: 40000 });

@@ -107,8 +107,8 @@ async function chosenModel(origin: ScriptOrigin): Promise<AiModel> {
   return model;
 }
 
-/** How many clips a script will need, for telling the user before anything is spent. */
-export function sceneCount(script: string, wordsPerSecond = 2.4): number {
+/** How many clips a script will need and how long it runs, for telling the user before anything is spent. */
+export function sceneEstimate(script: string, wordsPerSecond = 2.4): { count: number; seconds: number } {
   const sentences = splitSentences(script);
   const timings: { start: number; end: number }[] = [];
   let cursor = 0;
@@ -117,12 +117,15 @@ export function sceneCount(script: string, wordsPerSecond = 2.4): number {
     timings.push({ start: cursor, end: cursor + seconds });
     cursor += seconds + 0.3;
   }
-  return planScenes(timings, SCENE_SECONDS).length;
+  return { count: planScenes(timings, SCENE_SECONDS).length, seconds: Math.ceil(cursor) };
 }
 
-async function startScenes(origin: ScriptOrigin, doc: ProjectDoc, projectId: ID, trackId: ID, sentences: string[], timings: { start: number; end: number }[], onStage: (text: string) => void): Promise<void> {
+async function startScenes(origin: ScriptOrigin, doc: ProjectDoc, projectId: ID, trackId: ID, sentences: string[], timings: { start: number; end: number }[], voiceLength: number, onStage: (text: string) => void): Promise<void> {
   const model = await chosenModel(origin);
   const scenes = planScenes(timings, SCENE_SECONDS);
+  // The voice runs on a moment after the last word, and the picture should too.
+  const last = scenes.at(-1);
+  if (last) last.end = Math.max(last.end, voiceLength);
   const narration = scenes.map((s) => s.sentences.map((i) => sentences[i]).join(' '));
   onStage('Planning the shots…');
   const written = await api.ai.writeScenePrompts({ scenes: narration, topic: origin.topic });
@@ -183,7 +186,7 @@ export async function generateScriptVideo(origin: ScriptOrigin, onStage: (text: 
 
     if (visualTrack) {
       if (origin.settings.visuals === 'talking-character') await startTalkingCharacter(origin, meta.id, visualTrack, photoId!, asset.id, asset.duration);
-      else await startScenes(origin, doc, meta.id, visualTrack, sentences, timings, onStage);
+      else await startScenes(origin, doc, meta.id, visualTrack, sentences, timings, asset.duration, onStage);
       await navigate({ page: 'editor', projectId: meta.id, showAi: true });
       return;
     }
