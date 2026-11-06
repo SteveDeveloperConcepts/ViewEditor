@@ -498,13 +498,15 @@ export function AiForm(props: AiFormProps): ReactNode {
         </p>
       )}
       {note && <p className="faint panel-note">{note}</p>}
-      <p className="faint panel-note">
-        Billed to your {providerName} account{price ? ` · ${price}` : ''}
-        {total ? ` · about ${total} for this clip` : ''}.
-      </p>
-      <Button variant="primary" block icon={busy ? <Spinner /> : <Sparkles size={15} />} disabled={busy || !!missing} title={missing ?? undefined} onClick={() => void submit()}>
-        {submitLabel}
-      </Button>
+      <div className="ai-submit">
+        <p className="faint panel-note">
+          Billed to your {providerName} account{price ? ` · ${price}` : ''}
+          {total ? ` · about ${total} for this clip` : ''}.
+        </p>
+        <Button variant="primary" block icon={busy ? <Spinner /> : <Sparkles size={15} />} disabled={busy || !!missing} title={missing ?? undefined} onClick={() => void submit()}>
+          {submitLabel}
+        </Button>
+      </div>
       {error && (
         <Notice kind="error" icon={<CircleAlert size={15} />}>
           {error}

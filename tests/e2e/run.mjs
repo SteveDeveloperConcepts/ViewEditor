@@ -1682,6 +1682,9 @@ section('ai', async () => {
     await p.keyboard.press('Tab');
     await p.fill('.ai-form textarea', 'A paper boat in the rain');
     await shot(p, '52-ai-sound-row');
+    const goButton = await p.locator('.ai-form button:has-text("Generate")').boundingBox();
+    const leftPanel = await p.locator('.panel').boundingBox();
+    check(goButton.y + goButton.height <= leftPanel.y + leftPanel.height + 1, 'Generate stays in view however long the form gets', JSON.stringify({ goButton, leftPanel }));
     await p.click('.ai-form button:has-text("Generate")');
     await p.waitForSelector('.clip.video', { timeout: 15000 });
     await p.waitForSelector('.clip.audio', { timeout: 5000 });
