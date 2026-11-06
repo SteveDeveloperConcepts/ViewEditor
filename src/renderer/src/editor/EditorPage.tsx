@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import {
+  ArrowLeft,
   Captions,
   Check,
   CircleAlert,
   Clapperboard,
   Group,
-  House,
   Image as ImageIcon,
   Music,
   Palette,
@@ -135,8 +135,8 @@ function TopBar({ projectId, onDone, exporting }: { projectId: ID; onDone: () =>
   const empty = useEditor((s) => (s.doc ? projectDuration(s.doc) <= 0 : true));
   return (
     <header className="editor-top">
-      <IconButton label="Back to dashboard" onClick={() => void navigate({ page: 'home' })}>
-        <House size={17} />
+      <IconButton label="Back to Projects" onClick={() => void navigate({ page: 'library', view: { kind: 'all' } })}>
+        <ArrowLeft size={17} />
       </IconButton>
       <ProjectName />
       <SaveState />

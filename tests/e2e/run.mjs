@@ -59,7 +59,7 @@ async function newProject(files) {
 }
 
 async function home() {
-  if (await page.$('.editor')) await page.click('[aria-label="Back to dashboard"]');
+  if (await page.$('.editor')) await page.click('[aria-label="Back to Projects"]');
   await page.waitForSelector('.sidebar');
 }
 
@@ -1155,7 +1155,7 @@ section('ai', async () => {
     return p.evaluate((id) => window.api.library.loadProject(id), l.projects.find((x) => x.name === name && !x.trashedAt).id);
   };
   const toHome = async () => {
-    if (await p.$('.editor')) await p.click('[aria-label="Back to dashboard"]');
+    if (await p.$('.editor')) await p.click('[aria-label="Back to Projects"]');
     await p.waitForSelector('.sidebar');
   };
   const blank = async (files) => {
