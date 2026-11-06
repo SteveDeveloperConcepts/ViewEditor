@@ -320,11 +320,23 @@ function overlayTrack(doc: ProjectDoc, start: number, duration: number, accept: 
   return insertTrack(doc, 0);
 }
 
+/** The row a video should use at a given time: a footage row with room there, or a new row above them. */
+function footageRow(doc: ProjectDoc, start: number, duration: number): { doc: ProjectDoc; trackId: ID } {
+  const rows = doc.tracks.filter((t) => hasVideo(doc, t));
+  const free = [...rows].reverse().find((t) => rangeFree(doc, t.id, start, start + duration));
+  return free ? { doc, trackId: free.id } : insertTrack(doc, doc.tracks.indexOf(rows[0]));
+}
+
 export interface Placement {
   trackId?: ID;
   newTrack?: 'top' | 'bottom';
   at?: number;
+  /** A clicked media tile: the clip goes at the playhead, and clicking on builds a sequence from there. */
+  atPlayhead?: boolean;
 }
+
+/** The last clip added by clicking a tile, and where the playhead was at the time. */
+let lastTile: { itemId: ID; playhead: number } | null = null;
 
 /**
  * Puts an asset on the timeline. Without an explicit placement: videos queue up after the footage
@@ -357,7 +369,16 @@ export function addAsset(asset: Asset, where: Placement = {}): ID | null {
     } else if (asset.kind === 'video') {
       const main = [...doc.tracks].reverse().find((t) => hasVideo(doc, t));
       const empty = doc.tracks.find((t) => trackItems(doc, t).length === 0);
-      if (main) {
+      const previous = where.atPlayhead && lastTile?.playhead === playhead ? doc.items.find((it) => it.id === lastTile?.itemId) : undefined;
+      if (previous) {
+        trackId = previous.trackId;
+        start = nearestFreeStart(doc, trackId, itemEnd(previous), duration);
+      } else if (where.atPlayhead && main) {
+        const row = footageRow(doc, playhead, duration);
+        doc = row.doc;
+        trackId = row.trackId;
+        start = playhead;
+      } else if (main) {
         trackId = main.id;
         start = Math.max(0, ...trackItems(doc, main).map(itemEnd));
       } else if (empty) {
@@ -401,6 +422,7 @@ export function addAsset(asset: Asset, where: Placement = {}): ID | null {
   });
   const item = created as Item | null;
   if (!item) return null;
+  lastTile = where.atPlayhead ? { itemId: item.id, playhead: get().playhead } : null;
   select([item.id], { inspect: false });
   return item.id;
 }

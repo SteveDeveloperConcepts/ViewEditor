@@ -348,6 +348,24 @@ section('review', async () => {
   await page.keyboard.press('Delete');
   await sleep(150);
   check(Math.abs(seconds(await readout()) - 4) < 0.1, 'the playhead comes back to the new end after a delete', await readout());
+
+  // Media tiles add at the playhead, as they say they do.
+  await page.click('.rail-item:has-text("Video")');
+  await seekTo(1);
+  await page.click('.asset-tile:has-text("clip-a.mp4")');
+  await sleep(200);
+  let doc = await storedDoc();
+  const added = doc.items.filter((i) => i.type === 'video').sort((a, b) => b.id.localeCompare(a.id));
+  const overlay = doc.items.find((i) => i.trackId === doc.tracks[0].id);
+  check(doc.tracks.length === 2 && Math.abs(overlay.start - 1) < 0.05, 'a video tile goes at the playhead, on a new row over the footage', JSON.stringify(added.map((i) => i.start)));
+  await page.click('.asset-tile:has-text("clip-a.mp4")');
+  await sleep(200);
+  doc = await storedDoc();
+  const onRow = doc.items.filter((i) => i.trackId === doc.tracks[0].id).sort((a, b) => a.start - b.start);
+  check(onRow.length === 2 && Math.abs(onRow[1].start - (onRow[0].start + onRow[0].duration)) < 0.05, 'clicking on builds a sequence after it', JSON.stringify(onRow.map((i) => i.start)));
+  await page.keyboard.press(`${MOD}+z`);
+  await page.keyboard.press(`${MOD}+z`);
+  await sleep(100);
 });
 
 section('text', async () => {

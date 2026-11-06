@@ -75,7 +75,7 @@ export function MediaPanel({ kind, projectId }: { kind: AssetKind; projectId: ID
     };
   }, [assets, kind, projectId, query]);
 
-  const onAdd = (a: Asset): void => void addAsset(a);
+  const onAdd = (a: Asset): void => void addAsset(a, { atPlayhead: true });
   const none = !project.length && !workspace.length;
 
   return (
