@@ -1,23 +1,12 @@
-// Project settings: shape, export quality, background, length, timeline view and frame rate.
+// Project settings: shape, background, length, timeline view and frame rate.
 
 import type { ReactNode } from 'react';
-import { useState } from 'react';
-import { ChevronDown, ChevronRight, Image as ImageIcon, Info, Scaling } from 'lucide-react';
-import {
-  BACKGROUND_SWATCHES,
-  EXPORT_PRESETS,
-  FPS_OPTIONS,
-  RESOLUTION_OPTIONS,
-  SIZE_PRESETS,
-  advancedFromPreset,
-  aspectLabel,
-  defaultBitrate,
-  resolutionLabel,
-} from '@shared/constants';
-import { effectiveAdvanced, effectiveFps, resolveOutputSpec, sourceResolution } from '@shared/render';
+import { Image as ImageIcon, Scaling } from 'lucide-react';
+import { BACKGROUND_SWATCHES, FPS_OPTIONS, SIZE_PRESETS, aspectLabel } from '@shared/constants';
+import { effectiveFps } from '@shared/render';
 import { contentEnd } from '@shared/timeline';
-import type { EncodeSpeed, ExportAdvanced, ID, RateControl } from '@shared/types';
-import { ColorField, FieldRow, Notice, NumberInput, Segmented, Slider, Switch, TimeInput, Button } from '@/components/ui';
+import type { ID } from '@shared/types';
+import { ColorField, FieldRow, Segmented, Switch, TimeInput, Button } from '@/components/ui';
 import { api, errorMessage } from '@/lib/api';
 import { addAsset, fitItem, setCanvasSize, updateItem, updateSettings, useEditor } from '@/store/editor';
 import { useLibrary } from '@/store/library';
@@ -69,70 +58,12 @@ export function SizeSelect({ label = 'Shape', compact = false }: { label?: strin
   );
 }
 
-function AdvancedExport({ value, onChange }: { value: ExportAdvanced; onChange: (patch: Partial<ExportAdvanced>) => void }): ReactNode {
-  const fps = useEditor((s) => s.doc?.settings.fps ?? 30);
-  return (
-    <div className="col">
-      <FieldRow label="Resolution">
-        <select className="select small fixed" aria-label="Export resolution" value={value.resolution} onChange={(e) => onChange({ resolution: Number(e.target.value) })}>
-          {RESOLUTION_OPTIONS.map((r) => (
-            <option key={r} value={r}>
-              {resolutionLabel(r)}
-            </option>
-          ))}
-        </select>
-      </FieldRow>
-      <FieldRow label="Bitrate">
-        <Segmented<RateControl>
-          label="Bitrate mode"
-          value={value.rateControl}
-          options={[
-            { value: 'vbr', label: 'Variable', title: 'Smaller files at higher quality' },
-            { value: 'cbr', label: 'Constant', title: 'The same amount of data every second' },
-          ]}
-          onChange={(rateControl) => onChange({ rateControl, bitrateKbps: value.bitrateKbps || defaultBitrate(value.resolution, fps) })}
-        />
-      </FieldRow>
-      {value.rateControl === 'vbr' ? (
-        <div className="field">
-          <span className="label">Quality · {value.crf <= 18 ? 'Very high' : value.crf <= 22 ? 'High' : value.crf <= 26 ? 'Medium' : 'Low'}</span>
-          {/* Lower CRF means better quality, so the slider runs the other way. */}
-          <Slider label="Quality" min={-32} max={-14} value={-value.crf} onChange={(v) => onChange({ crf: -v })} />
-        </div>
-      ) : (
-        <FieldRow label="Target (kbit/s)">
-          <div className="fixed">
-            <NumberInput label="Target bitrate in kilobits per second" min={500} max={120000} value={value.bitrateKbps} onCommit={(bitrateKbps) => onChange({ bitrateKbps })} />
-          </div>
-        </FieldRow>
-      )}
-      <FieldRow label="Encoding">
-        <Segmented<EncodeSpeed>
-          label="Encoding speed"
-          value={value.speed}
-          options={[
-            { value: 'fast', label: 'Fast', title: 'Quickest export, larger file' },
-            { value: 'balanced', label: 'Balanced' },
-            { value: 'compact', label: 'Compact', title: 'Slowest export, smallest file' },
-          ]}
-          onChange={(speed) => onChange({ speed })}
-        />
-      </FieldRow>
-    </div>
-  );
-}
-
 export function SettingsPanel({ projectId }: { projectId: ID }): ReactNode {
   const doc = useEditor((s) => s.doc)!;
   const assets = useLibrary((s) => s.assetsById);
   const showSoundwaves = usePrefs((s) => s.showSoundwaves);
   const showGhostPlayhead = usePrefs((s) => s.showGhostPlayhead);
-  const [advancedOpen, setAdvancedOpen] = useState(!!doc.settings.exportAdvanced);
   const s = doc.settings;
-
-  const spec = resolveOutputSpec(doc, assets);
-  const adv = effectiveAdvanced(doc);
-  const source = sourceResolution(doc, assets);
   const fps = effectiveFps(doc, assets);
 
   return (
@@ -145,43 +76,6 @@ export function SettingsPanel({ projectId }: { projectId: ID }): ReactNode {
         <p className="faint panel-note">
           <Scaling size={12} /> {s.width} × {s.height} frame
         </p>
-      </section>
-
-      <section>
-        <div className="row">
-          <h3 className="grow">Export settings</h3>
-          <button type="button" className="link-btn" aria-expanded={advancedOpen} onClick={() => setAdvancedOpen(!advancedOpen)}>
-            {advancedOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />} Advanced
-          </button>
-        </div>
-        <select
-          className="select"
-          aria-label="Export quality"
-          value={s.exportAdvanced ? 'custom' : s.exportPresetId}
-          onChange={(e) => updateSettings({ exportPresetId: e.target.value, exportAdvanced: null })}
-        >
-          {s.exportAdvanced && <option value="custom">Custom</option>}
-          {(['Quality', 'YouTube'] as const).map((group) => (
-            <optgroup key={group} label={group}>
-              {EXPORT_PRESETS.filter((p) => p.group === group).map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.label} · {p.description}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
-        {advancedOpen && (
-          <AdvancedExport value={adv} onChange={(patch) => updateSettings({ exportAdvanced: { ...(s.exportAdvanced ?? advancedFromPreset(s.exportPresetId, s.fps)), ...patch } })} />
-        )}
-        <p className="faint panel-note tabular">
-          Exports as {spec.width} × {spec.height} · {fps} fps · H.264 MP4 · {spec.rateControl === 'vbr' ? 'variable' : 'constant'} bitrate
-        </p>
-        {source > 0 && source < adv.resolution && (
-          <Notice icon={<Info size={14} />}>
-            Your footage is {resolutionLabel(source)}. Exporting at {resolutionLabel(adv.resolution)} makes a larger file but does not add detail.
-          </Notice>
-        )}
       </section>
 
       <section>

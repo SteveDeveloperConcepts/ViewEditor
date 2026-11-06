@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import {
   BLANK_OVERLAY,
   buildRenderCommands,
+  type ExportFormat,
   gifArgs,
   isSeekableExt,
   listOverlayFiles,
@@ -28,6 +29,7 @@ interface Job {
   dir: string;
   /** Sections are written straight to where the user asked; exports go into the library. */
   savePath: string | null;
+  format: ExportFormat;
   controller: AbortController;
   running: boolean;
 }
@@ -54,13 +56,13 @@ export class RenderJobs {
     this.send(this.last);
   }
 
-  async begin(projectId: ID, kind: 'export' | 'section', savePath: string | null): Promise<{ jobId: ID }> {
+  async begin(projectId: ID, kind: 'export' | 'section', savePath: string | null, format: ExportFormat = 'mp4'): Promise<{ jobId: ID }> {
     if (this.job) throw new Error('Another video is still exporting. Wait for it to finish or cancel it first.');
     this.lib.project(projectId);
     const id = newId('job');
     const dir = join(this.lib.paths.tmpDir, id);
     await mkdir(dir, { recursive: true });
-    this.job = { id, projectId, kind, dir, savePath, controller: new AbortController(), running: false };
+    this.job = { id, projectId, kind, dir, savePath, format, controller: new AbortController(), running: false };
     this.report(this.job, { state: 'preparing' });
     return { jobId: id };
   }
@@ -101,8 +103,8 @@ export class RenderJobs {
         };
       }
 
-      // Every text picture the plan refers to must have arrived from the renderer.
-      const needed = [...listOverlayFiles(planLayers(doc, window)).map((f) => f.file)];
+      // Every text picture the plan refers to must have arrived from the renderer. Sound needs none.
+      const needed = job.format === 'mp3' ? [] : listOverlayFiles(planLayers(doc, window)).map((f) => f.file);
       if (needed.length) needed.push(BLANK_OVERLAY);
       for (const name of needed) {
         if (!(await stat(join(job.dir, name)).catch(() => null))) throw new Error('The text layers were not prepared. Try exporting again.');
@@ -112,14 +114,19 @@ export class RenderJobs {
       const cmds = buildRenderCommands({ doc, window, spec, sources, workDir: job.dir, outputPath: out, caps: await ffmpegCaps() });
       await runRenderCommands(cmds, {
         signal: job.controller.signal,
+        soundOnly: job.format === 'mp3',
         onProgress: (f) => this.report(job, { state: f >= 0.96 ? 'finishing' : 'rendering', progress: f }),
       });
 
       if (job.kind === 'section') {
         const target = job.savePath!;
-        await rename(out, target).catch(async () => {
-          await copyFile(out, target);
-        });
+        if (job.format === 'mp3') await runFfmpeg(mp3Args(cmds.audio.out, target), { signal: job.controller.signal });
+        else if (job.format === 'gif') await runFfmpeg(gifArgs(out, target, spec.width), { signal: job.controller.signal });
+        else {
+          await rename(out, target).catch(async () => {
+            await copyFile(out, target);
+          });
+        }
         this.report(job, { state: 'done', progress: 1, outputPath: target });
         return;
       }

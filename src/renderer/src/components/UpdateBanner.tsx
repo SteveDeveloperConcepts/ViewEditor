@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import type { UpdateState } from '@shared/update';
-import { saveAndThumbnail } from '@/editor/EditorPage';
+import { saveAndThumbnail } from '@/editor/save';
 import { api } from '@/lib/api';
 import { renderActive, useLibrary } from '@/store/library';
 import { toast } from '@/store/ui';

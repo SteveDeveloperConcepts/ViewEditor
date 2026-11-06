@@ -79,7 +79,8 @@ import {
 } from '@/store/editor';
 import { useLibrary } from '@/store/library';
 import { usePrefs, setPrefs } from '@/store/prefs';
-import { downloadSection, itemMenu, selectionRange } from './actions';
+import { itemMenu, selectionRange } from './actions';
+import { openExportDialog } from './ExportDialog';
 import { ASSET_DRAG_TYPE, droppedPaths, hasFiles, importPathsIntoProject, pickIntoProjectAny } from './importing';
 import { pause, seek, stepFrames, togglePlay } from './player';
 
@@ -420,7 +421,7 @@ function TimeReadout(): ReactNode {
 
 // ---------------------------------------------------------------- toolbar
 
-function Toolbar({ onFit }: { onFit: () => void }): ReactNode {
+function Toolbar({ projectId, onFit }: { projectId: ID; onFit: () => void }): ReactNode {
   const doc = useEditor((s) => s.doc)!;
   const selection = useEditor((s) => s.selection);
   const playing = useEditor((s) => s.playing);
@@ -434,7 +435,7 @@ function Toolbar({ onFit }: { onFit: () => void }): ReactNode {
           Split
         </Button>
         {range && (
-          <Button variant="ghost" size="small" icon={<Download size={14} />} title="Export only this part of the timeline" onClick={() => void downloadSection()}>
+          <Button variant="ghost" size="small" icon={<Download size={14} />} title="Export only this part of the timeline" onClick={() => openExportDialog(projectId, 'selection')}>
             Export section <span className="faint tabular">({formatClock(range.start)} – {formatClock(range.end)})</span>
           </Button>
         )}
@@ -852,7 +853,7 @@ export function Timeline({ projectId }: { projectId: ID }): ReactNode {
 
   return (
     <div className="timeline">
-      <Toolbar onFit={fit} />
+      <Toolbar projectId={projectId} onFit={fit} />
       <div className="tl-main">
       <RowHeads doc={doc} rows={rows} inner={heads} />
       <div

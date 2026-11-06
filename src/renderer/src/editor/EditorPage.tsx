@@ -25,10 +25,8 @@ import type { Asset, ID } from '@shared/types';
 import { forgetDrafts } from '@/ai/drafts';
 import { Button, IconButton, Spinner } from '@/components/ui';
 import { api, errorMessage, isMod, isTyping, MOD_LABEL } from '@/lib/api';
-import { startRender } from '@/lib/exporter';
 import { loadBrandFonts } from '@/lib/fonts';
 import { discardIfUnused } from '@/lib/projects';
-import { updateProjectThumb } from '@/lib/thumbnail';
 import { openRecorder } from '@/recorder/openRecorder';
 import {
   clearSelection,
@@ -36,7 +34,6 @@ import {
   copySelection,
   deleteSelection,
   duplicateSelection,
-  flushSave,
   groupSelection,
   openProject,
   paste,
@@ -54,7 +51,8 @@ import {
 } from '@/store/editor';
 import { isRendering, useLibrary } from '@/store/library';
 import { usePrefs } from '@/store/prefs';
-import { navigate, onLeave, toast } from '@/store/ui';
+import { navigate, onLeave } from '@/store/ui';
+import { openExportDialog } from './ExportDialog';
 import { addToTimeline } from './importing';
 import { AiPanel } from './panels/AiPanel';
 import { BrandPanel } from './panels/BrandPanel';
@@ -64,6 +62,7 @@ import { SettingsPanel, SizeSelect } from './panels/SettingsPanel';
 import { SubtitlesPanel } from './panels/SubtitlesPanel';
 import { TextPanel } from './panels/TextPanel';
 import { pause, seek, stepFrames, togglePlay } from './player';
+import { saveAndThumbnail } from './save';
 import { Stage } from './Stage';
 import { Timeline, TimelineResizer } from './Timeline';
 
@@ -265,15 +264,6 @@ function useShortcuts(enabled: boolean): void {
   }, [enabled]);
 }
 
-/** Saves the project and refreshes its picture on the dashboard. */
-export async function saveAndThumbnail(): Promise<void> {
-  const doc = useEditor.getState().doc;
-  if (!doc) return;
-  pause();
-  await flushSave();
-  await updateProjectThumb(doc).catch(() => undefined);
-}
-
 export function EditorPage({ projectId, showAi, add }: { projectId: ID; showAi?: boolean; add?: Asset[] }): ReactNode {
   const doc = useEditor((s) => s.doc);
   const panel = useEditor((s) => s.panel);
@@ -315,18 +305,6 @@ export function EditorPage({ projectId, showAi, add }: { projectId: ID; showAi?:
 
   const exporting = isRendering(render, projectId);
 
-  const exportProject = async (): Promise<void> => {
-    try {
-      await saveAndThumbnail();
-      const current = useEditor.getState().doc;
-      if (!current) return;
-      await startRender(current, { kind: 'export' });
-      await navigate({ page: 'video', projectId });
-    } catch (err) {
-      toast(errorMessage(err), { kind: 'error' });
-    }
-  };
-
   if (failed) {
     return (
       <div className="page-center">
@@ -351,7 +329,7 @@ export function EditorPage({ projectId, showAi, add }: { projectId: ID; showAi?:
 
   return (
     <div className="editor">
-      <TopBar projectId={projectId} onExport={() => void exportProject()} exporting={exporting} />
+      <TopBar projectId={projectId} onExport={() => openExportDialog(projectId)} exporting={exporting} />
       <div className="editor-main">
         <nav className="rail" aria-label="Editor tools">
           {RAIL.map((r) => (

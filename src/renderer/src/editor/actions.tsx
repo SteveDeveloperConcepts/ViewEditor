@@ -10,14 +10,12 @@ import type { MenuEntry } from '@/components/Menu';
 import { confirmDialog } from '@/components/Modal';
 import { api, errorMessage, MOD_LABEL } from '@/lib/api';
 import { useAi } from '@/store/ai';
-import { startRender } from '@/lib/exporter';
 import {
   addAsset,
   apply,
   copySelection,
   deleteSelection,
   duplicateSelection,
-  flushSave,
   groupSelection,
   hasClipboard,
   paste,
@@ -33,6 +31,7 @@ import {
 } from '@/store/editor';
 import { getAssets } from '@/store/library';
 import { toast } from '@/store/ui';
+import { openExportDialog } from './ExportDialog';
 import { rememberAssets } from './importing';
 import { pickFromMedia } from './MediaPicker';
 
@@ -41,20 +40,6 @@ export function selectionRange(): { start: number; end: number } | null {
   const items = selectedItems();
   if (!items.length) return null;
   return { start: Math.min(...items.map((it) => it.start)), end: Math.max(...items.map(itemEnd)) };
-}
-
-/** Renders only the part of the project between the start and end of the selection, and saves it as an MP4. */
-export async function downloadSection(): Promise<void> {
-  const doc = useEditor.getState().doc;
-  const range = selectionRange();
-  if (!doc || !range) return;
-  try {
-    await flushSave();
-    const label = `${formatClock(range.start)}-${formatClock(range.end)}`.replace(/:/g, '.');
-    await startRender(doc, { kind: 'section', window: range, suggestedName: `${doc.name} ${label}` });
-  } catch (err) {
-    toast(errorMessage(err), { kind: 'error' });
-  }
 }
 
 export async function replaceMediaFor(item: Item): Promise<void> {
@@ -130,7 +115,7 @@ export function itemMenu(item: Item, projectId: ID): MenuEntry[] {
     range && {
       label: `Export section (${formatClock(range.start)} – ${formatClock(range.end)})`,
       icon: <Download size={15} />,
-      onSelect: () => void downloadSection(),
+      onSelect: () => openExportDialog(projectId, 'selection'),
     },
     isTimed(item) &&
       !many && {

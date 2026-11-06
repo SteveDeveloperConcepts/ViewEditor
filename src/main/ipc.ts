@@ -190,18 +190,20 @@ export function registerIpc(s: Services): void {
   });
 
   register('render', {
-    begin: async (projectId, kind, suggestedName) => {
+    begin: async (projectId, kind, suggestedName, format = 'mp4') => {
       let savePath: string | null = null;
       if (kind === 'section') {
+        const label = { mp4: 'MP4 video', mp3: 'MP3 audio', gif: 'GIF' }[format];
+        if (!label) throw new Error('Unknown format.');
         const r = await saveDialog({
-          title: 'Save section',
-          defaultPath: join(app.getPath('downloads'), `${safeFileName(suggestedName ?? 'section')}.mp4`),
-          filters: [{ name: 'MP4 video', extensions: ['mp4'] }],
+          title: `Save ${format.toUpperCase()}`,
+          defaultPath: join(app.getPath('downloads'), `${safeFileName(suggestedName ?? 'export')}.${format}`),
+          filters: [{ name: label, extensions: [format] }],
         });
         if (r.canceled || !r.filePath) return null;
-        savePath = /\.mp4$/i.test(r.filePath) ? r.filePath : `${r.filePath}.mp4`;
+        savePath = new RegExp(`\\.${format}$`, 'i').test(r.filePath) ? r.filePath : `${r.filePath}.${format}`;
       }
-      return jobs.begin(projectId, kind, savePath);
+      return jobs.begin(projectId, kind, savePath, format);
     },
     putOverlay: (jobId, name, data) => jobs.putOverlay(jobId, name, data),
     run: (jobId, payload) => jobs.run(jobId, payload),

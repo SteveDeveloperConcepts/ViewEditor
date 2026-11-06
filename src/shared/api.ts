@@ -2,7 +2,7 @@
 // object of this shape as `window.api`; every method is an IPC round trip.
 
 import type { AiJob, AiModel, AiProviderId, AiProviderStatus, AiRequest, AiTask } from './ai.ts';
-import type { OutputSpec, TimeWindow } from './render.ts';
+import type { ExportFormat, OutputSpec, TimeWindow } from './render.ts';
 import type {
   AppSettings,
   Asset,
@@ -116,7 +116,7 @@ export interface Api {
   };
   render: {
     /** Starts a job. For a section the user is asked where to save first; null means they cancelled. */
-    begin(projectId: ID, kind: 'export' | 'section', suggestedName?: string): Promise<{ jobId: ID } | null>;
+    begin(projectId: ID, kind: 'export' | 'section', suggestedName?: string, format?: ExportFormat): Promise<{ jobId: ID } | null>;
     putOverlay(jobId: ID, name: string, data: Uint8Array): Promise<void>;
     run(jobId: ID, payload: { doc: ProjectDoc; window: TimeWindow; spec: OutputSpec }): Promise<void>;
     cancel(): Promise<void>;

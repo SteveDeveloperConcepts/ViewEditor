@@ -101,6 +101,12 @@ async function seekTo(t) {
   await sleep(80);
 }
 
+/** Exports the open project with the Export dialog as it stands. */
+async function exportVideo(pg) {
+  await pg.click('.editor-top button:has-text("Export")');
+  await pg.click('.modal-foot button:has-text("Export")');
+}
+
 const sections = {};
 const section = (name, fn) => (sections[name] = fn);
 
@@ -581,24 +587,23 @@ section('export', async () => {
   await page.keyboard.press('Tab');
   await page.keyboard.press('Escape');
 
-  // Quality settings
-  await page.click('.rail-item:has-text("Settings")');
-  await sleep(100);
-  await shot(page, '16-settings');
-  const options = await page.$$eval('.panel select[aria-label="Export quality"] option', (e) => e.map((x) => x.textContent));
+  // The Export dialog: nothing starts until it has been filled in.
+  await page.click('.editor-top button:has-text("Export")');
+  await page.waitForSelector('.modal select[aria-label="Export quality"]');
+  await shot(page, '16-export-dialog');
+  const options = await page.$$eval('.modal select[aria-label="Export quality"] option', (e) => e.map((x) => x.textContent));
   check(options.some((o) => o.startsWith('YouTube 1080p')), 'YouTube presets are offered');
-  await page.selectOption('.panel select[aria-label="Export quality"]', 'standard');
+  check((await page.inputValue('.modal select[aria-label="Export quality"]')) === 'match', 'it starts from the size of the footage');
+  check((await page.textContent('.modal')).includes('1280 × 720'), 'and says what will be exported');
+  await page.click('.modal .link-btn:has-text("Advanced")');
+  await page.selectOption('.modal select[aria-label="Export resolution"]', '1080');
   await sleep(100);
-  check((await page.textContent('.panel')).includes('1280 × 720'), 'the panel says what will be exported');
-  await page.click('.panel .link-btn:has-text("Advanced")');
-  await page.selectOption('.panel select[aria-label="Export resolution"]', '1080');
-  await sleep(100);
-  check((await page.textContent('.panel')).includes('1920 × 1080'), 'Advanced changes the resolution');
-  check((await page.textContent('.panel')).includes('does not add detail'), 'exporting above the source resolution is explained');
-  await page.selectOption('.panel select[aria-label="Export quality"]', 'standard');
+  check((await page.textContent('.modal')).includes('1920 × 1080'), 'Advanced changes the resolution');
+  check((await page.textContent('.modal')).includes('does not add detail'), 'exporting above the source resolution is explained');
+  await page.selectOption('.modal select[aria-label="Export quality"]', 'standard');
   await sleep(100);
 
-  await page.click('.editor-top button:has-text("Export")');
+  await page.click('.modal-foot button:has-text("Export")');
   await page.waitForSelector('.video-page', { timeout: 10000 });
   await page.waitForSelector('.video-player', { timeout: 60000 });
   await sleep(300);
@@ -674,9 +679,26 @@ section('export', async () => {
   await page.mouse.click(rb.x + 40, rb.y + 25);
   await sleep(120);
   await page.click('.tl-toolbar button:has-text("Export section")');
-  await page.waitForSelector('.toast:has-text("Section saved")', { timeout: 60000 });
+  await page.click('.modal-foot button:has-text("Export")');
+  await page.waitForSelector('.toast:has-text("Export saved")', { timeout: 60000 });
   const section2 = probe(target);
   check(Math.abs(Number(section2.format.duration) - 3) < 0.2, 'Export section renders only the selected part', section2.format.duration);
+
+  // Sound straight from the dialog, without rendering any picture.
+  const soundFile = join(dir, 'whole-sound.mp3');
+  await stubSaveDialog(app, soundFile);
+  await page.click('.editor-top button:has-text("Export")');
+  await page.click('.modal .segmented button:has-text("Sound only")');
+  await page.click('.modal .segmented button:has-text("A stretch of time")');
+  await page.fill('.modal [aria-label="Export from"]', '00:01.0');
+  await page.keyboard.press('Tab');
+  await page.fill('.modal [aria-label="Export up to"]', '00:03.0');
+  await page.keyboard.press('Tab');
+  await page.click('.modal-foot button:has-text("Export")');
+  await page.waitForFunction(() => document.querySelectorAll('.toast').length > 0 && [...document.querySelectorAll('.toast')].some((t) => t.textContent.includes('Export saved')), null, { timeout: 30000 });
+  await sleep(200);
+  const sound = probe(soundFile);
+  check(sound.streams.length === 1 && sound.streams[0].codec_name === 'mp3' && Math.abs(Number(sound.format.duration) - 2) < 0.2, 'the dialog exports a stretch as sound only', JSON.stringify(sound.format?.duration));
 });
 
 section('formats', async () => {
@@ -1121,8 +1143,9 @@ section('tools', async () => {
   await sleep(200);
 
   // Cancelling an export
-  await page.selectOption('.panel select[aria-label="Export quality"]', '4k');
   await page.click('.editor-top button:has-text("Export")');
+  await page.selectOption('.modal select[aria-label="Export quality"]', '4k');
+  await page.click('.modal-foot button:has-text("Export")');
   await page.waitForSelector('.render-card', { timeout: 10000 });
   await shot(page, '34-rendering');
   await page.click('.render-card button:has-text("Cancel")');
@@ -1134,7 +1157,6 @@ section('tools', async () => {
   await page.click('button:has-text("Open in editor")');
   await page.waitForSelector('.clip');
   await page.click('.rail-item:has-text("Settings")');
-  await page.selectOption('.panel select[aria-label="Export quality"]', 'draft');
 
   // Fixed duration
   await page.click('.segmented button:has-text("Fixed")');
@@ -1143,6 +1165,8 @@ section('tools', async () => {
   await sleep(150);
   check(!!(await page.$('.tl-project-end')), 'a fixed length is marked on the timeline');
   await page.click('.editor-top button:has-text("Export")');
+  await page.selectOption('.modal select[aria-label="Export quality"]', 'draft');
+  await page.click('.modal-foot button:has-text("Export")');
   await page.waitForSelector('.video-player', { timeout: 60000 });
   const lib = await library();
   const meta = lib.projects.sort((x, y) => y.updatedAt - x.updatedAt).find((p) => p.lastExport);
@@ -1196,7 +1220,7 @@ section('rotation', async () => {
   check(photo.raster === 'ready', 'export uses the upright picture');
   const doc = await storedDoc();
   check(doc.settings.height > doc.settings.width, 'the canvas takes the upright shape', `${doc.settings.width}x${doc.settings.height}`);
-  await page.click('.editor-top button:has-text("Export")');
+  await exportVideo(page);
   await page.waitForSelector('.video-player', { timeout: 60000 });
   const meta = (await library()).projects.find((p) => p.assetIds.includes(photo.id));
   const file = join(dir, 'library', 'exports', meta.id, meta.lastExport.file);
@@ -1642,7 +1666,7 @@ section('ai', async () => {
     check(scenes.every((s) => s.h >= doc.settings.height - 1 && s.w >= doc.settings.width - 1), 'scenes fill the frame');
 
     // The whole thing still exports
-    await p.click('.editor-top button:has-text("Export")');
+    await exportVideo(p);
     await p.waitForSelector('.video-player', { timeout: 90000 });
     const l2 = await lib();
     const m = l2.projects.filter((x) => x.lastExport).sort((x, y) => y.updatedAt - x.updatedAt)[0];

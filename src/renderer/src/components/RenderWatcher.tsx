@@ -23,7 +23,7 @@ export function RenderWatcher(): ReactNode {
       toast(`The export did not finish: ${(render.message ?? '').split('\n')[0]}`, { kind: 'error' });
     } else if (render.state === 'done' && render.kind === 'section' && render.outputPath) {
       const path = render.outputPath;
-      toast('Section saved.', { kind: 'success', action: { label: 'Show', run: () => void api.app.showItemInFolder(path) } });
+      toast('Export saved.', { kind: 'success', action: { label: 'Show', run: () => void api.app.showItemInFolder(path) } });
     } else if (render.state === 'done' && !onVideoPage) {
       const projectId = render.projectId;
       toast('Your video is ready.', { kind: 'success', action: { label: 'View', run: () => void navigate({ page: 'video', projectId }) } });
@@ -48,7 +48,7 @@ export function RenderWatcher(): ReactNode {
         <div className="render-toast" role="status">
           <div className="row">
             <strong className="grow tabular">
-              {render.kind === 'section' ? 'Exporting section' : 'Exporting'} {Math.round(render.progress * 100)}%
+              Exporting {Math.round(render.progress * 100)}%
             </strong>
             <Button size="small" variant="ghost" onClick={() => void api.render.cancel()}>
               Cancel

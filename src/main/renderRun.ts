@@ -7,6 +7,8 @@ export interface RenderRunOptions {
   /** 0..1 over the whole job. */
   onProgress?: (fraction: number) => void;
   signal?: AbortSignal;
+  /** Stops after the sound, for exports that have no picture. */
+  soundOnly?: boolean;
 }
 
 // Share of the progress bar given to each stage. Video encoding dominates.
@@ -24,10 +26,12 @@ export async function runRenderCommands(cmds: RenderCommands, opts: RenderRunOpt
   }
 
   report(0);
+  const share = opts.soundOnly ? 1 : AUDIO_SHARE;
   await runFfmpeg(cmds.audio.args, {
     signal: opts.signal,
-    onProgress: (p) => report(AUDIO_SHARE * Math.min(1, p.seconds / Math.max(0.001, cmds.duration))),
+    onProgress: (p) => report(share * Math.min(1, p.seconds / Math.max(0.001, cmds.duration))),
   });
+  if (opts.soundOnly) return;
 
   let framesDone = 0;
   for (const chunk of cmds.chunks) {

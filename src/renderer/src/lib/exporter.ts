@@ -1,7 +1,7 @@
 // Starts an export. Text layers are drawn here, with the same code as the preview, and handed to
 // the main process as pictures; ffmpeg composites them over the footage.
 
-import { BLANK_OVERLAY, fullWindow, listOverlayFiles, planLayers, resolveOutputSpec, type TimeWindow } from '@shared/render';
+import { BLANK_OVERLAY, fullWindow, listOverlayFiles, planLayers, resolveOutputSpec, type ExportFormat, type TimeWindow } from '@shared/render';
 import type { ProjectDoc } from '@shared/types';
 import { getAssets } from '@/store/library';
 import { api } from './api';
@@ -15,11 +15,12 @@ export interface RenderRequest {
   window?: TimeWindow;
   /** File name offered when a section is saved. */
   suggestedName?: string;
+  format?: ExportFormat;
 }
 
 /**
  * Kicks off a render and returns once it is running (progress then arrives as events).
- * Resolves to false when the user cancelled the "save as" dialog of a section download.
+ * Resolves to false when the user cancelled the "save as" dialog of a section.
  */
 export async function startRender(doc: ProjectDoc, request: RenderRequest): Promise<boolean> {
   const window = request.window ?? fullWindow(doc);
@@ -27,10 +28,11 @@ export async function startRender(doc: ProjectDoc, request: RenderRequest): Prom
   if (window.end - window.start < 1 / spec.fps) {
     throw new Error('There is nothing to export yet. Add something to the timeline first.');
   }
-  const begun = await api.render.begin(doc.id, request.kind, request.suggestedName);
+  const begun = await api.render.begin(doc.id, request.kind, request.suggestedName, request.format);
   if (!begun) return false;
   try {
-    const files = listOverlayFiles(planLayers(doc, window));
+    // Sound has no use for text.
+    const files = request.format === 'mp3' ? [] : listOverlayFiles(planLayers(doc, window));
     if (files.length) {
       await fontsReady();
       const canvas = new OffscreenCanvas(spec.width, spec.height);
