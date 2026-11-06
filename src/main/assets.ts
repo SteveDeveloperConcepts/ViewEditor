@@ -179,6 +179,9 @@ export class AssetManager {
     const ext = extOf(name);
     if (!ALL_MEDIA_EXTS.includes(ext)) throw new Error(ext ? `.${ext} files are not supported.` : 'This file type is not supported.');
     if (st.size === 0) throw new Error('The file is empty.');
+    // Adding the same file again gives what is already in Media, not a second copy of it.
+    const known = opts.move ? undefined : this.lib.data.assets.find((a) => a.source === 'upload' && a.name === name && a.size === st.size);
+    if (known) return known;
 
     const id = newId('ast');
     const paths = this.lib.paths;

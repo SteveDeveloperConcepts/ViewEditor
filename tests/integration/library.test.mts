@@ -209,3 +209,13 @@ test('media from before there was one library joins it', async () => {
   assert.equal(again.lib.data.assets[0].scope, 'workspace');
   assert.equal(again.lib.data.assets[0].projectId, null);
 });
+
+test('adding the same file again reuses what is in Media', async () => {
+  const { lib, assets } = await open();
+  const { assets: [first] } = await assets.importFiles([media('clip-a.mp4')], { scope: 'workspace' });
+  const { assets: [again] } = await assets.importFiles([media('clip-a.mp4')], { scope: 'workspace' });
+  assert.equal(again.id, first.id);
+  assert.equal(lib.data.assets.length, 1);
+  await assets.importFiles([media('clip-b.mp4')], { scope: 'workspace' });
+  assert.equal(lib.data.assets.length, 2, 'a different file is still added');
+});
