@@ -1,0 +1,103 @@
+import type { ReactNode } from 'react';
+import { useEffect } from 'react';
+import { startApplyingJobs } from '@/ai/applyJobs';
+import { MenuHost } from '@/components/Menu';
+import { ModalHost } from '@/components/Modal';
+import { RenderWatcher } from '@/components/RenderWatcher';
+import { DashTop, Sidebar } from '@/components/Shell';
+import { Toasts } from '@/components/Toasts';
+import { Spinner } from '@/components/ui';
+import { UpdateBanner } from '@/components/UpdateBanner';
+import { EditorPage, saveAndThumbnail } from '@/editor/EditorPage';
+import { api } from '@/lib/api';
+import { startIntake } from '@/lib/intake';
+import { AssetsPage } from '@/pages/AssetsPage';
+import { BrandPage } from '@/pages/BrandPage';
+import { CreateAssetPage } from '@/pages/CreateAssetPage';
+import { HomePage } from '@/pages/HomePage';
+import { LibraryPage } from '@/pages/LibraryPage';
+import { TemplatesPage } from '@/pages/TemplatesPage';
+import { VideoPage } from '@/pages/VideoPage';
+import { loadProviders } from '@/store/ai';
+import { useLibrary } from '@/store/library';
+import { useUi, type Route } from '@/store/ui';
+
+function Page({ route }: { route: Route }): ReactNode {
+  switch (route.page) {
+    case 'home':
+      return <HomePage key={JSON.stringify(route.prefill ?? null)} prefill={route.prefill} />;
+    case 'library':
+      return <LibraryPage view={route.view} />;
+    case 'assets':
+      return <AssetsPage />;
+    case 'brand':
+      return <BrandPage />;
+    case 'templates':
+      return <TemplatesPage />;
+    case 'create-asset':
+      return <CreateAssetPage />;
+    case 'video':
+      return <VideoPage projectId={route.projectId} />;
+    case 'editor':
+      return null;
+  }
+}
+
+export function App(): ReactNode {
+  const route = useUi((s) => s.route);
+  const ready = useLibrary((s) => !!s.lib);
+
+  useEffect(() => {
+    const stopIntake = startIntake();
+    const stopJobs = startApplyingJobs();
+    void loadProviders();
+    const offClosing = api.on('app:closing', () => {
+      void saveAndThumbnail()
+        .catch(() => undefined)
+        .finally(() => void api.app.readyToClose());
+    });
+    // A file dropped anywhere that does not accept it must not make the window navigate to it.
+    const block = (e: DragEvent): void => e.preventDefault();
+    window.addEventListener('dragover', block);
+    window.addEventListener('drop', block);
+    return () => {
+      stopIntake();
+      stopJobs();
+      offClosing();
+      window.removeEventListener('dragover', block);
+      window.removeEventListener('drop', block);
+    };
+  }, []);
+
+  if (!ready) {
+    return (
+      <div className="page-center">
+        <Spinner large />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {route.page === 'editor' ? (
+        <EditorPage key={route.projectId} projectId={route.projectId} welcome={route.welcome} showAi={route.showAi} />
+      ) : (
+        <div className="shell">
+          <Sidebar />
+          <div className="shell-body">
+            {/* Only here, not in the editor: restarting from a page with no open project has nothing to save. */}
+            <UpdateBanner />
+            <div className="shell-main">
+              <DashTop />
+              <Page route={route} />
+            </div>
+          </div>
+        </div>
+      )}
+      <RenderWatcher />
+      <ModalHost />
+      <MenuHost />
+      <Toasts />
+    </>
+  );
+}

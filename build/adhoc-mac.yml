@@ -1,0 +1,8 @@
+# Mac builds made without an Apple certificate: `electron-builder --mac -c build/adhoc-mac.yml`, used by
+# `npm run dist:mac` and the GitHub workflows. Apple silicon Macs won't open an app with no signature at
+# all, so it gets an ad-hoc one. The hardened runtime would make that ad-hoc build fail Electron's library
+# validation at launch.
+extends: electron-builder.yml
+mac:
+  identity: '-'
+  hardenedRuntime: false

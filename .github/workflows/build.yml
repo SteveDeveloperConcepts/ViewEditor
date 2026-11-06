@@ -1,0 +1,109 @@
+# Tests ViewEditor and builds its installers for Windows and macOS. It runs on every push to main, and the
+# Release workflow runs it for a version tag, so a release is built exactly the way main is checked.
+# Mac builds can only be made on a Mac, so this is also how a Windows machine gets them: download the
+# files from the run's Artifacts.
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            os: windows-latest
+            dist: npm run dist:win -- --x64
+            app: release/win-unpacked/ViewEditor.exe
+          - name: macOS
+            os: macos-latest
+            dist: npm run dist:mac -- --x64 --arm64
+            app: release/mac-arm64/ViewEditor.app/Contents/MacOS/ViewEditor
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      # The tests should run against the FFmpeg the installers will contain.
+      - name: Use the FFmpeg that ships on a Mac
+        if: runner.os == 'macOS'
+        run: npm run mac:ffmpeg
+
+      - run: npm run typecheck
+
+      - name: Run the tests
+        env:
+          NODE_OPTIONS: --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/support/github-reporter.mjs --test-reporter-destination=stdout
+        run: |
+          npm run test:unit
+          npm run fixtures
+          npm run test:integration
+
+      - name: Build installers
+        run: ${{ matrix.dist }} --publish never
+
+      - name: Check the app signatures
+        if: runner.os == 'macOS'
+        run: |
+          for app in release/mac*/*.app; do
+            codesign --verify --deep --strict --verbose=2 "$app"
+          done
+
+      - name: Check the FFmpeg inside the Mac apps
+        if: runner.os == 'macOS'
+        run: |
+          check() {
+            folder="release/$1/ViewEditor.app/Contents/Resources/app.asar.unpacked/node_modules/ffmpeg-ffprobe-static"
+            for tool in ffmpeg ffprobe; do
+              if [ "$(lipo -archs "$folder/$tool")" != "$2" ]; then
+                echo "::error::$1/$tool is not a $2 program"
+                exit 1
+              fi
+              if grep -aq -- '--enable-nonfree' "$folder/$tool"; then
+                echo "::error::$1/$tool was compiled with --enable-nonfree, so it can't be passed on"
+                exit 1
+              fi
+            done
+          }
+          check mac x86_64
+          check mac-arm64 arm64
+
+      - name: Check the update files were written
+        run: ls release/latest*.yml
+
+      # Packing swaps FFmpeg for each architecture, and these tests read exports with it.
+      - name: Use this Mac's FFmpeg again
+        if: runner.os == 'macOS'
+        run: npm run mac:ffmpeg
+
+      - name: Drive the packaged app
+        env:
+          VIEWEDITOR_E2E_EXE: ${{ github.workspace }}/${{ matrix.app }}
+        run: node --experimental-strip-types tests/e2e/run.mjs
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: installers-${{ matrix.name }}
+          path: |
+            release/*.exe
+            release/*.dmg
+            release/*.blockmap
+            release/latest*.yml
+          if-no-files-found: error

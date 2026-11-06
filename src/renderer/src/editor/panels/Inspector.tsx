@@ -1,0 +1,316 @@
+// The side panel while an element is selected: everything that can be changed about it.
+
+import type { ReactNode } from 'react';
+import { useEffect, useRef } from 'react';
+import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
+  ArrowLeft,
+  Bold,
+  CaseUpper,
+  Group,
+  Italic,
+  Maximize,
+  Minimize,
+  Replace,
+  Sparkles,
+  Trash2,
+  Ungroup,
+} from 'lucide-react';
+import { FONT_FAMILIES } from '@shared/constants';
+import { formatClock } from '@shared/time';
+import { isTimed, itemEnd, nearestFreeStart, trimEndTo, updateItems } from '@shared/timeline';
+import type { Asset, ID, Item, MediaItem, TextItem, TextStyle } from '@shared/types';
+import { Button, ColorField, FieldRow, IconButton, NumberInput, Segmented, Slider, Switch, TimeInput } from '@/components/ui';
+import { actionLabel, actionsFor, openClipAi } from '@/ai/clipActions';
+import { openConnections } from '@/ai/ConnectionsDialog';
+import { useConnected } from '@/store/ai';
+import {
+  apply,
+  clearSelection,
+  deleteSelection,
+  fitItem,
+  groupSelection,
+  selectionHasGroup,
+  setSpeed,
+  ungroupSelection,
+  updateItem,
+  updateText,
+  useEditor,
+} from '@/store/editor';
+import { useLibrary } from '@/store/library';
+import { replaceMediaFor } from '../actions';
+
+const SPEEDS = ['0.5', '1', '1.5', '2'];
+
+function Timing({ item, asset }: { item: Item; asset: Asset | undefined }): ReactNode {
+  return (
+    <section>
+      <h3>Timing</h3>
+      <div className="form-grid">
+        <label className="field">
+          <span className="label">Start</span>
+          <TimeInput
+            label="Start time"
+            value={item.start}
+            onCommit={(t) =>
+              apply((doc) => {
+                const start = nearestFreeStart(doc, item.trackId, Math.max(0, t), item.duration, new Set([item.id]));
+                return updateItems(doc, [item.id], (it) => ({ ...it, start }) as Item);
+              })
+            }
+          />
+        </label>
+        <label className="field">
+          <span className="label">End</span>
+          <TimeInput
+            label="End time"
+            value={itemEnd(item)}
+            onCommit={(t) =>
+              apply((doc) => {
+                const current = doc.items.find((it) => it.id === item.id);
+                return current ? updateItems(doc, [item.id], () => trimEndTo(doc, current, t, asset)) : doc;
+              })
+            }
+          />
+        </label>
+      </div>
+    </section>
+  );
+}
+
+function Opacity({ item }: { item: Exclude<Item, { type: 'audio' }> }): ReactNode {
+  return (
+    <div className="field">
+      <span className="label">Opacity · {Math.round(item.opacity * 100)}%</span>
+      <Slider label="Opacity" min={0} max={1} step={0.01} value={item.opacity} onChange={(opacity) => updateItem(item.id, { opacity }, 'opacity')} />
+    </div>
+  );
+}
+
+function AudioControls({ item, asset }: { item: MediaItem; asset: Asset | undefined }): ReactNode {
+  const preset = SPEEDS.find((s) => Number(s) === item.speed);
+  const silent = asset ? !asset.hasAudio : false;
+  return (
+    <>
+      <section>
+        <h3>Speed</h3>
+        <Segmented<string>
+          fill
+          label="Playback speed"
+          value={preset ?? 'custom'}
+          options={[...SPEEDS.map((s) => ({ value: s, label: `${s}x` })), ...(preset ? [] : [{ value: 'custom', label: `${item.speed}x` }])]}
+          onChange={(v) => {
+            if (v !== 'custom') setSpeed(item.id, Number(v));
+          }}
+        />
+        <FieldRow label="Custom">
+          <div className="fixed">
+            <NumberInput label="Custom speed" min={0.25} max={4} decimals={2} value={item.speed} onCommit={(v) => setSpeed(item.id, v)} />
+          </div>
+        </FieldRow>
+      </section>
+      {silent ? (
+        <p className="faint panel-note">This clip has no sound.</p>
+      ) : (
+        <section>
+          <h3>Audio</h3>
+          <div className="field">
+            <span className="label">Volume · {Math.round(item.volume * 100)}%</span>
+            <Slider label="Volume" min={0} max={1} step={0.01} value={item.volume} onChange={(volume) => updateItem(item.id, { volume }, 'volume')} />
+          </div>
+          <FieldRow label="Mute">
+            <Switch label="Mute" checked={item.muted} onChange={(muted) => updateItem(item.id, { muted })} />
+          </FieldRow>
+          <FieldRow label="Fade audio in/out">
+            <Switch label="Fade audio in and out" checked={item.fadeAudio} onChange={(fadeAudio) => updateItem(item.id, { fadeAudio })} />
+          </FieldRow>
+        </section>
+      )}
+    </>
+  );
+}
+
+function PictureControls({ item }: { item: Extract<Item, { type: 'video' | 'image' }> }): ReactNode {
+  return (
+    <section>
+      <h3>Picture</h3>
+      <div className="panel-actions">
+        <Button size="small" icon={<Minimize size={13} />} title="Show the whole picture inside the frame" onClick={() => fitItem(item.id, 'contain')}>
+          Fit
+        </Button>
+        <Button size="small" icon={<Maximize size={13} />} title="Cover the whole frame" onClick={() => fitItem(item.id, 'cover')}>
+          Fill
+        </Button>
+      </div>
+      <Opacity item={item} />
+    </section>
+  );
+}
+
+function TextControls({ item }: { item: TextItem }): ReactNode {
+  const kits = useLibrary((s) => s.lib?.brandKits) ?? [];
+  const input = useRef<HTMLTextAreaElement>(null);
+  const style = (patch: Partial<TextStyle>, coalesce?: string): void => updateText(item.id, { style: patch }, coalesce);
+  const s = item.style;
+  const brandFonts = kits.flatMap((k) => k.fonts.map((f) => f.family));
+  const fonts = [...new Set([...brandFonts, ...FONT_FAMILIES, s.fontFamily])];
+
+  useEffect(() => {
+    const focus = (): void => {
+      input.current?.focus();
+      input.current?.select();
+    };
+    window.addEventListener('vieweditor:edit-text', focus);
+    return () => window.removeEventListener('vieweditor:edit-text', focus);
+  }, []);
+
+  return (
+    <>
+      <section>
+        <h3>{item.subtitle ? 'Subtitle' : 'Text'}</h3>
+        <textarea ref={input} className="textarea" rows={3} aria-label="Text" value={item.text} onChange={(e) => updateText(item.id, { text: e.target.value }, 'text')} />
+      </section>
+      <section>
+        <h3>Font</h3>
+        <select className="select" aria-label="Font" value={s.fontFamily} onChange={(e) => style({ fontFamily: e.target.value })}>
+          {fonts.map((f) => (
+            <option key={f} value={f}>
+              {f}
+            </option>
+          ))}
+        </select>
+        <div className="row">
+          <div className="size-box">
+            <NumberInput label="Font size" min={6} max={800} value={s.fontSize} onCommit={(fontSize) => style({ fontSize })} />
+          </div>
+          <IconButton label="Bold" active={s.bold} onClick={() => style({ bold: !s.bold })}>
+            <Bold size={15} />
+          </IconButton>
+          <IconButton label="Italic" active={s.italic} onClick={() => style({ italic: !s.italic })}>
+            <Italic size={15} />
+          </IconButton>
+          <IconButton label="All capitals" active={s.uppercase} onClick={() => style({ uppercase: !s.uppercase })}>
+            <CaseUpper size={15} />
+          </IconButton>
+        </div>
+        <Segmented<TextStyle['align']>
+          fill
+          label="Alignment"
+          value={s.align}
+          options={[
+            { value: 'left', label: <AlignLeft size={14} />, title: 'Left' },
+            { value: 'center', label: <AlignCenter size={14} />, title: 'Centre' },
+            { value: 'right', label: <AlignRight size={14} />, title: 'Right' },
+          ]}
+          onChange={(align) => style({ align })}
+        />
+      </section>
+      <section>
+        <h3>Colour</h3>
+        <ColorField label="Text colour" value={s.color} onChange={(color) => style({ color }, 'text-color')} />
+        <FieldRow label="Background">
+          <Switch label="Text background" checked={!!s.bgColor} onChange={(on) => style({ bgColor: on ? '#000000' : null })} />
+        </FieldRow>
+        {s.bgColor && <ColorField label="Text background colour" value={s.bgColor} onChange={(bgColor) => style({ bgColor }, 'text-bg')} />}
+        <FieldRow label="Outline">
+          <Switch label="Text outline" checked={!!s.strokeColor} onChange={(on) => style({ strokeColor: on ? '#000000' : null })} />
+        </FieldRow>
+        {s.strokeColor && <ColorField label="Outline colour" value={s.strokeColor} onChange={(strokeColor) => style({ strokeColor }, 'text-stroke')} />}
+        <FieldRow label="Shadow">
+          <Switch label="Text shadow" checked={s.shadow} onChange={(shadow) => style({ shadow })} />
+        </FieldRow>
+        <Opacity item={item} />
+      </section>
+    </>
+  );
+}
+
+const TITLES = { video: 'Video', image: 'Image', audio: 'Audio', text: 'Text' };
+
+export function Inspector({ projectId }: { projectId: ID }): ReactNode {
+  const doc = useEditor((s) => s.doc)!;
+  const selection = useEditor((s) => s.selection);
+  const assets = useLibrary((s) => s.assetsById);
+  const connected = useConnected();
+  const items = doc.items.filter((it) => selection.includes(it.id));
+
+  if (items.length !== 1) {
+    const grouped = selectionHasGroup(doc, selection);
+    return (
+      <div className="panel-body">
+        <div className="inspector-head">
+          <IconButton label="Back" onClick={clearSelection}>
+            <ArrowLeft size={16} />
+          </IconButton>
+          <h2 className="panel-title grow">{items.length} elements</h2>
+        </div>
+        <div className="panel-actions">
+          {grouped ? (
+            <Button icon={<Ungroup size={14} />} onClick={ungroupSelection}>
+              Ungroup
+            </Button>
+          ) : (
+            <Button icon={<Group size={14} />} onClick={groupSelection}>
+              Group
+            </Button>
+          )}
+          <Button icon={<Trash2 size={14} />} onClick={deleteSelection}>
+            Delete
+          </Button>
+        </div>
+        <p className="faint panel-note">Grouped elements move together on the timeline and on the canvas.</p>
+      </div>
+    );
+  }
+
+  const item = items[0];
+  const asset = item.type === 'text' ? undefined : assets[item.assetId];
+  return (
+    <div className="panel-body">
+      <div className="inspector-head">
+        <IconButton label="Back" onClick={clearSelection}>
+          <ArrowLeft size={16} />
+        </IconButton>
+        <h2 className="panel-title grow truncate" title={asset?.name}>
+          {item.type === 'text' ? (item.subtitle ? 'Subtitle' : 'Text') : (asset?.name ?? TITLES[item.type])}
+        </h2>
+        <IconButton label="Delete" onClick={deleteSelection}>
+          <Trash2 size={15} />
+        </IconButton>
+      </div>
+      {asset && (
+        <p className="faint panel-note tabular">
+          {asset.kind === 'audio' ? `${formatClock(asset.duration)} · ${asset.audioCodec ?? 'audio'}` : `${asset.width} × ${asset.height}${asset.kind === 'video' ? ` · ${formatClock(asset.duration)} · ${asset.fps} fps` : ''}`}
+          {asset.isHdr && ' · HDR converted to SDR'}
+        </p>
+      )}
+      {item.type === 'text' && <TextControls item={item} />}
+      {(item.type === 'video' || item.type === 'image') && <PictureControls item={item} />}
+      {isTimed(item) && <AudioControls item={item} asset={asset} />}
+      <Timing item={item} asset={asset} />
+      {item.type !== 'text' && (
+        <Button size="small" icon={<Replace size={13} />} onClick={() => void replaceMediaFor(item, projectId)}>
+          Replace media
+        </Button>
+      )}
+      {actionsFor(item).length > 0 && (
+        <section>
+          <h3>AI</h3>
+          {actionsFor(item).map((action) => (
+            <Button key={action} size="small" icon={<Sparkles size={13} />} onClick={() => (connected ? openClipAi(item, action, projectId) : openConnections())}>
+              {actionLabel(action)}
+            </Button>
+          ))}
+        </section>
+      )}
+      {asset?.origin?.prompt && (
+        <section>
+          <h3>Generated by {asset.origin.model}</h3>
+          <p className="faint panel-note selectable">{asset.origin.prompt}</p>
+        </section>
+      )}
+    </div>
+  );
+}

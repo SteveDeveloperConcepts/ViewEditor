@@ -147,3 +147,10 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# ViewEditor
+release/
+.DS_Store
+Thumbs.db
+tests/e2e/.artifacts/
+tests/fixtures/media/

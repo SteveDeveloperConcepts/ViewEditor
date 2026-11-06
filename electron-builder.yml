@@ -1,0 +1,53 @@
+appId: com.developerconcepts.vieweditor
+productName: ViewEditor
+copyright: Copyright © 2026 Steve Vaubell
+directories:
+  buildResources: build
+  output: release
+files:
+  - out/**/*
+  - package.json
+  - '!**/*.map'
+asarUnpack:
+  - node_modules/ffmpeg-ffprobe-static/ffmpeg*
+  - node_modules/ffmpeg-ffprobe-static/ffprobe*
+extraResources:
+  - from: licenses
+    to: licenses
+# Mac builds swap in an FFmpeg that may be passed on. The script explains why.
+beforePack: scripts/mac-ffmpeg.mjs
+# Where installed copies look for new versions (src/main/updater.ts). Builds still don't upload anything
+# themselves: the Release workflow attaches the latest*.yml and .blockmap files written next to the installers.
+publish:
+  provider: github
+  owner: SteveDeveloperConcepts
+  repo: ViewEditor
+
+win:
+  icon: build/icon.png
+  target:
+    - target: nsis
+      arch: [x64]
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  # No spaces in release file names: GitHub renames uploads that have them.
+  artifactName: ViewEditor-Setup-${version}.${ext}
+
+mac:
+  icon: build/icon.png
+  category: public.app-category.video
+  target:
+    - dmg
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  extendInfo:
+    NSCameraUsageDescription: ViewEditor uses the camera when you record yourself.
+    NSMicrophoneUsageDescription: ViewEditor uses the microphone when you record a voice-over or a video.
+dmg:
+  sign: false
+  artifactName: ViewEditor-${version}-${arch}.${ext}

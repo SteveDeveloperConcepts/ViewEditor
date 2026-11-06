@@ -1,0 +1,347 @@
+// One form for every kind of generation. What it shows comes from the chosen model: a model without a
+// duration setting shows none, and a model that offers 4, 6 and 8 seconds offers exactly those.
+
+import type { ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { CircleAlert, RefreshCw, Sparkles, Upload } from 'lucide-react';
+import {
+  aspectLabel,
+  durationChoices,
+  durationLabel,
+  missingInput,
+  pickAspect,
+  pickDuration,
+  type AiChoices,
+  type AiMediaRef,
+  type AiModel,
+  type AiOption,
+  type AiPlacement,
+  type AiRequest,
+  type AiTask,
+  type AiValue,
+} from '@shared/ai';
+import type { AssetKind, ID } from '@shared/types';
+import { Button, Field, FieldRow, IconButton, Notice, Spinner, Switch } from '@/components/ui';
+import { api, errorMessage } from '@/lib/api';
+import { reportRejected } from '@/editor/importing';
+import { loadModels, useAi, useConnected, useModels } from '@/store/ai';
+import { useLibrary } from '@/store/library';
+import { openConnections } from './ConnectionsDialog';
+
+const LAST_MODEL = 'vieweditor.ai.model.';
+
+function rememberedModel(task: AiTask): string | null {
+  try {
+    return localStorage.getItem(LAST_MODEL + task);
+  } catch {
+    return null;
+  }
+}
+
+function rememberModel(task: AiTask, key: string): void {
+  try {
+    localStorage.setItem(LAST_MODEL + task, key);
+  } catch {
+    // Forgetting which model was last used does no harm.
+  }
+}
+
+/** Keeps the choice, or falls back to the model's default, when moving between models. */
+function chooseFrom(option: AiOption | null, current: AiValue | undefined): AiValue | undefined {
+  if (!option) return undefined;
+  if (current !== undefined && (!option.values || option.values.includes(current))) return current;
+  return option.default ?? option.values?.[0] ?? undefined;
+}
+
+function initialChoices(model: AiModel, width: number, height: number, previous: AiChoices): AiChoices {
+  const seconds = typeof previous.duration === 'number' ? previous.duration : 5;
+  return {
+    prompt: previous.prompt,
+    duration: model.duration ? (chooseFrom(model.duration, previous.duration) ?? pickDuration(model.duration, seconds)) : undefined,
+    aspect: model.aspect ? pickAspect(model.aspect, width, height) : undefined,
+    resolution: chooseFrom(model.resolution, previous.resolution),
+    sound: model.sound ? (previous.sound ?? model.sound.default) : undefined,
+  };
+}
+
+function MediaPick(props: { kind: AssetKind; label: string; value: AiMediaRef | null; projectId: ID | null; onChange: (ref: AiMediaRef | null) => void }): ReactNode {
+  const { kind, label, value, projectId, onChange } = props;
+  const assets = useLibrary((s) => s.lib?.assets);
+  const [error, setError] = useState('');
+  const options = (assets ?? []).filter((a) => a.kind === kind && (a.scope === 'workspace' || a.projectId === projectId)).reverse();
+
+  const upload = async (): Promise<void> => {
+    setError('');
+    try {
+      const target = projectId ? ({ scope: 'project', projectId } as const) : ({ scope: 'workspace' } as const);
+      const result = await api.assets.pickAndImport(kind, target);
+      if (!result) return;
+      reportRejected(result);
+      if (result.assets[0]) onChange({ assetId: result.assets[0].id });
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  };
+
+  return (
+    <div className="field">
+      <span className="label">{label}</span>
+      <div className="row">
+        <select className="select" aria-label={label} value={value?.assetId ?? ''} onChange={(e) => onChange(e.target.value ? { assetId: e.target.value } : null)}>
+          <option value="">Choose…</option>
+          {options.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name}
+            </option>
+          ))}
+        </select>
+        <IconButton label={`Upload ${kind === 'image' ? 'an image' : kind}`} onClick={() => void upload()}>
+          <Upload size={15} />
+        </IconButton>
+      </div>
+      {error && <span className="hint">{error}</span>}
+    </div>
+  );
+}
+
+export interface AiFormProps {
+  task: AiTask;
+  /** Media decided by the caller, such as the selected clip. Without it the form asks. */
+  image?: AiMediaRef | null;
+  video?: AiMediaRef | null;
+  audio?: AiMediaRef | null;
+  projectId: ID | null;
+  placement: AiPlacement;
+  /** The frame the result should suit. */
+  width: number;
+  height: number;
+  promptLabel?: string;
+  promptPlaceholder?: string;
+  submitLabel?: string;
+  /** A sentence saying what will be sent, shown above the button. */
+  note?: ReactNode;
+  onSubmitted?: () => void;
+}
+
+export function AiForm(props: AiFormProps): ReactNode {
+  const { task, projectId, placement, width, height, promptLabel = 'Prompt', promptPlaceholder, submitLabel = 'Generate', note, onSubmitted } = props;
+  const models = useModels(task);
+  const providers = useAi((s) => s.providers);
+  const connected = useConnected();
+  const [modelKey, setModelKey] = useState<string | null>(() => rememberedModel(task));
+  const [choices, setChoices] = useState<AiChoices>({});
+  const [image, setImage] = useState<AiMediaRef | null>(props.image ?? null);
+  const [video, setVideo] = useState<AiMediaRef | null>(props.video ?? null);
+  const [audio, setAudio] = useState<AiMediaRef | null>(props.audio ?? null);
+  const [price, setPrice] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState('');
+
+  const model = useMemo(() => models?.find((m) => m.key === modelKey) ?? models?.[0] ?? null, [models, modelKey]);
+
+  useEffect(() => {
+    if (!model) return;
+    setChoices((c) => initialChoices(model, width, height, c));
+    setPrice(null);
+    let live = true;
+    void api.ai.price(model.key).then((p) => live && setPrice(p));
+    return () => {
+      live = false;
+    };
+  }, [model, width, height]);
+
+  const groups = useMemo(() => {
+    const byProvider = new Map<string, AiModel[]>();
+    for (const m of models ?? []) byProvider.set(m.provider, [...(byProvider.get(m.provider) ?? []), m]);
+    return [...byProvider.entries()].map(([id, list]) => ({ id, name: providers.find((p) => p.id === id)?.name ?? id, list }));
+  }, [models, providers]);
+
+  if (!connected) {
+    return (
+      <div className="empty small">
+        <div className="empty-icon">
+          <Sparkles size={20} />
+        </div>
+        <p>Connect an AI service to generate and edit video.</p>
+        <Button variant="primary" onClick={openConnections}>
+          Connect AI tools
+        </Button>
+      </div>
+    );
+  }
+  if (!models) {
+    return (
+      <div className="row muted">
+        <Spinner /> Finding models…
+      </div>
+    );
+  }
+  if (!model) {
+    return (
+      <Notice icon={<Sparkles size={14} />}>
+        None of your connected services offers this right now.{' '}
+        <button type="button" className="link-btn inline" onClick={openConnections}>
+          Connect another
+        </button>
+      </Notice>
+    );
+  }
+
+  const set = (patch: AiChoices): void => setChoices((c) => ({ ...c, ...patch }));
+  const missing = missingInput(model, choices, { image: !!image, video: !!video, audio: !!audio });
+  const providerName = providers.find((p) => p.id === model.provider)?.name ?? model.provider;
+
+  const submit = async (): Promise<void> => {
+    setBusy(true);
+    setError('');
+    try {
+      const request: AiRequest = {
+        modelKey: model.key,
+        choices,
+        image: model.image ? image : null,
+        video: model.video ? video : null,
+        audio: model.audio ? audio : null,
+        target: projectId ? { scope: 'project', projectId } : { scope: 'workspace' },
+        placement,
+      };
+      await api.ai.generate(request);
+      set({ prompt: '' });
+      onSubmitted?.();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const refresh = async (): Promise<void> => {
+    setRefreshing(true);
+    await loadModels(task, true).catch(() => undefined);
+    setRefreshing(false);
+  };
+
+  return (
+    <div className="ai-form">
+      <div className="field">
+        <span className="label">Model</span>
+        <div className="row">
+          <select
+            className="select"
+            aria-label="Model"
+            value={model.key}
+            onChange={(e) => {
+              setModelKey(e.target.value);
+              rememberModel(task, e.target.value);
+            }}
+          >
+            {groups.map((g) => (
+              <optgroup key={g.id} label={g.name}>
+                {g.list.map((m) => (
+                  <option key={m.key} value={m.key}>
+                    {/* Variants of a model can share a display name. */}
+                    {g.list.filter((x) => x.label === m.label).length > 1 ? `${m.label} · ${m.id.split('/').slice(-2).join('/')}` : m.label}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+          <IconButton label="Refresh the model list" disabled={refreshing} onClick={() => void refresh()}>
+            {refreshing ? <Spinner /> : <RefreshCw size={14} />}
+          </IconButton>
+        </div>
+      </div>
+
+      {model.image && props.image === undefined && <MediaPick kind="image" label="Image" value={image} projectId={projectId} onChange={setImage} />}
+      {model.video && props.video === undefined && <MediaPick kind="video" label="Video" value={video} projectId={projectId} onChange={setVideo} />}
+      {model.audio && props.audio === undefined && <MediaPick kind="audio" label="Audio" value={audio} projectId={projectId} onChange={setAudio} />}
+
+      {model.prompt && (
+        <Field label={promptLabel}>
+          <textarea
+            className="textarea"
+            rows={4}
+            aria-label={promptLabel}
+            placeholder={promptPlaceholder}
+            maxLength={model.prompt.maxLength ?? undefined}
+            value={choices.prompt ?? ''}
+            onChange={(e) => set({ prompt: e.target.value })}
+          />
+        </Field>
+      )}
+
+      <div className="form-grid">
+        {model.duration && choices.duration !== undefined && (
+          <Field label="Length">
+            <select
+              className="select"
+              aria-label="Length"
+              value={String(choices.duration)}
+              onChange={(e) => {
+                const v = durationChoices(model.duration).find((x) => String(x) === e.target.value);
+                if (v !== undefined) set({ duration: v });
+              }}
+            >
+              {durationChoices(model.duration).map((v) => (
+                <option key={String(v)} value={String(v)}>
+                  {durationLabel(v)}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
+        {model.aspect?.values && choices.aspect !== undefined && (
+          <Field label="Shape">
+            <select
+              className="select"
+              aria-label="Shape"
+              value={String(choices.aspect)}
+              onChange={(e) => set({ aspect: model.aspect?.values?.find((x) => String(x) === e.target.value) })}
+            >
+              {model.aspect.values.map((v) => (
+                <option key={String(v)} value={String(v)}>
+                  {aspectLabel(v)}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
+        {model.resolution?.values && choices.resolution !== undefined && (
+          <Field label="Resolution">
+            <select
+              className="select"
+              aria-label="Resolution"
+              value={String(choices.resolution)}
+              onChange={(e) => set({ resolution: model.resolution?.values?.find((x) => String(x) === e.target.value) })}
+            >
+              {model.resolution.values.map((v) => (
+                <option key={String(v)} value={String(v)}>
+                  {String(v)}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
+      </div>
+
+      {model.sound && (
+        <FieldRow label="Generate sound">
+          <Switch label="Generate sound" checked={!!choices.sound} onChange={(sound) => set({ sound })} />
+        </FieldRow>
+      )}
+
+      {note && <p className="faint panel-note">{note}</p>}
+      <p className="faint panel-note">
+        Billed to your {providerName} account{price ? ` · ${price}` : ''}.
+      </p>
+      <Button variant="primary" block icon={busy ? <Spinner /> : <Sparkles size={15} />} disabled={busy || !!missing} title={missing ?? undefined} onClick={() => void submit()}>
+        {submitLabel}
+      </Button>
+      {error && (
+        <Notice kind="error" icon={<CircleAlert size={15} />}>
+          {error}
+        </Notice>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,59 @@
+# Push a version tag (for example v0.2.0) to build the Windows and macOS installers and publish them as a
+# GitHub release. See docs/RELEASING.md.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check the tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check the tag matches package.json
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME doesn't match version $version in package.json"
+            exit 1
+          fi
+
+  build:
+    needs: check
+    uses: ./.github/workflows/build.yml
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          path: installers
+          merge-multiple: true
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=${GITHUB_REF_NAME#v}
+          tag="refs/tags/$GITHUB_REF_NAME"
+          notes="$RUNNER_TEMP/notes.md"
+          : > "$notes"
+          # The checkout flattens an annotated tag, so fetch the real one for the "What's new" lines.
+          git fetch --quiet --force origin "$tag:$tag"
+          if [ "$(git cat-file -t "$tag")" = tag ]; then
+            whats_new=$(git tag -l --format='%(contents:body)' "$GITHUB_REF_NAME")
+            if [ -n "$(printf '%s' "$whats_new" | tr -d '[:space:]')" ]; then
+              printf "## What's new\n\n%s\n\n" "$whats_new" > "$notes"
+            fi
+          fi
+          sed "s/<version>/$version/g" .github/release-notes.md >> "$notes"
+          gh release create "$GITHUB_REF_NAME" installers/* --verify-tag \
+            --title "ViewEditor $version" --notes-file "$notes" --generate-notes

@@ -1,0 +1,221 @@
+:root {
+  color-scheme: dark;
+  --bg: #0e1014;
+  --surface: #15181e;
+  --surface-2: #1c2028;
+  --surface-3: #262b36;
+  --border: #272c37;
+  --border-strong: #3b4252;
+  --text: #e9ecf2;
+  --text-2: #a8afbd;
+  --text-3: #727b8c;
+  --accent: #4f7cf5;
+  --accent-hover: #6a91ff;
+  --accent-soft: rgba(79, 124, 245, 0.17);
+  --accent-text: #9bb7ff;
+  --on-accent: #ffffff;
+  --danger: #e5484d;
+  --danger-soft: rgba(229, 72, 77, 0.15);
+  --success: #3dbb7d;
+  --warning: #f0a92e;
+  --stage: #08090c;
+  --overlay: rgba(4, 6, 10, 0.62);
+  --shadow-pop: 0 14px 36px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --clip-video: #3d6ad6;
+  --clip-audio: #249a70;
+  --clip-image: #b97a16;
+  --clip-text: #8f57c9;
+  --radius-s: 6px;
+  --radius: 8px;
+  --radius-l: 12px;
+  --font: system-ui, -apple-system, 'Segoe UI Variable Text', 'Segoe UI', Roboto, sans-serif;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --bg: #f3f4f7;
+    --surface: #ffffff;
+    --surface-2: #f2f4f7;
+    --surface-3: #e6e9ef;
+    --border: #e0e4ea;
+    --border-strong: #c2c8d3;
+    --text: #161a22;
+    --text-2: #4d5666;
+    --text-3: #808898;
+    --accent: #3565e0;
+    --accent-hover: #2957cf;
+    --accent-soft: rgba(53, 101, 224, 0.12);
+    --accent-text: #2a55c5;
+    --danger: #d13a3f;
+    --danger-soft: rgba(209, 58, 63, 0.1);
+    --success: #1f9a61;
+    --warning: #c27b08;
+    --stage: #e4e7ed;
+    --overlay: rgba(22, 28, 40, 0.42);
+    --shadow-pop: 0 14px 36px rgba(20, 28, 45, 0.18), 0 2px 6px rgba(20, 28, 45, 0.1);
+    --shadow-card: 0 1px 2px rgba(20, 28, 45, 0.08);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.45 var(--font);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  cursor: default;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 26px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+h2 {
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+h3 {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+input,
+textarea {
+  user-select: text;
+}
+
+img,
+video {
+  display: block;
+}
+
+a {
+  color: var(--accent-text);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--text-3);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.muted {
+  color: var(--text-2);
+}
+.faint {
+  color: var(--text-3);
+}
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.grow {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.selectable {
+  user-select: text;
+  cursor: text;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.985);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes rec-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
