@@ -15,6 +15,11 @@ export function extOf(name: string): string {
   return i < 0 ? '' : name.slice(i + 1).toLowerCase();
 }
 
+/** A file name without its extension, as a title for what is in it. */
+export function fileTitle(name: string): string {
+  return name.replace(/\.[^.]+$/, '') || name;
+}
+
 // ---------------------------------------------------------------- limits
 
 export const TRASH_RETENTION_DAYS = 30;

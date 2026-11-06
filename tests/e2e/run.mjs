@@ -334,6 +334,12 @@ section('review', async () => {
   await home();
   await page.waitForFunction((n) => window.api.library.get().then((l) => l.projects.length === n), before, { timeout: 3000 }).catch(() => undefined);
   check((await projectCount()) === before, 'and goes away again if nothing was put in it');
+  await newProject();
+  await stubOpenDialog(app, [media('clip-b.mp4')]);
+  await page.click('.tl-add-media');
+  await page.waitForSelector('.clip.video');
+  await sleep(100);
+  check((await page.inputValue('.project-name')).startsWith('clip-b'), 'an empty project takes its name from the first file added', await page.inputValue('.project-name'));
   await newProject([media('clip-a.mp4')]);
   check((await page.inputValue('.project-name')).startsWith('clip-a'), 'a project is named after its first file', await page.inputValue('.project-name'));
   const videos = async () => (await clips(page)).filter((c) => c.type === 'video').sort((a, b) => a.left - b.left);

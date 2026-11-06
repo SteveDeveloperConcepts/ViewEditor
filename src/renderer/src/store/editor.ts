@@ -3,7 +3,7 @@
 
 import { create } from 'zustand';
 import type { AiPlacement } from '@shared/ai';
-import { DEFAULT_TEXT_STYLE, MIN_ITEM_DURATION, SUBTITLE_STYLES } from '@shared/constants';
+import { DEFAULT_TEXT_STYLE, fileTitle, MIN_ITEM_DURATION, SUBTITLE_STYLES } from '@shared/constants';
 import { snapToFrame } from '@shared/time';
 import {
   canvasForMedia,
@@ -40,7 +40,7 @@ import {
 import type { Asset, ID, Item, ProjectDoc, ProjectSettings, TextItem, TextStyle, Track } from '@shared/types';
 import { api, errorMessage } from '@/lib/api';
 import { textHeight } from '@/lib/textRender';
-import { getAssets } from './library';
+import { getAssets, useLibrary } from './library';
 import { toast } from './ui';
 
 export type PanelId = 'ai' | 'video' | 'image' | 'audio' | 'text' | 'subtitles' | 'brand' | 'settings';
@@ -362,6 +362,16 @@ export interface Placement {
   chain?: boolean;
 }
 
+/** A project still called by its default name takes its name from the first file put in it. */
+function namedAfter(doc: ProjectDoc, asset: Asset): ProjectDoc {
+  if (doc.items.length || !/^Untitled video( \d+)?$/.test(doc.name)) return doc;
+  const taken = new Set((useLibrary.getState().lib?.projects ?? []).filter((p) => !p.trashedAt && p.id !== doc.id).map((p) => p.name.toLowerCase()));
+  const base = fileTitle(asset.name);
+  let name = base;
+  for (let n = 2; taken.has(name.toLowerCase()); n++) name = `${base} ${n}`;
+  return { ...doc, name };
+}
+
 /** The last clip added by clicking a tile, and where the playhead was at the time. */
 let lastTile: { itemId: ID; playhead: number } | null = null;
 
@@ -372,7 +382,7 @@ let lastTile: { itemId: ID; playhead: number } | null = null;
 export function addAsset(asset: Asset, where: Placement = {}): ID | null {
   let created: Item | null = null;
   apply((before) => {
-    let doc = before;
+    let doc = namedAfter(before, asset);
     if (asset.kind !== 'audio' && doc.settings.autoSize) {
       // The first picture or video decides the canvas size.
       const size = canvasForMedia(asset.width, asset.height);

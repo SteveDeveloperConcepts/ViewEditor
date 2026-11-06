@@ -14,7 +14,7 @@ import {
   Scissors,
   Trash2,
 } from 'lucide-react';
-import { SIZE_PRESETS, TRASH_RETENTION_DAYS } from '@shared/constants';
+import { fileTitle, SIZE_PRESETS, TRASH_RETENTION_DAYS } from '@shared/constants';
 import { canvasForMedia, makeAudioItem, makeImageItem, makeVideoItem, resizeCanvas } from '@shared/timeline';
 import { isActive } from '@shared/ai';
 import type { Asset, ID, ProjectDoc, ProjectMeta } from '@shared/types';
@@ -60,15 +60,10 @@ export async function discardIfUnused(doc: ProjectDoc | null): Promise<void> {
   await api.library.deleteProjectsForever([doc.id]).catch(() => undefined);
 }
 
-/** The name a project takes from its first file. */
-export function nameFromFile(asset: Asset): string {
-  return asset.name.replace(/\.[^.]+$/, '') || asset.name;
-}
-
 /** Starts a project around media that is already in the library, and opens it. */
 export async function startProjectWith(assets: Asset[], place: ProjectPlace = {}): Promise<void> {
   if (!assets.length) return;
-  const meta = await api.library.createProject({ ...place, name: nameFromFile(assets[0]) });
+  const meta = await api.library.createProject({ ...place, name: fileTitle(assets[0].name) });
   await navigate({ page: 'editor', projectId: meta.id, add: assets });
 }
 
