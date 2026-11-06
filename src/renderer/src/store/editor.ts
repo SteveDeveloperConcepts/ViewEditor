@@ -63,6 +63,8 @@ export interface EditorState {
   snapTime: number | null;
   /** Where a new track would be created if the dragged clip were dropped now. */
   newTrackHint: 'top' | 'bottom' | null;
+  /** A clip the timeline should scroll to. `n` changes each time, so the same clip can be asked for twice. */
+  reveal: { id: ID; n: number } | null;
 }
 
 const initial: EditorState = {
@@ -79,6 +81,7 @@ const initial: EditorState = {
   saveState: 'saved',
   snapTime: null,
   newTrackHint: null,
+  reveal: null,
 };
 
 export const useEditor = create<EditorState>(() => initial);
@@ -338,8 +341,10 @@ export interface Placement {
   trackId?: ID;
   newTrack?: 'top' | 'bottom';
   at?: number;
-  /** A clicked media tile: the clip goes at the playhead, and clicking on builds a sequence from there. */
+  /** A video goes at the playhead (or `at`), on a row of its own when the footage row is taken there. */
   atPlayhead?: boolean;
+  /** Adding more without moving the playhead builds a sequence from here, as clicking media tiles does. */
+  chain?: boolean;
 }
 
 /** The last clip added by clicking a tile, and where the playhead was at the time. */
@@ -359,8 +364,8 @@ export function addAsset(asset: Asset, where: Placement = {}): ID | null {
       doc = resizeCanvas(doc, size.width, size.height, 'fit');
     }
     const fps = doc.settings.fps;
-    const playhead = snapToFrame(get().playhead, fps);
-    const duration = asset.kind === 'image' ? overlayLength(doc, where.at ?? playhead) : Math.max(MIN_ITEM_DURATION, asset.duration);
+    const playhead = Math.max(0, snapToFrame(where.at ?? get().playhead, fps));
+    const duration = asset.kind === 'image' ? overlayLength(doc, playhead) : Math.max(MIN_ITEM_DURATION, asset.duration);
     let trackId: ID;
     let start: number;
 
@@ -372,11 +377,11 @@ export function addAsset(asset: Asset, where: Placement = {}): ID | null {
       } else {
         trackId = where.trackId!;
       }
-      start = nearestFreeStart(doc, trackId, Math.max(0, snapToFrame(where.at ?? playhead, fps)), duration);
+      start = nearestFreeStart(doc, trackId, playhead, duration);
     } else if (asset.kind === 'video') {
       const main = [...doc.tracks].reverse().find((t) => hasVideo(doc, t));
       const empty = doc.tracks.find((t) => trackItems(doc, t).length === 0);
-      const previous = where.atPlayhead && lastTile?.playhead === playhead ? doc.items.find((it) => it.id === lastTile?.itemId) : undefined;
+      const previous = where.chain && lastTile?.playhead === playhead ? doc.items.find((it) => it.id === lastTile?.itemId) : undefined;
       if (previous) {
         trackId = previous.trackId;
         start = nearestFreeStart(doc, trackId, itemEnd(previous), duration);
@@ -390,7 +395,7 @@ export function addAsset(asset: Asset, where: Placement = {}): ID | null {
         start = Math.max(0, ...trackItems(doc, main).map(itemEnd));
       } else if (empty) {
         trackId = empty.id;
-        start = 0;
+        start = where.atPlayhead ? playhead : 0;
       } else {
         // Below the overlays, above any audio-only tracks.
         let index = doc.tracks.length;
@@ -398,7 +403,7 @@ export function addAsset(asset: Asset, where: Placement = {}): ID | null {
         const made = insertTrack(doc, index);
         doc = made.doc;
         trackId = made.trackId;
-        start = 0;
+        start = where.atPlayhead ? playhead : 0;
       }
     } else if (asset.kind === 'audio') {
       const home = [...doc.tracks].reverse().find((t) => (audioOnly(doc, t) || trackItems(doc, t).length === 0) && rangeFree(doc, t.id, playhead, playhead + duration));
@@ -429,7 +434,7 @@ export function addAsset(asset: Asset, where: Placement = {}): ID | null {
   });
   const item = created as Item | null;
   if (!item) return null;
-  lastTile = where.atPlayhead ? { itemId: item.id, playhead: get().playhead } : null;
+  lastTile = where.chain ? { itemId: item.id, playhead: get().playhead } : null;
   select([item.id], { inspect: false });
   return item.id;
 }
@@ -594,32 +599,31 @@ export function replaceMedia(id: ID, asset: Asset): void {
   );
 }
 
+/** Asks the timeline to bring a clip into view. */
+function reveal(id: ID | null): ID | null {
+  if (id) set({ reveal: { id, n: (get().reveal?.n ?? 0) + 1 } });
+  return id;
+}
+
 /**
- * Puts a finished AI generation in its place. Unlike replacing media by hand, the new clip keeps
- * its own length and natural speed: it is a different take, not the same footage.
+ * Puts a finished AI generation in its place, and returns the clip it became. Unlike replacing media
+ * by hand, the new clip keeps its own length and natural speed: it is a different take, not the same footage.
  */
-export function placeGenerated(asset: Asset, placement: AiPlacement): void {
+export function placeGenerated(asset: Asset, placement: AiPlacement): ID | null {
   const doc = get().doc;
-  if (!doc) return;
-  if (placement.kind === 'none') return;
-  if (placement.kind === 'timeline') {
-    addAsset(asset);
-    return;
-  }
+  if (!doc) return null;
+  if (placement.kind === 'none') return null;
+  if (placement.kind === 'timeline') return reveal(addAsset(asset, placement.sequence ? {} : { atPlayhead: true, at: placement.at }));
 
   if (placement.kind === 'after') {
     const item = doc.items.find((it) => it.id === placement.itemId);
-    addAsset(asset, item ? { trackId: item.trackId, at: itemEnd(item) } : {});
-    return;
+    return reveal(addAsset(asset, item ? { trackId: item.trackId, at: itemEnd(item) } : {}));
   }
 
   if (placement.kind === 'replace') {
     const original = doc.items.find((it) => it.id === placement.itemId);
     // The original may have been deleted while the job ran; the result must not vanish with it.
-    if (!original || original.type === 'text' || original.type === 'audio' || asset.kind === 'audio') {
-      addAsset(asset);
-      return;
-    }
+    if (!original || original.type === 'text' || original.type === 'audio' || asset.kind === 'audio') return reveal(addAsset(asset));
     apply((d) =>
       updateItems(d, [original.id], (it) => {
         if (it.type !== 'video' && it.type !== 'image') return it;
@@ -638,10 +642,11 @@ export function placeGenerated(asset: Asset, placement: AiPlacement): void {
         };
       }),
     );
-    return;
+    return reveal(original.id);
   }
 
   // A scene fills a stretch of the timeline. Footage that is too short is slowed a little to fit.
+  let scene: ID | null = null;
   apply((before) => {
     let next = before;
     let { trackId } = placement;
@@ -661,8 +666,10 @@ export function placeGenerated(asset: Asset, placement: AiPlacement): void {
       item = { ...makeImageItem(asset, next, trackId, placement.start, placement.duration), ...box };
     }
     const start = nearestFreeStart(next, trackId, placement.start, item.duration);
+    scene = item.id;
     return quantize({ ...next, items: [...next.items, { ...item, start } as Item] });
   });
+  return scene;
 }
 
 export function deleteSelection(): void {

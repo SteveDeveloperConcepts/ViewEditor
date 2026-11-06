@@ -408,8 +408,8 @@ export interface AiMediaRef {
 /** What happens to the result once it arrives. */
 export type AiPlacement =
   | { kind: 'none' }
-  /** Added to the timeline like any new clip. */
-  | { kind: 'timeline' }
+  /** Added to the timeline: where the playhead was when asked for, or after the last clip for a `sequence`. */
+  | { kind: 'timeline'; at?: number; sequence?: boolean }
   /** Takes the place of this element, keeping its position. */
   | { kind: 'replace'; itemId: ID }
   /** Goes straight after this element on the same track. */

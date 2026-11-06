@@ -2,16 +2,18 @@
 // closed, so this also runs whenever a project opens, and a result is placed exactly once.
 
 import type { AiJob } from '@shared/ai';
+import { formatClock } from '@shared/time';
+import type { ID } from '@shared/types';
 import { api } from '@/lib/api';
 import { placeGenerated, useEditor } from '@/store/editor';
 import { useLibrary } from '@/store/library';
 import { navigate, toast } from '@/store/ui';
 
 /**
- * Jobs placed during this run. The saved `applied` flag comes back a moment after it is set, and a
- * library update arriving in between must not place the same clip a second time.
+ * Jobs placed during this run, and the clip each became. The saved `applied` flag comes back a moment
+ * after it is set, and a library update arriving in between must not place the same clip a second time.
  */
-const placed = new Set<string>();
+const placed = new Map<string, ID | null>();
 const announced = new Set<string>();
 
 function place(job: AiJob): void {
@@ -20,8 +22,7 @@ function place(job: AiJob): void {
   if (job.state !== 'done' || job.applied || !asset || !docId || job.request.target.projectId !== docId || placed.has(job.id)) return;
   // Images only know their true shape a moment after import.
   if (asset.kind === 'image' && !asset.hasThumb) return;
-  placed.add(job.id);
-  placeGenerated(asset, job.request.placement);
+  placed.set(job.id, placeGenerated(asset, job.request.placement));
   void api.ai.markApplied(job.id);
 }
 
@@ -31,14 +32,16 @@ function announce(job: AiJob): void {
     announced.add(job.id);
     toast(`${job.name}: ${job.error ?? 'generation failed.'}`, { kind: 'error' });
   } else if (job.state === 'done') {
-    announced.add(job.id);
     const projectId = job.request.target.projectId;
-    const open = useEditor.getState().doc?.id === projectId;
-    toast(`${job.name} is ready.`, {
+    const doc = useEditor.getState().doc;
+    const open = !!projectId && doc?.id === projectId;
+    // Worth waiting a moment for: saying where the clip went beats saying it is ready.
+    if (open && !job.applied && !placed.has(job.id)) return;
+    announced.add(job.id);
+    const item = doc?.items.find((it) => it.id === placed.get(job.id));
+    toast(item ? `${job.name} is on the timeline at ${formatClock(item.start)}.` : `${job.name} is ready.`, {
       kind: 'success',
-      action: open
-        ? undefined
-        : { label: 'View', run: () => void navigate(projectId ? { page: 'editor', projectId } : { page: 'assets' }) },
+      action: open ? undefined : { label: 'View', run: () => void navigate(projectId ? { page: 'editor', projectId } : { page: 'assets' }) },
     });
   }
 }

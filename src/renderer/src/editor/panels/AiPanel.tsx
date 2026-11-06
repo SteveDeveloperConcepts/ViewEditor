@@ -3,9 +3,9 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Settings2 } from 'lucide-react';
-import type { AiTask } from '@shared/ai';
+import type { AiPlacement, AiTask } from '@shared/ai';
 import type { ID } from '@shared/types';
-import { IconButton } from '@/components/ui';
+import { Field, IconButton } from '@/components/ui';
 import { AiForm } from '@/ai/AiForm';
 import { openConnections } from '@/ai/ConnectionsDialog';
 import { draftTask, saveDraftTask } from '@/ai/drafts';
@@ -20,14 +20,18 @@ const TASKS: { task: AiTask; label: string; placeholder: string; hint?: string }
   { task: 'edit-video', label: 'Edit a video', placeholder: 'Change the jacket to red leather', hint: 'To edit a clip on the timeline, select it and choose Edit with AI.' },
 ];
 
+type Where = 'playhead' | 'end';
+
 export function AiPanel({ projectId }: { projectId: ID }): ReactNode {
   const doc = useEditor((s) => s.doc)!;
   const [task, setTask] = useState<AiTask>(() => draftTask(projectId) ?? 'text-to-video');
+  const [where, setWhere] = useState<Where>('playhead');
   const current = TASKS.find((t) => t.task === task)!;
   const choose = (next: AiTask): void => {
     setTask(next);
     saveDraftTask(projectId, next);
   };
+  const placement = (): AiPlacement => ({ kind: 'timeline', at: useEditor.getState().playhead, sequence: where === 'end' });
   return (
     <div className="panel-body">
       <div className="row">
@@ -49,10 +53,20 @@ export function AiPanel({ projectId }: { projectId: ID }): ReactNode {
         task={task}
         draftKey={`${projectId}:${task}`}
         projectId={projectId}
-        placement={{ kind: 'timeline' }}
+        placement={placement}
         width={doc.settings.width}
         height={doc.settings.height}
         promptPlaceholder={current.placeholder}
+        extra={
+          doc.items.length > 0 && (
+            <Field label="Place it">
+              <select className="select" aria-label="Where to place the result" value={where} onChange={(e) => setWhere(e.target.value as Where)}>
+                <option value="playhead">At the playhead, over the video</option>
+                <option value="end">After the last clip</option>
+              </select>
+            </Field>
+          )
+        }
       />
       <JobList projectId={projectId} />
     </div>

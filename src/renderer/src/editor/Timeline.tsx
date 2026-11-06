@@ -78,6 +78,8 @@ import { pause, seek, stepFrames, togglePlay } from './player';
 
 const LEFT_PAD = 14;
 const ROW_GAP = 4;
+/** Height of the time ruler, which stays at the top while the rows scroll. */
+const RULER = 26;
 /** Empty band above and below the rows; dropping there creates a new track. */
 const ZONE = 18;
 const SNAP_PX = 8;
@@ -233,7 +235,9 @@ function PendingBlocks({ jobs, doc, rows, k }: { jobs: AiJob[]; doc: ProjectDoc;
   const blocks: ReactNode[] = [];
   for (const job of jobs) {
     const p = job.request.placement;
-    let trackId: ID;
+    const chosen = job.request.choices.duration;
+    const asked = (chosen !== undefined ? durationSeconds(chosen) : null) ?? 5;
+    let trackId: ID | null;
     let start: number;
     let duration: number;
     if (p.kind === 'scene') {
@@ -243,12 +247,17 @@ function PendingBlocks({ jobs, doc, rows, k }: { jobs: AiJob[]; doc: ProjectDoc;
       if (!item) continue;
       trackId = item.trackId;
       start = itemEnd(item);
-      const chosen = job.request.choices.duration;
-      duration = (chosen !== undefined ? durationSeconds(chosen) : null) ?? 5;
+      duration = asked;
+    } else if (p.kind === 'timeline' && p.at !== undefined && !p.sequence) {
+      // Its row may not exist yet, so it is marked in the band above the rows.
+      trackId = null;
+      start = p.at;
+      duration = asked;
     } else continue;
-    const top = rows.tops.get(trackId) ?? 0;
+    const top = trackId ? (rows.tops.get(trackId) ?? 0) : 1 - ZONE;
+    const height = trackId ? (rows.heights.get(trackId) ?? 52) : ZONE - 2;
     blocks.push(
-      <div key={job.id} className="tl-pending" style={{ left: LEFT_PAD + start * k, width: Math.max(4, duration * k), top, height: rows.heights.get(trackId) ?? 52 }} title={job.prompt}>
+      <div key={job.id} className="tl-pending" style={{ left: LEFT_PAD + start * k, width: Math.max(4, duration * k), top, height }} title={job.prompt}>
         <Spinner /> <span className="truncate">{job.name}</span>
       </div>,
     );
@@ -416,6 +425,7 @@ export function Timeline({ projectId }: { projectId: ID }): ReactNode {
   const k = useEditor((s) => s.pxPerSec);
   const snapTime = useEditor((s) => s.snapTime);
   const hint = useEditor((s) => s.newTrackHint);
+  const reveal = useEditor((s) => s.reveal);
   const assets = useLibrary((s) => s.assetsById);
   const allJobs = useLibrary((s) => s.lib?.aiJobs);
   const projectJobs = useMemo(() => (allJobs ?? []).filter((j) => isActive(j) && j.request.target.projectId === projectId), [allJobs, projectId]);
@@ -477,6 +487,21 @@ export function Timeline({ projectId }: { projectId: ID }): ReactNode {
     if (doc.items.length && !hadContent.current) fit();
     hadContent.current = doc.items.length > 0;
   }, [doc.items.length, fit]);
+
+  // A clip that lands out of sight is scrolled to, so it cannot go unnoticed.
+  useEffect(() => {
+    const el = scroller.current;
+    const s = useEditor.getState();
+    const item = reveal && s.doc?.items.find((it) => it.id === reveal.id);
+    if (!el || !item) return;
+    const left = LEFT_PAD + item.start * s.pxPerSec;
+    const right = left + item.duration * s.pxPerSec;
+    if (left < el.scrollLeft || right > el.scrollLeft + el.clientWidth) el.scrollLeft = Math.max(0, left - 40);
+    const top = RULER + ZONE + (rowsRef.current.tops.get(item.trackId) ?? 0);
+    const bottom = top + (rowsRef.current.heights.get(item.trackId) ?? 0);
+    if (top < el.scrollTop + RULER) el.scrollTop = top - RULER - ZONE;
+    else if (bottom > el.scrollTop + el.clientHeight) el.scrollTop = bottom - el.clientHeight + ROW_GAP;
+  }, [reveal]);
 
   // Ctrl/Cmd + wheel zooms around the pointer. This needs a non-passive listener.
   useEffect(() => {

@@ -121,7 +121,10 @@ export interface AiFormProps {
   video?: AiMediaRef | null;
   audio?: AiMediaRef | null;
   projectId: ID | null;
-  placement: AiPlacement;
+  /** Where the result goes. A function is asked when Generate is pressed, so it can read the playhead then. */
+  placement: AiPlacement | (() => AiPlacement);
+  /** Further fields, shown above the note. */
+  extra?: ReactNode;
   /** The frame the result should suit. */
   width: number;
   height: number;
@@ -225,7 +228,7 @@ export function AiForm(props: AiFormProps): ReactNode {
         video: model.video ? video : null,
         audio: model.audio ? audio : null,
         target: projectId ? { scope: 'project', projectId } : { scope: 'workspace' },
-        placement,
+        placement: typeof placement === 'function' ? placement() : placement,
       };
       await api.ai.generate(request);
       set({ prompt: '' });
@@ -355,6 +358,7 @@ export function AiForm(props: AiFormProps): ReactNode {
         </FieldRow>
       )}
 
+      {props.extra}
       {note && <p className="faint panel-note">{note}</p>}
       <p className="faint panel-note">
         Billed to your {providerName} account{price ? ` · ${price}` : ''}.

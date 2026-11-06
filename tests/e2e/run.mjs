@@ -1331,6 +1331,31 @@ section('ai', async () => {
     await wait(300);
     check((await pclips()).length === 1, 'the animation replaces the image');
 
+    // Over footage, a generated clip goes at the playhead on a row of its own, and says where it went.
+    await blank([media('clip-a.mp4')]);
+    await p.click('.rail-item:has-text("AI tools")');
+    await p.waitForSelector('.ai-form textarea');
+    await p.keyboard.press('Home');
+    await p.keyboard.press('Shift+ArrowRight');
+    await p.keyboard.press('Shift+ArrowRight');
+    await p.fill('.ai-form textarea', 'Goes over the footage');
+    await p.click('.ai-form button:has-text("Generate")');
+    await p.waitForFunction(() => document.querySelectorAll('.clip.video').length === 2, null, { timeout: 15000 });
+    await wait(300);
+    doc = await stored();
+    const overClip = doc.items.find((i) => i.trackId === doc.tracks[0].id);
+    check(doc.tracks.length === 2 && Math.abs(overClip.start - 2) < 0.1, 'over footage, the clip goes at the playhead on its own row', JSON.stringify(doc.items.map((i) => i.start)));
+    check((await pclips()).find((c) => c.id === overClip.id).selected, 'and it is selected');
+    check(!!(await p.$('.toast:has-text("on the timeline at 0:02")')), 'and the message says where it went', await p.textContent('.toasts').catch(() => ''));
+    await p.selectOption('.ai-form select[aria-label="Where to place the result"]', 'end');
+    await p.fill('.ai-form textarea', 'Goes after the last clip');
+    await p.click('.ai-form button:has-text("Generate")');
+    await p.waitForFunction(() => document.querySelectorAll('.clip.video').length === 3, null, { timeout: 15000 });
+    await wait(300);
+    doc = await stored();
+    const ends = doc.items.filter((i) => i.type === 'video').sort((x, y) => x.start - y.start);
+    check(Math.abs(ends[2].start - (ends[1].start + ends[1].duration)) < 0.1, 'After the last clip builds a sequence instead', JSON.stringify(ends.map((i) => i.start)));
+
     // A failure is explained, and can be retried
     await p.click('.rail-item:has-text("AI tools")');
     await p.waitForSelector('.ai-form');
