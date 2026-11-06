@@ -78,26 +78,25 @@ export function App(): ReactNode {
   }
 
   return (
-    <>
-      {route.page === 'editor' ? (
-        <EditorPage key={route.projectId} projectId={route.projectId} welcome={route.welcome} showAi={route.showAi} />
-      ) : (
-        <div className="shell">
-          <Sidebar />
-          <div className="shell-body">
-            {/* Only here, not in the editor: restarting from a page with no open project has nothing to save. */}
-            <UpdateBanner />
+    <div className="app-frame">
+      <UpdateBanner />
+      <div className="app-page">
+        {route.page === 'editor' ? (
+          <EditorPage key={route.projectId} projectId={route.projectId} welcome={route.welcome} showAi={route.showAi} />
+        ) : (
+          <div className="shell">
+            <Sidebar />
             <div className="shell-main">
               <DashTop />
               <Page route={route} />
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
       <RenderWatcher />
       <ModalHost />
       <MenuHost />
       <Toasts />
-    </>
+    </div>
   );
 }

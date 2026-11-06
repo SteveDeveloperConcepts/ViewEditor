@@ -66,8 +66,8 @@ Windows code-signing certificate and an Apple Developer ID.
 ViewEditor checks the latest GitHub release 10 seconds after it starts, then every 4 hours
 (`src/main/updater.ts`):
 
-- **Windows:** it downloads a newer version in the background and shows **Restart now** on the dashboard.
-  If the user doesn't restart, the new version installs the next time they quit ViewEditor.
+- **Windows:** it downloads a newer version in the background and shows **Restart now**. If the user
+  doesn't restart, the new version installs the next time they quit ViewEditor.
 - **macOS:** it only says a new version is out. **Download** opens the release page. macOS only installs
   updates signed with a Developer ID, and these builds have an ad-hoc signature.
 - **`npm run dev`:** this never checks.

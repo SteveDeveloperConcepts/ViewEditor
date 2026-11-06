@@ -1,19 +1,22 @@
 /* ---------------------------------------------------------------- frame */
 
+.app-frame {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.app-page {
+  flex: 1;
+  min-height: 0;
+}
 .shell {
   display: flex;
   height: 100%;
 }
-.shell-body {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
 .shell-main {
   position: relative;
   flex: 1;
-  min-height: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
 }

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import type { UpdateState } from '@shared/update';
+import { saveAndThumbnail } from '@/editor/EditorPage';
 import { api } from '@/lib/api';
 import { renderActive, useLibrary } from '@/store/library';
 import { toast } from '@/store/ui';
@@ -22,6 +23,17 @@ export function UpdateBanner(): ReactNode {
 
   if (!update || later === update.version) return null;
   const ready = update.kind === 'ready';
+
+  const install = async (): Promise<void> => {
+    try {
+      // The installer starts before the app closes, so the open project is saved first.
+      if (ready) await saveAndThumbnail();
+      await api.update.install();
+    } catch (err) {
+      toast((err as Error).message, { kind: 'error' });
+    }
+  };
+
   return (
     <div className="update-banner" role="status">
       <div className="update-text">
@@ -42,7 +54,7 @@ export function UpdateBanner(): ReactNode {
         variant="primary"
         disabled={ready && rendering}
         title={ready && rendering ? 'Wait for the export to finish' : undefined}
-        onClick={() => void api.update.install().catch((err: Error) => toast(err.message, { kind: 'error' }))}
+        onClick={() => void install()}
       >
         {ready ? 'Restart now' : 'Download'}
       </Button>

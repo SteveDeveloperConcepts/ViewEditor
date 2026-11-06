@@ -184,12 +184,13 @@ section('timeline', async () => {
   await drag(b.x + b.width - 3, b.y + 20, b.x + b.width - 3 - 1 * k, b.y + 20);
   doc = await storedDoc();
   let v = doc.items.find((i) => i.type === 'video');
-  check(Math.abs(v.duration - 5) < 0.1, 'dragging the end handle trims the clip', String(v.duration));
+  // A pixel is about 0.1 seconds at this zoom, so these allow for rounding on both ends of a drag.
+  check(Math.abs(v.duration - 5) < 0.25, 'dragging the end handle trims the clip', String(v.duration));
   b = await box(clipSel(video.id));
   await drag(b.x + 3, b.y + 20, b.x + 3 + 1 * k, b.y + 20);
   doc = await storedDoc();
   v = doc.items.find((i) => i.type === 'video');
-  check(Math.abs(v.trimStart - 1) < 0.1 && Math.abs(v.start - 1) < 0.1 && Math.abs(v.duration - 4) < 0.1, 'dragging the start handle trims from the front', JSON.stringify({ s: v.start, t: v.trimStart, d: v.duration }));
+  check(Math.abs(v.trimStart - 1) < 0.25 && Math.abs(v.start - 1) < 0.25 && Math.abs(v.duration - 4) < 0.35, 'dragging the start handle trims from the front', JSON.stringify({ s: v.start, t: v.trimStart, d: v.duration }));
   b = await box(clipSel(video.id));
   await drag(b.x + b.width - 3, b.y + 20, b.x + b.width + 6 * k, b.y + 20);
   doc = await storedDoc();
@@ -1036,6 +1037,24 @@ section('update', async () => {
   await sleep(100);
   check(await page.isEnabled(button('Restart now')), 'and is possible again afterwards');
   await page.click(button('Later'));
+
+  // The notice reaches people in the editor too, and restarting from there keeps their work.
+  await newProject([media('clip-a.mp4'), media('logo.png')]);
+  await emit('update:changed', { kind: 'ready', version: '9.9.11' });
+  await page.waitForSelector('.update-banner');
+  const [banner, editor] = [await box('.update-banner'), await box('.editor')];
+  const windowHeight = await page.evaluate(() => window.innerHeight);
+  check(editor.y >= banner.y + banner.height - 1 && editor.y + editor.height <= windowHeight + 1, 'the notice shows in the editor, which makes room for it', JSON.stringify({ banner, editor, windowHeight }));
+  await shot(page, '33-update-editor');
+  const before = await storedDoc();
+  await page.click('.clip.image');
+  await page.keyboard.press('Delete');
+  await page.click(button('Restart now'));
+  await sleep(400); // Sooner than the 800 ms autosave would have written it.
+  const after = await page.evaluate((id) => window.api.library.loadProject(id), before.id);
+  check(after.items.length === before.items.length - 1, 'Restart now saves the open project first', `${before.items.length} then ${after.items.length}`);
+  await page.click(button('Later'));
+  await home();
 });
 
 section('ai', async () => {
