@@ -269,10 +269,13 @@ section('timeline', async () => {
   const tracksBefore = doc.tracks.length;
   const p2 = await box(clipSel(parts[1].id));
   const top = await box('.tl-new-track');
-  await drag(p2.x + 30, p2.y + 25, p2.x + 30, top.y + 6);
+  const startBefore = moved.start;
+  await drag(p2.x + 30, p2.y + 25, p2.x + 30 - 1 * k2, top.y + 6);
   doc = await storedDoc();
   check(doc.tracks.length === tracksBefore + 1, 'dragging above the top track creates a new layer', `${tracksBefore} -> ${doc.tracks.length}`);
-  check(doc.tracks[0].id === doc.items.find((i) => i.id === parts[1].id).trackId, 'the element lands on the new top layer');
+  const lifted = doc.items.find((i) => i.id === parts[1].id);
+  check(doc.tracks[0].id === lifted.trackId, 'the element lands on the new top layer');
+  check(Math.abs(lifted.start - (startBefore - 1)) < 0.25, 'and stays where it was dropped, even over another clip', `${startBefore} -> ${lifted.start}`);
   await page.keyboard.press(`${MOD}+z`);
   await sleep(150);
 

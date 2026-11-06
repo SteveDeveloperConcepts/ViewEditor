@@ -569,7 +569,8 @@ export function Timeline({ projectId }: { projectId: ID }): ReactNode {
           const threshold = ev.altKey ? 0 : SNAP_PX / s.pxPerSec;
           const snapped = snapClip(Math.max(0, minStart + dt), maxEnd - minStart, points, threshold);
           let delta = Math.max(0, snapped.start) - minStart;
-          const fits = moved.every((m) => rangeFree(others, target(m), m.start + delta, itemEnd(m) + delta));
+          // A new row is empty, so what is on the clip's current row must not push it around.
+          const fits = !!zone || moved.every((m) => rangeFree(others, target(m), m.start + delta, itemEnd(m) + delta));
           if (!fits) {
             // A single clip slides to the nearest free spot. A selection stays where it last fitted.
             if (moved.length > 1) return;
