@@ -327,7 +327,7 @@ export function Inspector({ projectId }: { projectId: ID }): ReactNode {
       {isTimed(item) && <AudioControls item={item} asset={asset} />}
       <Timing item={item} asset={asset} />
       {item.type !== 'text' && (
-        <Button size="small" icon={<Replace size={13} />} onClick={() => void replaceMediaFor(item, projectId)}>
+        <Button size="small" icon={<Replace size={13} />} onClick={() => void replaceMediaFor(item)}>
           Replace media
         </Button>
       )}

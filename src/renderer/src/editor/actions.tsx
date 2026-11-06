@@ -31,7 +31,8 @@ import {
 } from '@/store/editor';
 import { getAssets } from '@/store/library';
 import { toast } from '@/store/ui';
-import { rememberAssets, reportRejected } from './importing';
+import { rememberAssets } from './importing';
+import { pickFromMedia } from './MediaPicker';
 
 /** The stretch of timeline covered by the selected elements. */
 export function selectionRange(): { start: number; end: number } | null {
@@ -54,18 +55,11 @@ export async function downloadSection(): Promise<void> {
   }
 }
 
-export async function replaceMediaFor(item: Item, projectId: ID): Promise<void> {
+export async function replaceMediaFor(item: Item): Promise<void> {
   if (item.type === 'text') return;
-  try {
-    const result = await api.assets.pickAndImport(item.type === 'audio' ? 'audio' : 'media', { scope: 'project', projectId });
-    if (!result) return;
-    reportRejected(result);
-    const wanted = result.assets.find((a) => (a.kind === 'audio') === (item.type === 'audio'));
-    if (wanted) replaceMedia(item.id, wanted);
-    else if (result.assets.length) toast(item.type === 'audio' ? 'Choose an audio file to replace audio.' : 'Choose a video or an image to replace this clip.', { kind: 'error' });
-  } catch (err) {
-    toast(errorMessage(err), { kind: 'error' });
-  }
+  const audio = item.type === 'audio';
+  const chosen = await pickFromMedia({ title: 'Replace media', kinds: audio ? ['audio'] : ['video', 'image'], files: audio ? 'audio' : 'media', exclude: item.assetId });
+  if (chosen) replaceMedia(item.id, chosen);
 }
 
 /** Pulls a clip's sound out: it becomes its own clip, lined up underneath, and the video is muted. */
@@ -113,7 +107,7 @@ export function itemMenu(item: Item, projectId: ID): MenuEntry[] {
     { label: 'Copy', icon: <Copy size={15} />, hint: `${MOD_LABEL}+C`, onSelect: () => void copySelection() },
     { label: 'Paste', icon: <ClipboardPaste size={15} />, hint: `${MOD_LABEL}+V`, disabled: !hasClipboard(), onSelect: () => paste() },
     { label: 'Duplicate', icon: <CopyPlus size={15} />, hint: `${MOD_LABEL}+D`, onSelect: duplicateSelection },
-    item.type !== 'text' && !many && { label: 'Replace media…', icon: <Replace size={15} />, onSelect: () => void replaceMediaFor(item, projectId) },
+    item.type !== 'text' && !many && { label: 'Replace media…', icon: <Replace size={15} />, onSelect: () => void replaceMediaFor(item) },
     range && {
       label: `Export section (${formatClock(range.start)} – ${formatClock(range.end)})`,
       icon: <Download size={15} />,
