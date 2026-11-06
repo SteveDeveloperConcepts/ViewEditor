@@ -98,7 +98,7 @@ function MediaPick(props: { kind: AssetKind; label: string; value: AiMediaRef | 
   const [error, setError] = useState('');
   // Sound can come from an audio file or from a video.
   const sound = kind === 'audio';
-  const options = (assets ?? []).filter((a) => (sound ? a.hasAudio : a.kind === kind) && (a.scope === 'workspace' || a.projectId === projectId)).reverse();
+  const options = (assets ?? []).filter((a) => (sound ? a.hasAudio : a.kind === kind)).reverse();
   const chosen = options.find((a) => a.id === value?.assetId);
 
   const upload = async (): Promise<void> => {

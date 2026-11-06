@@ -8,7 +8,7 @@ import type { Asset, AssetKind, ID } from '@shared/types';
 import { openMenuAt, type MenuEntry } from '@/components/Menu';
 import { Button, Spinner } from '@/components/ui';
 import { assetUrl } from '@/lib/media';
-import { addAsset, selectedItems } from '@/store/editor';
+import { addAsset, selectedItems, useEditor } from '@/store/editor';
 import { useLibrary } from '@/store/library';
 import { toast } from '@/store/ui';
 import { addSoundOf, extractAudioFrom } from '../actions';
@@ -90,20 +90,19 @@ function extractEntries(assets: Asset[], projectId: ID): MenuEntry[] {
 
 export function MediaPanel({ kind, projectId }: { kind: AssetKind; projectId: ID }): ReactNode {
   const assets = useLibrary((s) => s.lib?.assets);
+  const items = useEditor((s) => s.doc?.items);
   const [query, setQuery] = useState('');
   const [over, setOver] = useState(false);
 
-  const { project, workspace } = useMemo(() => {
+  const { used, others } = useMemo(() => {
     const q = query.trim().toLowerCase();
     const list = (assets ?? []).filter((a) => a.kind === kind && (!q || a.name.toLowerCase().includes(q))).reverse();
-    return {
-      project: list.filter((a) => a.scope === 'project' && a.projectId === projectId),
-      workspace: list.filter((a) => a.scope === 'workspace'),
-    };
-  }, [assets, kind, projectId, query]);
+    const inUse = new Set((items ?? []).flatMap((it) => (it.type === 'text' ? [] : [it.assetId])));
+    return { used: list.filter((a) => inUse.has(a.id)), others: list.filter((a) => !inUse.has(a.id)) };
+  }, [assets, items, kind, query]);
 
   const onAdd = (a: Asset): void => void addAsset(a, { atPlayhead: true, chain: true });
-  const none = !project.length && !workspace.length;
+  const none = !used.length && !others.length;
 
   return (
     <div className="panel-body">
@@ -165,21 +164,21 @@ export function MediaPanel({ kind, projectId }: { kind: AssetKind; projectId: ID
           <input className="input small" placeholder={`Search ${TITLES[kind].toLowerCase()}`} aria-label={`Search ${TITLES[kind].toLowerCase()}`} value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
       )}
-      {project.length > 0 && (
+      {used.length > 0 && (
         <section>
-          <h3>In this project</h3>
+          <h3>On the timeline</h3>
           <div className="asset-grid">
-            {project.map((a) => (
+            {used.map((a) => (
               <AssetTile key={a.id} asset={a} onAdd={onAdd} />
             ))}
           </div>
         </section>
       )}
-      {workspace.length > 0 && (
+      {others.length > 0 && (
         <section>
           <h3>Your media</h3>
           <div className="asset-grid">
-            {workspace.map((a) => (
+            {others.map((a) => (
               <AssetTile key={a.id} asset={a} onAdd={onAdd} />
             ))}
           </div>

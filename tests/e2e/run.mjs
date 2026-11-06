@@ -419,6 +419,15 @@ section('review', async () => {
   check(true, 'the Audio panel offers Extract audio too');
   await page.keyboard.press('Escape');
 
+  // One library: what went into a project is in Media and in every other project.
+  await home();
+  await page.click('.sidebar .nav-item:has-text("Media")');
+  await page.waitForSelector('.asset-card:has-text("clip-a.mp4")');
+  check(await page.isVisible('.asset-card:has-text("clip-a sound.flac")'), 'Media holds what was added and extracted in a project');
+  await newProject();
+  await page.click('.rail-item:has-text("Video")');
+  check((await page.textContent('.panel')).includes('clip-a.mp4'), 'and another project can use it');
+
   // Media tiles add at the playhead, as they say they do.
   await newProject([media('clip-a.mp4')]);
   await page.click('.rail-item:has-text("Video")');
@@ -1574,6 +1583,9 @@ section('ai', async () => {
     await toHome();
     await wait(400);
     check((await lib()).projects.length === projectsBefore, 'walking away from it leaves no empty project');
+    await p.click('.sidebar .nav-item:has-text("Media")');
+    await p.waitForSelector('.asset-card:has-text("A paper boat on a stream")', { timeout: 8000 });
+    check(true, 'what was generated in a project is in Media');
 
     // Stopping
     await toHome();

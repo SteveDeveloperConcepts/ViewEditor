@@ -169,7 +169,7 @@ export async function trashProjects(ids: ID[]): Promise<void> {
 export async function deleteForever(ids: ID[]): Promise<boolean> {
   const ok = await confirmDialog({
     title: ids.length === 1 ? 'Delete this project permanently?' : `Delete ${ids.length} projects permanently?`,
-    message: 'This cannot be undone. The project, its export and any media only it uses are removed from this computer.',
+    message: 'This cannot be undone. The project and its export are removed from this computer. Its media stays in Media.',
     confirmLabel: 'Delete permanently',
     danger: true,
   });

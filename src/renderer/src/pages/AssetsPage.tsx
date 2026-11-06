@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
-import { AudioLines, Ellipsis, FolderUp, Image as ImageIcon, Music, Scissors, Trash2, Upload, Video, Wand2 } from 'lucide-react';
+import { AudioLines, Ellipsis, FolderUp, Image as ImageIcon, Music, Scissors, Search, Trash2, Upload, Video, Wand2 } from 'lucide-react';
 import { formatBytes, formatClock } from '@shared/time';
 import type { Asset, AssetKind } from '@shared/types';
 import { JobList } from '@/ai/JobList';
@@ -91,9 +91,13 @@ export function AssetsPage(): ReactNode {
   const assets = useLibrary((s) => s.lib?.assets);
   const importing = useLibrary((s) => s.importing);
   const [filter, setFilter] = useState<Filter>('all');
+  const [query, setQuery] = useState('');
   const [over, setOver] = useState(false);
 
-  const list = useMemo(() => (assets ?? []).filter((a) => a.scope === 'workspace' && (filter === 'all' || a.kind === filter)).reverse(), [assets, filter]);
+  const list = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return (assets ?? []).filter((a) => (filter === 'all' || a.kind === filter) && (!q || a.name.toLowerCase().includes(q))).reverse();
+  }, [assets, filter, query]);
 
   const upload = async (): Promise<void> => {
     try {
@@ -126,6 +130,10 @@ export function AssetsPage(): ReactNode {
       <header className="page-head">
         <h1>Media</h1>
         <div className="grow" />
+        <div className="search-box">
+          <Search size={14} />
+          <input className="input" placeholder="Search media" aria-label="Search media" value={query} onChange={(e) => setQuery(e.target.value)} />
+        </div>
         <Segmented<Filter>
           label="Filter media"
           value={filter}
@@ -160,8 +168,8 @@ export function AssetsPage(): ReactNode {
           ))}
         </div>
       ) : (
-        <EmptyState icon={<FolderUp size={22} />} title={filter === 'all' ? 'No media yet' : 'Nothing here yet'}>
-          <p>Files you add here are available in every project. Drag them onto this page or use Add files.</p>
+        <EmptyState icon={<FolderUp size={22} />} title={query ? 'Nothing matches that search' : filter === 'all' ? 'No media yet' : 'Nothing here yet'}>
+          <p>Everything you add, record or generate is kept here, ready for any project. Drag files onto this page or use Add files.</p>
           <p className="faint">{SUPPORTED_SUMMARY}</p>
         </EmptyState>
       )}

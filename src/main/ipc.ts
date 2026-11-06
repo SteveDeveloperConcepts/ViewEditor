@@ -78,12 +78,9 @@ export function registerIpc(s: Services): void {
     return win ? dialog.showSaveDialog(win, options) : dialog.showSaveDialog(options);
   };
 
-  /** Only ever trust the two fields we understand, and make sure a project target really exists. */
+  /** Everything goes into the one Media library, whichever project asked. A project target must still exist. */
   const importOptions = (target: ImportTarget): ImportOptions => {
-    if (target?.scope === 'project' && target.projectId) {
-      lib.project(target.projectId);
-      return { scope: 'project', projectId: target.projectId };
-    }
+    if (target?.scope === 'project' && target.projectId) lib.project(target.projectId);
     return { scope: 'workspace' };
   };
 

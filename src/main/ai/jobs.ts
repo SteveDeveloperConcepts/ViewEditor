@@ -185,10 +185,8 @@ export class AiJobs {
       const type = await download(url, file, provider.name, signal);
       const fromUrl = extOf(new URL(url).pathname);
       const ext = ALL_MEDIA_EXTS.includes(fromUrl) ? fromUrl : (MIME_EXT[type.split(';')[0].trim()] ?? (job.task === 'text-to-image' ? 'png' : 'mp4'));
-      const { scope, projectId } = job.request.target;
       const imported = await this.o.assets.importFiles([file], {
-        scope,
-        projectId,
+        scope: 'workspace',
         move: true,
         source: 'ai',
         names: [`${job.name}.${ext}`],

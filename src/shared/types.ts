@@ -32,7 +32,7 @@ export interface Asset {
   origin?: AssetOrigin | null;
   /** The video this sound was taken from. */
   extractedFrom?: ID | null;
-  /** 'workspace' assets show in the asset library; 'project' assets belong to one project. */
+  /** Everything in Media is 'workspace'. 'project' is left over from when media belonged to one project. */
   scope: 'workspace' | 'project';
   projectId: ID | null;
 

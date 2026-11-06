@@ -171,7 +171,7 @@ export async function generateScriptVideo(origin: ScriptOrigin, onStage: (text: 
       sentences,
       voice: origin.settings.voice,
       rate: origin.settings.rate,
-      name: 'Voice-over',
+      name: `${name} voice-over`,
       target: { scope: 'project', projectId: meta.id },
     });
     onStage('Building the video…');

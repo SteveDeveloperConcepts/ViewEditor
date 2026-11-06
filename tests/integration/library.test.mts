@@ -199,3 +199,13 @@ test('extracting audio gives a real audio file, once, with the sound of the vide
   const { assets: [picture] } = await assets.importFiles([media('logo.png')], { scope: 'workspace' });
   await assert.rejects(assets.extractAudio(picture.id), /no sound/);
 });
+
+test('media from before there was one library joins it', async () => {
+  const { lib, assets, root } = await open();
+  const project = await lib.createProject({ name: 'Old' });
+  await assets.importFiles([media('logo.png')], { scope: 'project', projectId: project.id });
+  await lib.flush();
+  const again = await open(root);
+  assert.equal(again.lib.data.assets[0].scope, 'workspace');
+  assert.equal(again.lib.data.assets[0].projectId, null);
+});

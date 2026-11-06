@@ -88,6 +88,12 @@ export class LibraryStore extends EventEmitter {
       if (!this.data.spaces.length) this.data.spaces = defaultLibrary().spaces;
       if (!this.data.spaces.some((s) => s.isDefault)) this.data.spaces[0].isDefault = true;
       await copyFile(p.libraryFile, `${p.libraryFile}.bak`).catch(() => undefined);
+      // Media used to belong to single projects. It all lives in one library now.
+      for (const a of this.data.assets) {
+        if (a.scope !== 'project') continue;
+        a.scope = 'workspace';
+        a.projectId = null;
+      }
     }
     await this.reconcileProjects();
     await this.purgeTrash();
