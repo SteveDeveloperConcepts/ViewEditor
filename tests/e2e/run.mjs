@@ -1423,7 +1423,8 @@ section('ai', async () => {
     await p.selectOption('.ai-form select[aria-label="Model"]', veo.value);
     await wait(150);
     const veoLengths = await p.$$eval('.ai-form select[aria-label="Length"] option', (e) => e.map((o) => o.textContent));
-    check(JSON.stringify(veoLengths) === JSON.stringify(['4 s', '6 s', '8 s']), 'Veo offers exactly its lengths', veoLengths.join());
+    check(JSON.stringify(veoLengths.filter((l) => !l.includes('trimmed'))) === JSON.stringify(['4 s', '6 s', '8 s']), 'Veo offers exactly its lengths', veoLengths.join());
+    check(veoLengths.includes('3 s · trimmed from 4 s'), 'and shorter ones are made longer and trimmed', veoLengths.join());
     await p.selectOption('.ai-form select[aria-label="Model"]', gen.value);
     await wait(150);
     const genLengths = await p.$$eval('.ai-form select[aria-label="Length"] option', (e) => e.map((o) => o.textContent));
@@ -1432,6 +1433,9 @@ section('ai', async () => {
     await p.selectOption('.ai-form select[aria-label="Model"]', falModel.value);
     await p.waitForSelector('.ai-form >> text=$0.15 per second');
     check(true, 'the price is shown before generating');
+    check(/about \$\d+\.\d\d for this clip/.test(await p.textContent('.ai-form')), 'and what this clip comes to', await p.textContent('.ai-form'));
+    const groupsOffered = await p.$$eval('.ai-form select[aria-label="Model"] optgroup', (e) => e.map((g) => g.label));
+    check(groupsOffered[0] === 'Recommended', 'a short recommended list comes first', groupsOffered.join());
     check(await p.isDisabled('.ai-form button:has-text("Generate")'), 'nothing can start without a prompt');
 
     // Generating into a project
@@ -1588,8 +1592,11 @@ section('ai', async () => {
     await toHome();
     await p.click('.sidebar .nav-item:has-text("Generate with AI")');
     await p.waitForSelector('.panel .ai-form textarea');
-    await p.selectOption('.ai-form select[aria-label="Model"]', 'fal:text-to-video:minimax/h3-max/text-to-video');
+    await p.selectOption('.ai-form select[aria-label="Model"]', 'runway:text-to-video:veo3.1');
     await wait(150);
+    await p.selectOption('.ai-form select[aria-label="Length"]', 'trim:3');
+    await wait(100);
+    check((await p.textContent('.ai-form')).includes('trimmed to 3 s when it lands'), 'the form says when a model cannot make the length');
     await p.click('.ai-form .segmented button:has-text("My media")');
     check(await p.isDisabled('.ai-form button:has-text("Generate")'), 'My media needs a choice before generating');
     await p.selectOption('.ai-form select[aria-label="Sound from"]', { label: 'clip-a.mp4' });
@@ -1606,6 +1613,7 @@ section('ai', async () => {
     const made = doc.items.find((i) => i.type === 'video');
     const under = doc.items.find((i) => i.type === 'audio');
     check(made.muted && under.start === made.start && Math.abs(under.trimStart - 1) < 0.05, 'the clip and the chosen sound land together, lined up', JSON.stringify({ s: under.start, t: under.trimStart, d: under.duration, v: made.duration }));
+    check(Math.abs(made.duration - 3) < 0.05 && Math.abs(under.duration - 3) < 0.05, 'both are trimmed to the length asked for', JSON.stringify({ d: under.duration, v: made.duration }));
     await p.keyboard.press(`${MOD}+z`);
     await wait(200);
     check((await pclips()).length === 0, 'and they are one step to undo');
@@ -1614,6 +1622,7 @@ section('ai', async () => {
     await blank([media('clip-a.mp4')]);
     await p.click('.rail-item:has-text("AI tools")');
     await p.waitForSelector('.ai-form textarea');
+    await p.selectOption('.ai-form select[aria-label="Model"]', 'fal:text-to-video:minimax/h3-max/text-to-video');
 
     // A failure is explained, and can be retried
     await p.click('.rail-item:has-text("AI tools")');

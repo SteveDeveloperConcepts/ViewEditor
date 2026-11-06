@@ -12,6 +12,8 @@ import {
   missingInput,
   pickAspect,
   pickDuration,
+  recommendedModels,
+  totalPrice,
   type AiChoices,
   type AiMediaRef,
   type AiModel,
@@ -58,16 +60,16 @@ function chooseFrom(option: AiOption | null, current: AiValue | undefined): AiVa
   return option.default ?? option.values?.[0] ?? undefined;
 }
 
-/** The length to start from: what was chosen already if this model has it, then the clip's own length, then the model's default. */
-function lengthFor(model: AiModel, previous: AiChoices, seconds: number | undefined): AiValue | undefined {
+/** The length to start from: the closest this model can do to what was asked for, or else what was chosen already, or its default. */
+function lengthFor(model: AiModel, previous: AiChoices, seconds: number | null | undefined): AiValue | undefined {
   const option = model.duration;
   if (!option) return undefined;
+  if (typeof seconds === 'number') return pickDuration(option, seconds);
   if (previous.duration !== undefined && (!option.values || option.values.includes(previous.duration))) return previous.duration;
-  if (seconds !== undefined) return pickDuration(option, seconds);
   return chooseFrom(option, undefined) ?? pickDuration(option, typeof previous.duration === 'number' ? previous.duration : 5);
 }
 
-function initialChoices(model: AiModel, width: number, height: number, previous: AiChoices, seconds: number | undefined, shapePicked: boolean): AiChoices {
+function initialChoices(model: AiModel, width: number, height: number, previous: AiChoices, seconds: number | null | undefined, shapePicked: boolean): AiChoices {
   const keepShape = shapePicked && previous.aspect !== undefined && model.aspect?.values?.includes(previous.aspect);
   return {
     prompt: previous.prompt,
@@ -217,29 +219,31 @@ export function AiForm(props: AiFormProps): ReactNode {
   const [audio, setAudio] = useState<AiMediaRef | null>(props.audio ?? draft?.audio ?? null);
   const [soundMode, setSoundMode] = useState<SoundMode>(draft?.soundMode ?? 'none');
   const [mine, setMine] = useState<AiMediaRef | null>(draft?.mine ?? null);
+  const [wanted, setWanted] = useState<number | null>(seconds ?? draft?.wanted ?? null);
   const [price, setPrice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
-  const model = useMemo(() => models?.find((m) => m.key === modelKey) ?? models?.[0] ?? null, [models, modelKey]);
+  const recommended = useMemo(() => recommendedModels(models ?? [], task, wanted), [models, task, wanted]);
+  const model = useMemo(() => models?.find((m) => m.key === modelKey) ?? recommended[0] ?? models?.[0] ?? null, [models, modelKey, recommended]);
 
   useEffect(() => {
     if (!model) return;
-    setChoices((c) => initialChoices(model, width, height, c, seconds, shapePicked));
+    setChoices((c) => initialChoices(model, width, height, c, wanted, shapePicked));
     setPrice(null);
     let live = true;
     void api.ai.price(model.key).then((p) => live && setPrice(p));
     return () => {
       live = false;
     };
-    // Picking a shape only matters the next time the form is set up.
+    // Picking a shape or a length only matters the next time the form is set up.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [model, width, height, seconds]);
+  }, [model, width, height]);
 
   useEffect(() => {
-    if (draftKey) saveFormDraft(draftKey, { choices, shapePicked, image, video, audio, soundMode, mine });
-  }, [draftKey, choices, shapePicked, image, video, audio, soundMode, mine]);
+    if (draftKey) saveFormDraft(draftKey, { choices, shapePicked, image, video, audio, soundMode, mine, wanted });
+  }, [draftKey, choices, shapePicked, image, video, audio, soundMode, mine, wanted]);
 
   const groups = useMemo(() => {
     const byProvider = new Map<string, AiModel[]>();
@@ -280,7 +284,15 @@ export function AiForm(props: AiFormProps): ReactNode {
 
   const set = (patch: AiChoices): void => setChoices((c) => ({ ...c, ...patch }));
   const mode: SoundMode = soundMode === 'ai' && !model.sound ? 'none' : soundMode;
-  const clipSeconds = choices.duration !== undefined ? durationSeconds(choices.duration) : null;
+  const made = choices.duration !== undefined ? durationSeconds(choices.duration) : null;
+  // A model that cannot go as short as asked makes the next length up, and the clip is trimmed on arrival.
+  const trimTo = props.newClip && wanted !== null && made !== null && made > wanted + 1e-6 ? wanted : null;
+  const clipSeconds = trimTo ?? made;
+  const lengths = durationChoices(model.duration);
+  const offered = lengths.map(durationSeconds).filter((n): n is number => n !== null);
+  const shorter = props.newClip && offered.length ? [2, 3, ...(trimTo !== null ? [trimTo] : [])].filter((n, i, all) => n < Math.min(...offered) || (n === trimTo && all.indexOf(n) === i)) : [];
+  const madeFor = (n: number): string => durationLabel(pickDuration(model.duration, n) ?? n);
+  const total = totalPrice(price, made);
   const missing = missingInput(model, choices, { image: !!image, video: !!video, audio: !!audio }) ?? (props.newClip && mode === 'mine' && !mine ? 'Choose the sound to use.' : null);
   const providerName = providers.find((p) => p.id === model.provider)?.name ?? model.provider;
 
@@ -289,6 +301,7 @@ export function AiForm(props: AiFormProps): ReactNode {
     setError('');
     try {
       let lands = typeof placement === 'function' ? placement() : placement;
+      if (trimTo !== null && lands.kind === 'timeline') lands = { ...lands, trim: trimTo };
       if (props.newClip && mode === 'mine' && mine && lands.kind === 'timeline') {
         const source = useLibrary.getState().assetsById[mine.assetId];
         if (!source) throw new Error('That sound is no longer in Media.');
@@ -336,6 +349,15 @@ export function AiForm(props: AiFormProps): ReactNode {
               rememberModel(task, e.target.value);
             }}
           >
+            {recommended.length > 0 && (
+              <optgroup label="Recommended">
+                {recommended.map((m) => (
+                  <option key={m.key} value={m.key}>
+                    {m.label}
+                  </option>
+                ))}
+              </optgroup>
+            )}
             {groups.map((g) => (
               <optgroup key={g.id} label={g.name}>
                 {g.list.map((m) => (
@@ -377,13 +399,27 @@ export function AiForm(props: AiFormProps): ReactNode {
             <select
               className="select"
               aria-label="Length"
-              value={String(choices.duration)}
+              value={trimTo !== null ? `trim:${trimTo}` : String(choices.duration)}
               onChange={(e) => {
-                const v = durationChoices(model.duration).find((x) => String(x) === e.target.value);
-                if (v !== undefined) set({ duration: v });
+                const asked = e.target.value;
+                if (asked.startsWith('trim:')) {
+                  const n = Number(asked.slice(5));
+                  setWanted(n);
+                  set({ duration: pickDuration(model.duration, n) });
+                  return;
+                }
+                const v = lengths.find((x) => String(x) === asked);
+                if (v === undefined) return;
+                setWanted(durationSeconds(v));
+                set({ duration: v });
               }}
             >
-              {durationChoices(model.duration).map((v) => (
+              {shorter.map((n) => (
+                <option key={n} value={`trim:${n}`}>
+                  {n} s · trimmed from {madeFor(n)}
+                </option>
+              ))}
+              {lengths.map((v) => (
                 <option key={String(v)} value={String(v)}>
                   {durationLabel(v)}
                 </option>
@@ -451,9 +487,15 @@ export function AiForm(props: AiFormProps): ReactNode {
       )}
 
       {props.extra}
+      {trimTo !== null && (
+        <p className="faint panel-note">
+          This model cannot make {trimTo} s, so it makes {made} s and the clip is trimmed to {trimTo} s when it lands. You pay for {made} s.
+        </p>
+      )}
       {note && <p className="faint panel-note">{note}</p>}
       <p className="faint panel-note">
-        Billed to your {providerName} account{price ? ` · ${price}` : ''}.
+        Billed to your {providerName} account{price ? ` · ${price}` : ''}
+        {total ? ` · about ${total} for this clip` : ''}.
       </p>
       <Button variant="primary" block icon={busy ? <Spinner /> : <Sparkles size={15} />} disabled={busy || !!missing} title={missing ?? undefined} onClick={() => void submit()}>
         {submitLabel}

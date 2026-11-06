@@ -16,7 +16,9 @@ import {
   pickDuration,
   planScenes,
   ratioOf,
+  recommendedModels,
   refResolver,
+  totalPrice,
   type AiHint,
   type AiModel,
   type AiOption,
@@ -219,4 +221,22 @@ test('narration is grouped into scenes that leave no gaps', () => {
   scenes.forEach((s, i) => i && assert.equal(s.start, scenes[i - 1].end, 'each scene starts where the last ended'));
   assert.equal(scenes.at(-1)!.end, 12);
   assert.deepEqual(planScenes([], 5), []);
+});
+
+test('a short list of well-known models comes first, preferring ones that can make the length', () => {
+  const make = (label: string, values: number[] | null, min?: number): AiModel => ({
+    key: label, provider: 'fal', id: label, endpoint: label, task: 'text-to-video', label, description: '', prompt: null, image: null, video: null, audio: null,
+    duration: { field: 'duration', values, min: min ?? null, max: min ? 30 : null, default: null, required: false }, aspect: null, resolution: null, sound: null, fixed: {},
+  });
+  const models = [make('Obscure', [3]), make('Kling 3', [5, 10]), make('Veo 3.1', [4, 6, 8]), make('Seedance 2', null, 3)];
+  assert.deepEqual(recommendedModels(models, 'text-to-video', null).map((m) => m.label), ['Veo 3.1', 'Kling 3', 'Seedance 2']);
+  assert.equal(recommendedModels(models, 'text-to-video', 3)[0].label, 'Seedance 2', 'one that can make 3 seconds goes first');
+  assert.deepEqual(recommendedModels(models, 'lip-sync', null), []);
+});
+
+test('a per-second price adds up for the clip', () => {
+  assert.equal(totalPrice('$0.15 per second', 3), '$0.45');
+  assert.equal(totalPrice('$0.15 per second', null), null);
+  assert.equal(totalPrice('$0.50 per video', 3), null, 'other units are left as they are');
+  assert.equal(totalPrice(null, 3), null);
 });

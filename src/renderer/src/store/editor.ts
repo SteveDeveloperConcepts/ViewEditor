@@ -642,13 +642,18 @@ export function placeGenerated(asset: Asset, placement: AiPlacement): ID | null 
   if (placement.kind === 'none') return null;
   if (placement.kind === 'timeline') {
     const where: Placement = placement.sequence ? {} : { atPlayhead: true, at: placement.at };
-    const { sound } = placement;
+    const { sound, trim } = placement;
     const file = sound && getAssets()[sound.assetId];
-    if (!sound || !file) return reveal(addAsset(asset, where));
-    // The clip and its sound land together, as one step to undo.
+    if (!file && !trim) return reveal(addAsset(asset, where));
+    // The clip and what goes with it land together, as one step to undo.
     beginGesture();
     const id = addAsset(asset, where);
-    if (id) apply((d) => detachAudio(d, id, file, sound)?.doc ?? d);
+    if (id) {
+      apply((d) => {
+        const cut = trim ? updateItems(d, [id], (it) => ({ ...it, duration: Math.min(it.duration, trim) }) as Item) : d;
+        return file && sound ? (detachAudio(cut, id, file, sound)?.doc ?? cut) : cut;
+      });
+    }
     endGesture({ snapToFrames: true });
     return reveal(id);
   }

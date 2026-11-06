@@ -299,6 +299,44 @@ export function pickDuration(option: AiOption | null, seconds: number): AiValue 
   return sorted.find((v) => durationSeconds(v)! >= seconds - 1e-6) ?? sorted[sorted.length - 1];
 }
 
+/** Whether a model can make a clip of exactly this length. A model with no length setting decides for itself. */
+export function canMake(model: AiModel, seconds: number): boolean {
+  const option = model.duration;
+  if (!option) return true;
+  if (option.values) return option.values.some((v) => durationSeconds(v) === seconds);
+  return seconds >= (option.min ?? 0) && seconds <= (option.max ?? Infinity);
+}
+
+/** Well-known models for each task, best first. The rest of a service's list stays available under its name. */
+const RECOMMENDED: Partial<Record<AiTask, RegExp[]>> = {
+  'text-to-video': [/veo.?3/i, /kling/i, /seedance/i, /gen.?4/i, /hailuo|minimax/i],
+  'image-to-video': [/kling/i, /veo.?3/i, /seedance/i, /gen.?4/i, /hailuo|minimax/i],
+  'text-to-image': [/flux/i, /imagen/i, /gen.?4/i],
+  'edit-video': [/aleph/i, /kling/i],
+  'talking-photo': [/fabric/i],
+  'lip-sync': [/lip.?sync/i],
+};
+
+/** A short list to start from: up to three well-known models, preferring ones that can make the length asked for. */
+export function recommendedModels(models: AiModel[], task: AiTask, seconds: number | null): AiModel[] {
+  const picks: AiModel[] = [];
+  const offer = (usable: (m: AiModel) => boolean): void => {
+    for (const pattern of RECOMMENDED[task] ?? []) {
+      const found = models.find((m) => pattern.test(`${m.label} ${m.id}`) && usable(m) && !picks.includes(m));
+      if (found && picks.length < 3) picks.push(found);
+    }
+  };
+  offer((m) => seconds === null || canMake(m, seconds));
+  offer(() => true);
+  return picks;
+}
+
+/** What a clip comes to at a per-second price such as "$0.15 per second". Null for prices of any other kind. */
+export function totalPrice(price: string | null, seconds: number | null): string | null {
+  const m = price && seconds ? /^(\D*)(\d+(?:\.\d+)?)(\D*?)\s+per\s+(?:second|sec|s)\b/i.exec(price) : null;
+  return m ? `${m[1]}${(Number(m[2]) * seconds!).toFixed(2)}${m[3]}` : null;
+}
+
 /** Width over height of a raw ratio value such as "16:9" or "1280:720". Null for words like "auto". */
 export function ratioOf(value: AiValue): number | null {
   const m = /^(\d+(?:\.\d+)?)\s*[:x]\s*(\d+(?:\.\d+)?)$/.exec(String(value));
@@ -415,8 +453,8 @@ export interface AiSound {
 /** What happens to the result once it arrives. */
 export type AiPlacement =
   | { kind: 'none' }
-  /** Added to the timeline: where the playhead was when asked for, or after the last clip for a `sequence`. */
-  | { kind: 'timeline'; at?: number; sequence?: boolean; sound?: AiSound }
+  /** Added to the timeline: where the playhead was when asked for, or after the last clip for a `sequence`. `trim` is a length to cut it to. */
+  | { kind: 'timeline'; at?: number; sequence?: boolean; sound?: AiSound; trim?: number }
   /** Takes the place of this element, keeping its position. */
   | { kind: 'replace'; itemId: ID }
   /** Goes straight after this element on the same track. */

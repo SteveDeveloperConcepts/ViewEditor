@@ -17,6 +17,8 @@ export interface AiFormDraft {
   soundMode: SoundMode;
   /** The sound chosen from Media. */
   mine: AiMediaRef | null;
+  /** The length asked for, which the chosen model may not be able to make exactly. */
+  wanted: number | null;
 }
 
 const forms = new Map<string, AiFormDraft>();
