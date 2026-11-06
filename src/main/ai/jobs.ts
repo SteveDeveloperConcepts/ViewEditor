@@ -5,7 +5,7 @@
 import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ALL_MEDIA_EXTS, extOf } from '../../shared/constants.ts';
-import { buildInputs, isActive, type AiInputUrls, type AiJob, type AiModel, type AiProviderId, type AiRemote, type AiRequest } from '../../shared/ai.ts';
+import { buildInputs, isActive, type AiInputUrls, type AiJob, type AiModel, type AiProviderId, type AiRemote, type AiRequest, type TimedText } from '../../shared/ai.ts';
 import { newId } from '../../shared/time.ts';
 import type { ID } from '../../shared/types.ts';
 import type { AssetManager } from '../assets.ts';
@@ -215,6 +215,13 @@ export class AiJobs {
         this.track(job.id, this.follow(job.id, this.provider(job.provider), key, job.remote, controller.signal));
       }
     }
+  }
+
+  /** Writes down the speech in an MP3 file, through the first connected service that can. */
+  async transcribe(file: string): Promise<TimedText[]> {
+    const provider = this.o.providers.find((p) => p.transcribe && this.o.keys.get(p.id));
+    if (!provider?.transcribe) throw new Error('Automatic subtitles use fal.ai. Connect it under AI connections.');
+    return provider.transcribe(this.o.keys.get(provider.id)!, file, this.o.pollMs ?? 2000);
   }
 
   /** Stops waiting, and asks the service to stop too. Work already done may still be billed. */

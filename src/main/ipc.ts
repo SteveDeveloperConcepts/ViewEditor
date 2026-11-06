@@ -296,6 +296,15 @@ export function registerIpc(s: Services): void {
       return model && key && p?.price ? p.price(key, model).catch(() => null) : null;
     },
     generate: (request) => s.aiJobs.generate(request),
+    transcribe: async (input) => {
+      const dir = join(lib.paths.tmpDir, newId('stt'));
+      await mkdir(dir, { recursive: true });
+      try {
+        return await s.aiJobs.transcribe(await jobs.speechFile(input, dir));
+      } finally {
+        await rm(dir, { recursive: true, force: true, maxRetries: 4, retryDelay: 150 }).catch(() => undefined);
+      }
+    },
     cancel: (jobId) => s.aiJobs.cancel(jobId),
     dismiss: (jobId) => s.aiJobs.dismiss(jobId),
     markApplied: (jobId) => s.aiJobs.markApplied(jobId),

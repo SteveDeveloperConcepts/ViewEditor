@@ -89,19 +89,33 @@ export class RenderJobs {
     });
   }
 
+  private sources(): Record<ID, RenderSource> {
+    const sources: Record<ID, RenderSource> = {};
+    for (const a of this.lib.data.assets) {
+      const raster = a.raster === 'ready';
+      sources[a.id] = {
+        path: this.lib.paths.assetRenderSource(a), kind: a.kind, hasAudio: a.hasAudio, audioChannels: a.audioChannels,
+        hasAlpha: a.hasAlpha, isHdr: a.isHdr, colorMatrix: raster ? 'rgb' : a.colorMatrix, videoCodec: a.videoCodec,
+        seekable: isSeekableExt(a.ext),
+      };
+    }
+    return sources;
+  }
+
+  /** The sound of a stretch of a project as a small MP3, good enough for speech. Returns its path inside `dir`. */
+  async speechFile(payload: { doc: ProjectDoc; window: TimeWindow; spec: OutputSpec }, dir: string): Promise<string> {
+    const cmds = buildRenderCommands({ ...payload, sources: this.sources(), workDir: dir, outputPath: join(dir, 'out.mp4'), caps: await ffmpegCaps() });
+    await runRenderCommands(cmds, { soundOnly: true });
+    const out = join(dir, 'speech.mp3');
+    await runFfmpeg(['-i', cmds.audio.out, '-ac', '1', '-c:a', 'libmp3lame', '-b:a', '64k', out]);
+    return out;
+  }
+
   private async execute(job: Job, { doc, window, spec }: { doc: ProjectDoc; window: TimeWindow; spec: OutputSpec }): Promise<void> {
     try {
       if (window.end - window.start < 0.5 / spec.fps) throw new Error('There is nothing to export yet. Add something to the timeline first.');
 
-      const sources: Record<ID, RenderSource> = {};
-      for (const a of this.lib.data.assets) {
-        const raster = a.raster === 'ready';
-        sources[a.id] = {
-          path: this.lib.paths.assetRenderSource(a), kind: a.kind, hasAudio: a.hasAudio, audioChannels: a.audioChannels,
-          hasAlpha: a.hasAlpha, isHdr: a.isHdr, colorMatrix: raster ? 'rgb' : a.colorMatrix, videoCodec: a.videoCodec,
-          seekable: isSeekableExt(a.ext),
-        };
-      }
+      const sources = this.sources();
 
       // Every text picture the plan refers to must have arrived from the renderer. Sound needs none.
       const needed = job.format === 'mp3' ? [] : listOverlayFiles(planLayers(doc, window)).map((f) => f.file);

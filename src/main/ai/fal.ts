@@ -10,6 +10,10 @@ const QUEUE = 'https://queue.fal.run';
 const CATALOG = 'https://api.fal.ai/v1';
 const STORAGE = 'https://rest.fal.ai';
 
+const WHISPER = 'fal-ai/whisper';
+/** How long speech can take to come back before it counts as lost. */
+const TRANSCRIBE_LIMIT = 30 * 60 * 1000;
+
 const auth = (key: string): Record<string, string> => ({ Authorization: `Key ${key}` });
 
 interface CatalogModel {
@@ -140,6 +144,26 @@ export const fal: AiProvider = {
 
   async cancel(key, remote) {
     if (remote.cancelUrl) await call(remote.cancelUrl, NAME, { method: 'PUT', headers: auth(key) });
+  },
+
+  async transcribe(key, file, pollMs) {
+    const audio = await fal.upload(key, file, 'audio/mpeg', 'speech.mp3');
+    const job = await call<{ status_url: string; response_url: string }>(`${QUEUE}/${WHISPER}`, NAME, {
+      headers: auth(key),
+      json: { audio_url: audio, task: 'transcribe', chunk_level: 'segment' },
+    });
+    const started = Date.now();
+    for (;;) {
+      await new Promise((r) => setTimeout(r, pollMs));
+      const status = await call<{ status: string; error?: string | null }>(job.status_url, NAME, { headers: auth(key) });
+      if (status.error) throw new Error(status.error);
+      if (status.status === 'COMPLETED') break;
+      if (Date.now() - started > TRANSCRIBE_LIMIT) throw new Error(`${NAME} has not finished after 30 minutes.`);
+    }
+    const result = await call<{ chunks?: { timestamp: (number | null)[]; text: string }[] }>(job.response_url, NAME, { headers: auth(key) });
+    return (result.chunks ?? [])
+      .map((c) => ({ start: c.timestamp[0] ?? 0, end: c.timestamp[1] ?? (c.timestamp[0] ?? 0) + 3, text: c.text.trim() }))
+      .filter((c) => c.text && c.end > c.start);
   },
 
   async price(key, model) {

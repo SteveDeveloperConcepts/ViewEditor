@@ -1,16 +1,22 @@
-// Subtitles are text elements on their own track that share one look. They can be typed in,
-// imported from an SRT or VTT file, or exported again.
+// Subtitles are text clips on their own row that share one look. They can be made from the speech in the
+// project through a connected service, typed in, added from an SRT or VTT file, or saved as one again.
 
 import type { ReactNode } from 'react';
-import { Captions, FileDown, FileUp, Plus, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { Captions, FileDown, FileUp, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { SUBTITLE_STYLES } from '@shared/constants';
-import { parseSubtitles, toSrt } from '@shared/subtitles';
+import { fullWindow, resolveOutputSpec } from '@shared/render';
+import { chunkCue, parseSubtitles, toSrt } from '@shared/subtitles';
 import { formatTimecode, snapToFrame } from '@shared/time';
-import { itemEnd, removeItems, trimEndTo, trimStartTo, updateItems } from '@shared/timeline';
+import { isTimed, itemEnd, removeItems, trimEndTo, trimStartTo, updateItems } from '@shared/timeline';
 import type { ID, TextItem } from '@shared/types';
-import { Button, IconButton, TimeInput } from '@/components/ui';
+import { openConnections } from '@/ai/ConnectionsDialog';
+import { confirmDialog } from '@/components/Modal';
+import { Button, IconButton, Spinner, TimeInput } from '@/components/ui';
 import { api, errorMessage } from '@/lib/api';
-import { addSubtitles, apply, applySubtitlePreset, select, updateText, useEditor } from '@/store/editor';
+import { useAi } from '@/store/ai';
+import { addSubtitles, apply, applySubtitlePreset, flushSave, select, updateText, useEditor } from '@/store/editor';
+import { getAssets } from '@/store/library';
 import { toast } from '@/store/ui';
 import { seek } from '../player';
 
@@ -47,6 +53,41 @@ export function SubtitlesPanel({ projectName }: { projectName: string; projectId
   const items = useEditor((s) => s.doc?.items) ?? [];
   const t = useEditor((s) => Math.floor(s.playhead * 4) / 4);
   const cues = cuesOf(items);
+  const [listening, setListening] = useState(false);
+
+  const automatic = async (): Promise<void> => {
+    const assets = getAssets();
+    const heard = items.some((it) => isTimed(it) && !it.muted && assets[it.assetId]?.hasAudio);
+    if (!heard) {
+      toast('There is no sound in this project to make subtitles from.');
+      return;
+    }
+    if (!useAi.getState().providers.some((p) => p.id === 'fal' && p.connected)) {
+      toast('Automatic subtitles use fal.ai. Connect it here, then try again.');
+      void openConnections();
+      return;
+    }
+    const go = await confirmDialog({
+      title: 'Make subtitles from the speech?',
+      message: 'The sound of this project is sent to fal.ai, which writes down what is said. It is billed to your fal.ai account.',
+      confirmLabel: 'Make subtitles',
+    });
+    if (!go) return;
+    setListening(true);
+    try {
+      await flushSave();
+      const doc = useEditor.getState().doc;
+      if (!doc) return;
+      const speech = await api.ai.transcribe({ doc, window: fullWindow(doc), spec: resolveOutputSpec(doc, assets) });
+      const added = addSubtitles(speech.flatMap((s) => chunkCue(s.text, s.start, s.end)));
+      if (added.length) toast(`Added ${added.length} subtitle${added.length === 1 ? '' : 's'}. Check the words, since they are only a good guess.`, { kind: 'success' });
+      else toast('No speech was found in this project.');
+    } catch (err) {
+      toast(errorMessage(err), { kind: 'error' });
+    } finally {
+      setListening(false);
+    }
+  };
 
   const addCue = (): void => {
     const s = useEditor.getState();
@@ -89,6 +130,9 @@ export function SubtitlesPanel({ projectName }: { projectName: string; projectId
   return (
     <div className="panel-body">
       <h2 className="panel-title">Subtitles</h2>
+      <Button variant="primary" block icon={listening ? <Spinner /> : <Sparkles size={14} />} disabled={listening} onClick={() => void automatic()}>
+        {listening ? 'Listening…' : 'Make subtitles automatically'}
+      </Button>
       <div className="panel-actions">
         <Button icon={<Plus size={14} />} onClick={addCue}>
           Add subtitle
@@ -143,7 +187,7 @@ export function SubtitlesPanel({ projectName }: { projectName: string; projectId
           <div className="empty-icon">
             <Captions size={20} />
           </div>
-          <p>Add subtitles by hand or from an SRT or VTT file. Text to speech can add them for you too.</p>
+          <p>Make them from the speech in your video, add them by hand, or use an SRT or VTT file. Text to speech adds its own.</p>
         </div>
       )}
       {cues.length > 0 && <p className="faint panel-note">Total length {formatTimecode(itemEnd(cues[cues.length - 1]))}</p>}

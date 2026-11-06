@@ -523,6 +523,13 @@ export interface AiProviderStatus {
   detail: string | null;
 }
 
+/** A stretch of speech written down. */
+export interface TimedText {
+  start: number;
+  end: number;
+  text: string;
+}
+
 // ---------------------------------------------------------------- scenes
 
 export interface ScenePlan {

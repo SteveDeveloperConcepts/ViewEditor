@@ -201,6 +201,20 @@ test('fal: the sound of a video can be used, cut to the chosen stretch', async (
   assert.ok(Math.abs(seconds - 2) < 0.15, `two seconds were sent, not the whole six (${seconds})`);
 });
 
+test('fal: speech comes back as timed text', async () => {
+  const c = await setup();
+  const cues = await c.jobs.transcribe(media('tone.mp3'));
+  assert.deepEqual(cues, [{ start: 0.5, end: 2, text: 'Hello there.' }, { start: 2.2, end: 4, text: 'This line was heard.' }]);
+  const body = server.callsTo('/fal-queue/fal-ai/whisper', 'POST').at(-1)!.body as Record<string, unknown>;
+  assert.deepEqual(body, { audio_url: 'https://v3.fal.media/files/test/speech.mp3', task: 'transcribe', chunk_level: 'segment' });
+});
+
+test('automatic subtitles say which service they need', async () => {
+  const c = await setup();
+  await c.keys.remove('fal');
+  await assert.rejects(c.jobs.transcribe(media('tone.mp3')), /Connect it under AI connections/);
+});
+
 test('fal: a still taken from the end of a clip, for extending it', async () => {
   const c = await setup();
   const clip = await importClip(c, 'clip-a.mp4');

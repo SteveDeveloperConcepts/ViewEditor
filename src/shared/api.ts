@@ -1,7 +1,7 @@
 // The contract between the renderer and the main process. The preload script exposes an
 // object of this shape as `window.api`; every method is an IPC round trip.
 
-import type { AiJob, AiModel, AiProviderId, AiProviderStatus, AiRequest, AiTask } from './ai.ts';
+import type { AiJob, AiModel, AiProviderId, AiProviderStatus, AiRequest, AiTask, TimedText } from './ai.ts';
 import type { ExportFormat, OutputSpec, TimeWindow } from './render.ts';
 import type {
   AppSettings,
@@ -157,6 +157,8 @@ export interface Api {
     models(task?: AiTask, refresh?: boolean): Promise<AiModel[]>;
     price(modelKey: string): Promise<string | null>;
     generate(request: AiRequest): Promise<AiJob>;
+    /** Writes down the speech in a stretch of a project, through a connected service that can. */
+    transcribe(input: { doc: ProjectDoc; window: TimeWindow; spec: OutputSpec }): Promise<TimedText[]>;
     cancel(jobId: ID): Promise<void>;
     dismiss(jobId: ID): Promise<void>;
     markApplied(jobId: ID): Promise<void>;
@@ -203,7 +205,7 @@ export const API_METHODS: { [N in Namespace]: (keyof Api[N])[] } = {
   render: ['begin', 'putOverlay', 'run', 'cancel', 'current', 'download', 'revealExport', 'addToMedia'],
   recorder: ['sources', 'prepare', 'begin', 'chunk', 'finish', 'discard', 'setActive'],
   voice: ['list', 'speak'],
-  ai: ['setKey', 'writeScript', 'writeScenePrompts', 'providers', 'connect', 'disconnect', 'models', 'price', 'generate', 'cancel', 'dismiss', 'markApplied'],
+  ai: ['setKey', 'writeScript', 'writeScenePrompts', 'providers', 'connect', 'disconnect', 'models', 'price', 'generate', 'transcribe', 'cancel', 'dismiss', 'markApplied'],
   phone: ['start', 'stop'],
   update: ['state', 'install'],
 };

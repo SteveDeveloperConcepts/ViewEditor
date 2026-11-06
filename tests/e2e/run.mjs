@@ -1659,6 +1659,19 @@ section('ai', async () => {
     await p.waitForSelector('.ai-form textarea');
     await p.selectOption('.ai-form select[aria-label="Model"]', 'fal:text-to-video:minimax/h3-max/text-to-video');
 
+    // Subtitles from the speech in the project
+    await p.click('.rail-item:has-text("Subtitles")');
+    await p.click('.panel button:has-text("Make subtitles automatically")');
+    await p.waitForSelector('.modal:has-text("sent to fal.ai")');
+    check(true, 'automatic subtitles say what is sent, and who bills for it');
+    await p.click('.modal-foot button:has-text("Make subtitles")');
+    await p.waitForSelector('.cue', { timeout: 15000 });
+    const heard = await p.$$eval('.cue textarea', (e) => e.map((t) => t.value));
+    check(heard.length === 2 && heard[0] === 'Hello there.', 'subtitles can be made from the speech', heard.join(' / '));
+    doc = await stored();
+    check(Math.abs(doc.items.find((i) => i.subtitle).start - 0.5) < 0.05, 'with the timing of the speech');
+    await p.click('.rail-item:has-text("AI tools")');
+
     // A failure is explained, and can be retried
     await p.click('.rail-item:has-text("AI tools")');
     await p.waitForSelector('.ai-form');

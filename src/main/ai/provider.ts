@@ -1,4 +1,4 @@
-import type { AiModel, AiProviderId, AiRemote } from '../../shared/ai.ts';
+import type { AiModel, AiProviderId, AiRemote, TimedText } from '../../shared/ai.ts';
 
 export type PollResult =
   | { state: 'queued'; position: number | null }
@@ -24,6 +24,8 @@ export interface AiProvider {
   cancel(key: string, remote: AiRemote): Promise<void>;
   /** A short price description for a model, when the service publishes one. */
   price?(key: string, model: AiModel): Promise<string | null>;
+  /** Writes down the speech in an MP3 file. Not every service can. */
+  transcribe?(key: string, file: string, pollMs: number): Promise<TimedText[]>;
 }
 
 /** Walks a result and collects the addresses of media files, whatever shape the model returned. */

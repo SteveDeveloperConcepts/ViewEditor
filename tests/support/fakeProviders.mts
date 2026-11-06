@@ -26,6 +26,8 @@ interface Task {
   input: unknown;
   cancelled: boolean;
   image: boolean;
+  /** The job writes down speech, so its result is text, not a file. */
+  speech?: boolean;
 }
 
 const REPLICATE_MODELS = [
@@ -235,6 +237,13 @@ export class FakeProviders {
         if (s === 'failed') return this.json(res, 200, { status: 'COMPLETED', error: this.failJobsWith });
         return this.json(res, 200, { status: 'COMPLETED' });
       }
+      if (this.tasks.get(id)?.speech) {
+        return this.json(res, 200, {
+          text: 'Hello there. This line was heard.',
+          chunks: [{ timestamp: [0.5, 2], text: ' Hello there.' }, { timestamp: [2.2, 4], text: ' This line was heard.' }],
+          inferred_languages: ['en'],
+        });
+      }
       const image = this.tasks.get(id)?.image ?? false;
       return this.json(res, 200, image ? { images: [{ url: this.fileUrl(true) }] } : { video: { url: this.fileUrl(false), content_type: 'video/mp4' } });
     }
@@ -246,6 +255,7 @@ export class FakeProviders {
       }
       const model = p.slice('/fal-queue/'.length);
       const id = this.newTask('fal', body, /flux\/schnell/.test(model));
+      this.tasks.get(id)!.speech = model === 'fal-ai/whisper';
       const owner = model.split('/').slice(0, 2).join('/');
       const root = `https://queue.fal.run/${owner}/requests/${id}`;
       return this.json(res, 200, { request_id: id, status_url: `${root}/status`, response_url: root, cancel_url: `${root}/cancel`, queue_position: 3 });
