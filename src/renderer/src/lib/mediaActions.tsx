@@ -78,7 +78,10 @@ function waysToUse(asset: Asset): MediaAction[] {
   const recent = open ? undefined : lastProject();
   const actions: MediaAction[] = [];
   if (open) actions.push({ label: 'Add at the playhead', icon: <Plus size={15} />, run: () => void addAsset(asset, { atPlayhead: true }) });
-  if (recent) actions.push({ label: `Use in “${recent.name}”`, icon: <Plus size={15} />, run: () => void navigate({ page: 'editor', projectId: recent.id, add: [asset] }) });
+  if (recent) {
+    const name = recent.name.length > 26 ? `${recent.name.slice(0, 25).trim()}…` : recent.name;
+    actions.push({ label: `Use in “${name}”`, icon: <Plus size={15} />, run: () => void navigate({ page: 'editor', projectId: recent.id, add: [asset] }) });
+  }
   if (!open) {
     actions.push({
       label: 'Start a project',

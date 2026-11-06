@@ -572,6 +572,7 @@ input[type='range'].slider::-webkit-slider-thumb {
 }
 .modal-foot {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
   padding: 12px 20px 18px;
