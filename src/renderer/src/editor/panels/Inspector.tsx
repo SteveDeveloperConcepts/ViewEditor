@@ -24,7 +24,7 @@ import {
 import { FONT_FAMILIES } from '@shared/constants';
 import { formatClock } from '@shared/time';
 import { isTimed, itemEnd, nearestFreeStart, setSourceRange, trimEndTo, updateItems } from '@shared/timeline';
-import type { Asset, ID, Item, MediaItem, ProjectDoc, TextItem, TextStyle } from '@shared/types';
+import type { Asset, Item, MediaItem, ProjectDoc, TextItem, TextStyle } from '@shared/types';
 import { Button, ColorField, FieldRow, IconButton, Notice, NumberInput, Segmented, Slider, Switch, TimeInput } from '@/components/ui';
 import { actionLabel, actionsFor, openClipAi } from '@/ai/clipActions';
 import { openConnections } from '@/ai/ConnectionsDialog';
@@ -281,7 +281,7 @@ function TextControls({ item }: { item: TextItem }): ReactNode {
 
 const TITLES = { video: 'Video', image: 'Image', audio: 'Audio', text: 'Text' };
 
-export function Inspector({ projectId }: { projectId: ID }): ReactNode {
+export function Inspector(): ReactNode {
   const doc = useEditor((s) => s.doc)!;
   const selection = useEditor((s) => s.selection);
   const assets = useLibrary((s) => s.assetsById);

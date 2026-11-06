@@ -475,7 +475,7 @@ function Toolbar({ projectId, onFit }: { projectId: ID; onFit: () => void }): Re
         <Button variant="ghost" size="small" title="Fit the whole project in view" disabled={empty} onClick={onFit}>
           Fit
         </Button>
-        <IconButton label="Timeline settings" onClick={() => openProjectSettings(projectId)}>
+        <IconButton label="Project settings" onClick={() => openProjectSettings(projectId)}>
           <Settings size={15} />
         </IconButton>
       </div>

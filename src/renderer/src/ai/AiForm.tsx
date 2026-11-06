@@ -290,7 +290,7 @@ export function AiForm(props: AiFormProps): ReactNode {
   const clipSeconds = trimTo ?? made;
   const lengths = durationChoices(model.duration);
   const offered = lengths.map(durationSeconds).filter((n): n is number => n !== null);
-  const shorter = props.newClip && offered.length ? [2, 3, ...(trimTo !== null ? [trimTo] : [])].filter((n, i, all) => n < Math.min(...offered) || (n === trimTo && all.indexOf(n) === i)) : [];
+  const shorter = props.newClip && offered.length ? [...new Set([2, 3, ...(trimTo !== null ? [trimTo] : [])])].filter((n) => n < Math.min(...offered) || n === trimTo).sort((a, b) => a - b) : [];
   const madeFor = (n: number): string => durationLabel(pickDuration(model.duration, n) ?? n);
   const total = totalPrice(price, made);
   const missing = missingInput(model, choices, { image: !!image, video: !!video, audio: !!audio }) ?? (props.newClip && mode === 'mine' && !mine ? 'Choose the sound to use.' : null);

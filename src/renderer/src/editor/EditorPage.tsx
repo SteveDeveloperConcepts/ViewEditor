@@ -363,7 +363,7 @@ export function EditorPage({ projectId, showAi, add }: { projectId: ID; showAi?:
         </main>
         {inspecting && (
           <aside className="inspector" aria-label="Clip settings">
-            <Inspector projectId={projectId} />
+            <Inspector />
           </aside>
         )}
       </div>

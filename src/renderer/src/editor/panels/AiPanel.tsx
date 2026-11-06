@@ -9,7 +9,7 @@ import { Field, IconButton } from '@/components/ui';
 import { AiForm } from '@/ai/AiForm';
 import { ClipAiForm, useClipAi } from '@/ai/clipActions';
 import { openConnections } from '@/ai/ConnectionsDialog';
-import { draftTask, saveDraftTask, useDraftRevision } from '@/ai/drafts';
+import { draftTask, draftWhere, saveDraftTask, saveDraftWhere, useDraftRevision, type Where } from '@/ai/drafts';
 import { JobList } from '@/ai/JobList';
 import { useEditor } from '@/store/editor';
 
@@ -22,8 +22,6 @@ const TASKS: { task: AiTask; label: string; placeholder: string; hint?: string }
   { task: 'lip-sync', label: 'Lip-sync a video', placeholder: '', hint: 'Pick a video, and the sound it should speak.' },
 ];
 
-type Where = 'playhead' | 'end';
-
 export function AiPanel({ projectId }: { projectId: ID }): ReactNode {
   const doc = useEditor((s) => s.doc)!;
   const request = useClipAi((s) => s.request);
@@ -31,11 +29,15 @@ export function AiPanel({ projectId }: { projectId: ID }): ReactNode {
   const [picked, setTask] = useState<AiTask>('text-to-video');
   const revision = useDraftRevision((s) => s.n);
   const task = draftTask(projectId) ?? picked;
-  const [where, setWhere] = useState<Where>('playhead');
+  const [where, setWhere] = useState<Where>(() => draftWhere(projectId));
   const current = TASKS.find((t) => t.task === task)!;
   const choose = (next: AiTask): void => {
     setTask(next);
     saveDraftTask(projectId, next);
+  };
+  const place = (next: Where): void => {
+    setWhere(next);
+    saveDraftWhere(projectId, next);
   };
   const placement = (): AiPlacement => ({ kind: 'timeline', at: useEditor.getState().playhead, sequence: where === 'end' });
   return (
@@ -71,7 +73,7 @@ export function AiPanel({ projectId }: { projectId: ID }): ReactNode {
             extra={
               doc.items.length > 0 && (
                 <Field label="Place it">
-                  <select className="select" aria-label="Where to place the result" value={where} onChange={(e) => setWhere(e.target.value as Where)}>
+                  <select className="select" aria-label="Where to place the result" value={where} onChange={(e) => place(e.target.value as Where)}>
                     <option value="playhead">At the playhead, over the video</option>
                     <option value="end">After the last clip</option>
                   </select>

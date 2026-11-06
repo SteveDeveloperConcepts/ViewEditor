@@ -22,8 +22,12 @@ export interface AiFormDraft {
   wanted: number | null;
 }
 
+/** Where a new clip lands: at the playhead, or after the last clip. */
+export type Where = 'playhead' | 'end';
+
 const forms = new Map<string, AiFormDraft>();
 const tasks = new Map<ID, AiTask>();
+const places = new Map<ID, Where>();
 
 export function formDraft(key: string | undefined): AiFormDraft | undefined {
   return key ? forms.get(key) : undefined;
@@ -41,6 +45,14 @@ export function saveDraftTask(projectId: ID, task: AiTask): void {
   tasks.set(projectId, task);
 }
 
+export function draftWhere(projectId: ID): Where {
+  return places.get(projectId) ?? 'playhead';
+}
+
+export function saveDraftWhere(projectId: ID, where: Where): void {
+  places.set(projectId, where);
+}
+
 /** Changes when a form has been filled in from outside, so one already on screen starts again from its draft. */
 export const useDraftRevision = create<{ n: number }>(() => ({ n: 0 }));
 
@@ -54,5 +66,6 @@ export function draftForSound(projectId: ID, sound: AiMediaRef, seconds: number)
 
 export function forgetDrafts(projectId: ID): void {
   tasks.delete(projectId);
+  places.delete(projectId);
   for (const key of forms.keys()) if (key.startsWith(`${projectId}:`)) forms.delete(key);
 }

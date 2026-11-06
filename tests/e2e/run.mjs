@@ -101,6 +101,12 @@ async function seekTo(t) {
   await sleep(80);
 }
 
+/** Waits for an export to finish writing a file. A message from an earlier export may still be on screen, so that proves nothing. */
+async function exported(file) {
+  for (let i = 0; i < 600 && !existsSync(file); i++) await sleep(100);
+  for (let i = 0; i < 600 && (await page.evaluate(() => window.api.render.current())); i++) await sleep(100);
+}
+
 /** Exports the open project with the Export dialog as it stands. */
 async function exportVideo(pg) {
   await pg.click('.editor-top button:has-text("Export")');
@@ -728,10 +734,18 @@ section('export', async () => {
   await page.fill('.modal [aria-label="Export up to"]', '00:03.0');
   await page.keyboard.press('Tab');
   await page.click('.modal-foot button:has-text("Export")');
-  await page.waitForFunction(() => document.querySelectorAll('.toast').length > 0 && [...document.querySelectorAll('.toast')].some((t) => t.textContent.includes('Export saved')), null, { timeout: 30000 });
-  await sleep(200);
+  await exported(soundFile);
   const sound = probe(soundFile);
   check(sound.streams.length === 1 && sound.streams[0].codec_name === 'mp3' && Math.abs(Number(sound.format.duration) - 2) < 0.2, 'the dialog exports a stretch as sound only', JSON.stringify(sound.format?.duration));
+
+  // And a GIF, which goes through the picture first.
+  const gifFile = join(dir, 'whole.gif');
+  await stubSaveDialog(app, gifFile);
+  await page.click('.editor-top button:has-text("Export")');
+  await page.click('.modal .segmented button:has-text("GIF")');
+  await page.click('.modal-foot button:has-text("Export")');
+  await exported(gifFile);
+  check(existsSync(gifFile) && probe(gifFile).streams[0].codec_name === 'gif', 'the dialog makes a GIF directly');
 });
 
 section('formats', async () => {
