@@ -10,8 +10,9 @@ import type { ID, VoiceInfo } from '@shared/types';
 import { Modal } from '@/components/Modal';
 import { Button, Field, Notice, Slider, Spinner, Switch } from '@/components/ui';
 import { api, errorMessage } from '@/lib/api';
-import { addSubtitles, useEditor } from '@/store/editor';
-import { showModal, toast } from '@/store/ui';
+import type { ProjectPlace } from '@/lib/projects';
+import { addSubtitles, useEditor, whenOpen } from '@/store/editor';
+import { navigate, showModal, toast } from '@/store/ui';
 import { addToTimeline } from '../importing';
 
 export function VoicePicker({ voices, value, onChange }: { voices: VoiceInfo[]; value: string; onChange: (v: string) => void }): ReactNode {
@@ -27,7 +28,7 @@ export function VoicePicker({ voices, value, onChange }: { voices: VoiceInfo[]; 
   );
 }
 
-function SpeechBody({ projectId, close }: { projectId: ID; close: () => void }): ReactNode {
+function SpeechBody({ projectId, place, close }: { projectId: ID | null; place: ProjectPlace; close: () => void }): ReactNode {
   const [voices, setVoices] = useState<VoiceInfo[] | null>(null);
   const [voice, setVoice] = useState('');
   const [rate, setRate] = useState(1);
@@ -49,7 +50,13 @@ function SpeechBody({ projectId, close }: { projectId: ID; close: () => void }):
     try {
       const sentences = splitSentences(text);
       const name = sentences[0]?.slice(0, 40) || 'Voice-over';
-      const { asset, timings } = await api.voice.speak({ sentences, voice, rate, name, target: { scope: 'project', projectId } });
+      // Started from the dashboard: the project begins now that there is something to put in it.
+      const target = projectId ?? (await api.library.createProject({ ...place, name })).id;
+      if (!projectId) {
+        await navigate({ page: 'editor', projectId: target });
+        await whenOpen(target);
+      }
+      const { asset, timings } = await api.voice.speak({ sentences, voice, rate, name, target: { scope: 'project', projectId: target } });
       const at = snapToFrame(useEditor.getState().playhead, useEditor.getState().doc?.settings.fps ?? 30);
       await addToTimeline([asset]);
       if (subtitles) addSubtitles(sentences.flatMap((s, i) => chunkCue(s, at + timings[i].start, at + timings[i].end)));
@@ -115,6 +122,6 @@ function SpeechBody({ projectId, close }: { projectId: ID; close: () => void }):
   );
 }
 
-export function openSpeechDialog(projectId: ID): void {
-  void showModal<void>((close) => <SpeechBody projectId={projectId} close={() => close()} />);
+export function openSpeechDialog(projectId: ID | null, place: ProjectPlace = {}): void {
+  void showModal<void>((close) => <SpeechBody projectId={projectId} place={place} close={() => close()} />);
 }

@@ -11,6 +11,7 @@ import { UpdateBanner } from '@/components/UpdateBanner';
 import { EditorPage, saveAndThumbnail } from '@/editor/EditorPage';
 import { api } from '@/lib/api';
 import { startIntake } from '@/lib/intake';
+import { discardIfUnused } from '@/lib/projects';
 import { AssetsPage } from '@/pages/AssetsPage';
 import { BrandPage } from '@/pages/BrandPage';
 import { CreateAssetPage } from '@/pages/CreateAssetPage';
@@ -19,6 +20,7 @@ import { LibraryPage } from '@/pages/LibraryPage';
 import { TemplatesPage } from '@/pages/TemplatesPage';
 import { VideoPage } from '@/pages/VideoPage';
 import { loadProviders } from '@/store/ai';
+import { useEditor } from '@/store/editor';
 import { useLibrary } from '@/store/library';
 import { useUi, type Route } from '@/store/ui';
 
@@ -53,6 +55,7 @@ export function App(): ReactNode {
     void loadProviders();
     const offClosing = api.on('app:closing', () => {
       void saveAndThumbnail()
+        .then(() => discardIfUnused(useEditor.getState().doc))
         .catch(() => undefined)
         .finally(() => void api.app.readyToClose());
     });
@@ -82,7 +85,7 @@ export function App(): ReactNode {
       <UpdateBanner />
       <div className="app-page">
         {route.page === 'editor' ? (
-          <EditorPage key={route.projectId} projectId={route.projectId} welcome={route.welcome} showAi={route.showAi} />
+          <EditorPage key={route.projectId} projectId={route.projectId} showAi={route.showAi} add={route.add} />
         ) : (
           <div className="shell">
             <Sidebar />

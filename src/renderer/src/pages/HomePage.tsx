@@ -11,7 +11,7 @@ import { confirmDialog } from '@/components/Modal';
 import { Button, Notice, Spinner } from '@/components/ui';
 import { api, errorMessage } from '@/lib/api';
 import { templateThumbUrl } from '@/lib/media';
-import { startBlankProject } from '@/lib/projects';
+import { openStartDialog } from '@/lib/startDialog';
 import { generateScriptVideo, sceneCount } from '@/lib/scriptVideo';
 import { useAi, useConnected, useModels } from '@/store/ai';
 import { useLibrary } from '@/store/library';
@@ -409,9 +409,9 @@ export function HomePage({ prefill }: { prefill?: ScriptOrigin | null }): ReactN
         <div className="home-blank">
           <div>
             <h2>Editing your own footage?</h2>
-            <p className="muted">Open a blank project, add your files and start cutting.</p>
+            <p className="muted">Add your files and start cutting.</p>
           </div>
-          <Button onClick={() => void startBlankProject()}>Edit video</Button>
+          <Button onClick={() => openStartDialog()}>Edit video</Button>
         </div>
       </section>
     </div>

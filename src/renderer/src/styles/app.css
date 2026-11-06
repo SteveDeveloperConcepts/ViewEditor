@@ -957,3 +957,7 @@
   font-size: inherit;
   text-decoration: underline;
 }
+
+.welcome-blank {
+  align-self: center;
+}

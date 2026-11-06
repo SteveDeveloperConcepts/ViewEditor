@@ -6,7 +6,7 @@ import { Blocks, CircleHelp, Clapperboard, FolderClosed, KeyRound, Keyboard, Lay
 import { APP_NAME } from '@shared/constants';
 import { openConnections } from '@/ai/ConnectionsDialog';
 import { openRecorder } from '@/recorder/openRecorder';
-import { startBlankProject } from '@/lib/projects';
+import { openStartDialog } from '@/lib/startDialog';
 import { projectThumbUrl } from '@/lib/media';
 import { openSettings, openShortcuts } from '@/pages/SettingsDialog';
 import { useLibrary } from '@/store/library';
@@ -43,7 +43,7 @@ export function Sidebar(): ReactNode {
         <span>{APP_NAME}</span>
       </div>
       <NavItem icon={<Plus size={16} />} label="Create video" page="home" onClick={() => void navigate({ page: 'home' })} />
-      <NavItem icon={<Scissors size={16} />} label="Edit video" onClick={() => void startBlankProject()} />
+      <NavItem icon={<Scissors size={16} />} label="Edit video" onClick={() => openStartDialog()} />
       <div className="nav-gap" />
       <NavItem icon={<Sparkles size={16} />} label="Create asset" page="create-asset" onClick={() => void navigate({ page: 'create-asset' })} />
       <NavItem icon={<FolderClosed size={16} />} label="Assets" page="assets" onClick={() => void navigate({ page: 'assets' })} />

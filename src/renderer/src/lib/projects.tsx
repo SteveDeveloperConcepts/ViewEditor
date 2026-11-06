@@ -16,7 +16,8 @@ import {
 } from 'lucide-react';
 import { SIZE_PRESETS, TRASH_RETENTION_DAYS } from '@shared/constants';
 import { canvasForMedia, makeAudioItem, makeImageItem, makeVideoItem, resizeCanvas } from '@shared/timeline';
-import type { Asset, ID, ProjectMeta } from '@shared/types';
+import { isActive } from '@shared/ai';
+import type { Asset, ID, ProjectDoc, ProjectMeta } from '@shared/types';
 import type { MenuEntry } from '@/components/Menu';
 import { confirmDialog, Modal, promptDialog } from '@/components/Modal';
 import { Button, Field } from '@/components/ui';
@@ -32,12 +33,43 @@ async function attempt(fn: () => Promise<unknown>): Promise<void> {
   }
 }
 
-/** "Edit video": a new, empty project, straight into the editor. */
-export function startBlankProject(opts: { spaceId?: ID | null; folderId?: ID | null } = {}): Promise<void> {
+/** Where a new project goes in the library. */
+export interface ProjectPlace {
+  spaceId?: ID | null;
+  folderId?: ID | null;
+}
+
+/** Projects started empty here, with the name they started with. */
+const drafts = new Map<ID, string>();
+
+/** A new, empty project, straight into the editor. It goes away again if nothing is ever put in it. */
+export function startBlankProject(place: ProjectPlace = {}, name?: string, showAi = false): Promise<void> {
   return attempt(async () => {
-    const meta = await api.library.createProject(opts);
-    await navigate({ page: 'editor', projectId: meta.id, welcome: true });
+    const meta = await api.library.createProject({ ...place, name });
+    drafts.set(meta.id, meta.name);
+    await navigate({ page: 'editor', projectId: meta.id, showAi });
   });
+}
+
+/** Removes a project that was started empty and stayed that way. Called as it closes. */
+export async function discardIfUnused(doc: ProjectDoc | null): Promise<void> {
+  if (!doc || doc.items.length || drafts.get(doc.id) !== doc.name) return;
+  const waiting = getLibrary().aiJobs?.some((j) => isActive(j) && j.request.target.projectId === doc.id);
+  if (waiting) return;
+  drafts.delete(doc.id);
+  await api.library.deleteProjectsForever([doc.id]).catch(() => undefined);
+}
+
+/** The name a project takes from its first file. */
+export function nameFromFile(asset: Asset): string {
+  return asset.name.replace(/\.[^.]+$/, '') || asset.name;
+}
+
+/** Starts a project around media that is already in the library, and opens it. */
+export async function startProjectWith(assets: Asset[], place: ProjectPlace = {}): Promise<void> {
+  if (!assets.length) return;
+  const meta = await api.library.createProject({ ...place, name: nameFromFile(assets[0]) });
+  await navigate({ page: 'editor', projectId: meta.id, add: assets });
 }
 
 /** Starts a project around one piece of media and opens it. */

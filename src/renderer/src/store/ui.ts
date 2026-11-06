@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { create } from 'zustand';
-import type { ID, ScriptOrigin } from '@shared/types';
+import type { Asset, ID, ScriptOrigin } from '@shared/types';
 
 export type LibraryView = { kind: 'all' } | { kind: 'space'; spaceId: ID; folderId: ID | null } | { kind: 'trash' };
 
@@ -11,7 +11,8 @@ export type Route =
   | { page: 'brand' }
   | { page: 'templates' }
   | { page: 'create-asset' }
-  | { page: 'editor'; projectId: ID; welcome?: boolean; showAi?: boolean }
+  /** `add` is media to put on the timeline once the project has opened. */
+  | { page: 'editor'; projectId: ID; showAi?: boolean; add?: Asset[] }
   | { page: 'video'; projectId: ID };
 
 export interface Toast {

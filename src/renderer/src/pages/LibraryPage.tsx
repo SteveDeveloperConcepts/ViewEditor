@@ -27,7 +27,8 @@ import { confirmDialog, promptDialog } from '@/components/Modal';
 import { Button, EmptyState, IconButton } from '@/components/ui';
 import { api, errorMessage } from '@/lib/api';
 import { projectThumbUrl } from '@/lib/media';
-import { deleteForever, moveProjects, projectMenu, startBlankProject, TRASH_NOTE, trashProjects } from '@/lib/projects';
+import { deleteForever, moveProjects, projectMenu, TRASH_NOTE, trashProjects } from '@/lib/projects';
+import { openStartDialog } from '@/lib/startDialog';
 import { useLibrary } from '@/store/library';
 import { navigate, toast, type LibraryView } from '@/store/ui';
 
@@ -235,7 +236,7 @@ export function LibraryPage({ view }: { view: LibraryView }): ReactNode {
           <input className="input" placeholder="Search projects" aria-label="Search projects" value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
         {view.kind !== 'trash' && (
-          <Button variant="primary" icon={<Plus size={15} />} onClick={() => void startBlankProject({ spaceId: space?.id, folderId })}>
+          <Button variant="primary" icon={<Plus size={15} />} onClick={() => openStartDialog({ spaceId: space?.id, folderId })}>
             New project
           </Button>
         )}
@@ -289,7 +290,7 @@ export function LibraryPage({ view }: { view: LibraryView }): ReactNode {
         <EmptyState icon={<Trash2 size={22} />} title="Trash is empty" />
       ) : !folders.length ? (
         <EmptyState icon={<Clapperboard size={22} />} title="No projects here yet">
-          <Button variant="primary" icon={<Plus size={15} />} onClick={() => void startBlankProject({ spaceId: space?.id, folderId })}>
+          <Button variant="primary" icon={<Plus size={15} />} onClick={() => openStartDialog({ spaceId: space?.id, folderId })}>
             New project
           </Button>
         </EmptyState>

@@ -54,7 +54,8 @@ async function newProject(files) {
     await page.waitForFunction((n) => document.querySelectorAll('.clip').length >= n, files.length, { timeout: 20000 });
     await sleep(400);
   } else {
-    await page.click('.modal [aria-label="Close"]');
+    await page.click('.modal button:has-text("Start with an empty project")');
+    await page.waitForSelector('.editor .tl-add-media');
   }
 }
 
@@ -319,7 +320,22 @@ section('timeline', async () => {
 
 // Behaviour that came out of the design review of 0.1.0.
 section('review', async () => {
+  // Nothing is created until there is something to put in it.
+  await home();
+  const projectCount = async () => (await library()).projects.length;
+  const before = await projectCount();
+  await page.click('.sidebar .nav-item:has-text("Edit video")');
+  await page.waitForSelector('.modal');
+  await page.click('.modal [aria-label="Close"]');
+  await sleep(150);
+  check((await projectCount()) === before && !(await page.$('.editor')), 'closing the start dialog leaves no project behind');
+  await newProject();
+  check((await projectCount()) === before + 1, 'an empty project can be asked for');
+  await home();
+  await page.waitForFunction((n) => window.api.library.get().then((l) => l.projects.length === n), before, { timeout: 3000 }).catch(() => undefined);
+  check((await projectCount()) === before, 'and goes away again if nothing was put in it');
   await newProject([media('clip-a.mp4')]);
+  check((await page.inputValue('.project-name')).startsWith('clip-a'), 'a project is named after its first file', await page.inputValue('.project-name'));
   const videos = async () => (await clips(page)).filter((c) => c.type === 'video').sort((a, b) => a.left - b.left);
   let list = await videos();
   const b0 = await box(clipSel(list[0].id));
@@ -1167,7 +1183,10 @@ section('ai', async () => {
       await p.click('.modal .dropzone');
       await p.waitForFunction((n) => document.querySelectorAll('.clip').length >= n, files.length, { timeout: 15000 });
       await wait(300);
-    } else await p.click('.modal [aria-label="Close"]');
+    } else {
+      await p.click('.modal button:has-text("Start with an empty project")');
+      await p.waitForSelector('.editor .tl-add-media');
+    }
   };
   const selectClip = async (id) => {
     const b = await p.locator(`.clip[data-clip="${id}"]`).boundingBox();

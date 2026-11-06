@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ArrowLeft,
   Captions,
@@ -13,24 +13,21 @@ import {
   Redo2,
   Settings,
   Share,
-  Smartphone,
   Sparkles,
-  Speech,
   Type,
   Undo2,
   Ungroup,
-  Upload,
   Video,
 } from 'lucide-react';
 import { isActive } from '@shared/ai';
 import { projectDuration } from '@shared/timeline';
-import type { ID } from '@shared/types';
+import type { Asset, ID } from '@shared/types';
 import { forgetDrafts } from '@/ai/drafts';
-import { Modal } from '@/components/Modal';
 import { Button, IconButton, Spinner } from '@/components/ui';
 import { api, errorMessage, isMod, isTyping, MOD_LABEL } from '@/lib/api';
 import { startRender } from '@/lib/exporter';
 import { loadBrandFonts } from '@/lib/fonts';
+import { discardIfUnused } from '@/lib/projects';
 import { updateProjectThumb } from '@/lib/thumbnail';
 import { openRecorder } from '@/recorder/openRecorder';
 import {
@@ -57,17 +54,15 @@ import {
 } from '@/store/editor';
 import { isRendering, useLibrary } from '@/store/library';
 import { usePrefs } from '@/store/prefs';
-import { navigate, onLeave, showModal, toast } from '@/store/ui';
-import { droppedPaths, hasFiles, importPathsIntoProject, pickIntoProject, SUPPORTED_SUMMARY } from './importing';
+import { navigate, onLeave, toast } from '@/store/ui';
+import { addToTimeline } from './importing';
 import { AiPanel } from './panels/AiPanel';
 import { BrandPanel } from './panels/BrandPanel';
 import { Inspector } from './panels/Inspector';
 import { MediaPanel } from './panels/MediaPanel';
 import { SettingsPanel, SizeSelect } from './panels/SettingsPanel';
-import { openSpeechDialog } from './panels/SpeechDialog';
 import { SubtitlesPanel } from './panels/SubtitlesPanel';
 import { TextPanel } from './panels/TextPanel';
-import { openPhoneDialog } from './PhoneDialog';
 import { pause, seek, stepFrames, togglePlay } from './player';
 import { Stage } from './Stage';
 import { Timeline, TimelineResizer } from './Timeline';
@@ -187,66 +182,6 @@ function StageBar(): ReactNode {
   );
 }
 
-function WelcomeBody({ projectId, close }: { projectId: ID; close: () => void }): ReactNode {
-  const [over, setOver] = useState(false);
-  const then = (action: () => void) => () => {
-    close();
-    action();
-  };
-  return (
-    <Modal title="Let's make a video" size="wide" onClose={close}>
-      <div
-        className={`dropzone${over ? ' over' : ''}`}
-        role="button"
-        tabIndex={0}
-        data-autofocus
-        onClick={then(() => void pickIntoProject('media', projectId))}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') then(() => void pickIntoProject('media', projectId))();
-        }}
-        onDragOver={(e) => {
-          if (!hasFiles(e.dataTransfer)) return;
-          e.preventDefault();
-          e.stopPropagation();
-          setOver(true);
-        }}
-        onDragLeave={() => setOver(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const paths = droppedPaths(e.dataTransfer);
-          close();
-          void importPathsIntoProject(paths, projectId);
-        }}
-      >
-        <div className="dz-icon">
-          <Upload size={18} />
-        </div>
-        <strong>Upload files</strong>
-        <span>Choose files or drag them here</span>
-        <span className="faint">{SUPPORTED_SUMMARY}</span>
-      </div>
-      <div className="welcome-options">
-        <button type="button" className="welcome-option" onClick={then(() => openPhoneDialog(projectId))}>
-          <Smartphone size={20} />
-          <strong>Upload from phone</strong>
-          <span>Send files over Wi-Fi</span>
-        </button>
-        <button type="button" className="welcome-option" onClick={then(() => void openRecorder({ projectId, addToTimeline: true }))}>
-          <Clapperboard size={20} />
-          <strong>Start by recording</strong>
-          <span>Screen, camera or both</span>
-        </button>
-        <button type="button" className="welcome-option" onClick={then(() => openSpeechDialog(projectId))}>
-          <Speech size={20} />
-          <strong>Start with a script</strong>
-          <span>Turn text into a voice-over</span>
-        </button>
-      </div>
-    </Modal>
-  );
-}
-
 function useShortcuts(enabled: boolean): void {
   useEffect(() => {
     if (!enabled) return;
@@ -339,7 +274,7 @@ export async function saveAndThumbnail(): Promise<void> {
   await updateProjectThumb(doc).catch(() => undefined);
 }
 
-export function EditorPage({ projectId, welcome, showAi }: { projectId: ID; welcome?: boolean; showAi?: boolean }): ReactNode {
+export function EditorPage({ projectId, showAi, add }: { projectId: ID; showAi?: boolean; add?: Asset[] }): ReactNode {
   const doc = useEditor((s) => s.doc);
   const panel = useEditor((s) => s.panel);
   const inspecting = useEditor((s) => s.inspecting);
@@ -347,7 +282,6 @@ export function EditorPage({ projectId, welcome, showAi }: { projectId: ID; welc
   const kits = useLibrary((s) => s.lib?.brandKits);
   const render = useLibrary((s) => s.render);
   const [failed, setFailed] = useState('');
-  const welcomed = useRef(false);
   const ready = doc?.id === projectId;
 
   useEffect(() => {
@@ -355,14 +289,10 @@ export function EditorPage({ projectId, welcome, showAi }: { projectId: ID; welc
     openProject(projectId).then(
       () => {
         if (!live) return;
-        const opened = useEditor.getState().doc;
         // With generations under way, their progress is what there is to see.
         const generating = useLibrary.getState().lib?.aiJobs?.some((j) => isActive(j) && j.request.target.projectId === projectId);
         if (showAi || generating) setPanel('ai');
-        if (welcome && !welcomed.current && opened && !opened.items.length) {
-          welcomed.current = true;
-          void showModal<void>((close) => <WelcomeBody projectId={projectId} close={() => close()} />);
-        }
+        if (add?.length) void addToTimeline(add);
       },
       (err) => live && setFailed(errorMessage(err)),
     );
@@ -372,9 +302,10 @@ export function EditorPage({ projectId, welcome, showAi }: { projectId: ID; welc
       off();
       pause();
       forgetDrafts(projectId);
-      void closeProject(projectId);
+      const closing = useEditor.getState().doc;
+      void closeProject(projectId).then(() => discardIfUnused(closing?.id === projectId ? closing : null));
     };
-  }, [projectId, welcome, showAi]);
+  }, [projectId, showAi, add]);
 
   useEffect(() => {
     if (kits) void loadBrandFonts(kits);

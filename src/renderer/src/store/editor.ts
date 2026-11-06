@@ -253,6 +253,21 @@ export async function openProject(id: ID): Promise<void> {
   set({ ...initial, doc, pxPerSec: get().pxPerSec });
 }
 
+/** Resolves once this project is the one open in the editor. */
+export function whenOpen(id: ID): Promise<void> {
+  return new Promise((resolve) => {
+    if (get().doc?.id === id) {
+      resolve();
+      return;
+    }
+    const off = useEditor.subscribe((s) => {
+      if (s.doc?.id !== id) return;
+      off();
+      resolve();
+    });
+  });
+}
+
 export async function closeProject(id: ID): Promise<void> {
   await flushSave();
   // Another project may have opened while that save was running; it must not be cleared.

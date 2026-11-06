@@ -8,10 +8,13 @@ import type { ID } from '@shared/types';
 import { Modal } from '@/components/Modal';
 import { Button, Notice, Spinner } from '@/components/ui';
 import { api, errorMessage } from '@/lib/api';
+import { startProjectWith, type ProjectPlace } from '@/lib/projects';
+import { useEditor } from '@/store/editor';
 import { showModal } from '@/store/ui';
 import { addToTimeline, reportRejected } from './importing';
 
-function PhoneBody({ projectId, close }: { projectId: ID | null; close: () => void }): ReactNode {
+/** With no project open yet, the first file starts one and the rest follow it onto the timeline. */
+function PhoneBody({ projectId, place, close }: { projectId: ID | null; place: ProjectPlace; close: () => void }): ReactNode {
   const [session, setSession] = useState<PhoneSession | null>(null);
   const [error, setError] = useState('');
   const [received, setReceived] = useState<string[]>([]);
@@ -19,15 +22,21 @@ function PhoneBody({ projectId, close }: { projectId: ID | null; close: () => vo
   useEffect(() => {
     const target = projectId ? ({ scope: 'project', projectId } as const) : ({ scope: 'workspace' } as const);
     api.phone.start(target).then(setSession, (err) => setError(errorMessage(err)));
+    let queue = Promise.resolve();
     const off = api.on('phone:received', (result) => {
       reportRejected(result);
       setReceived((r) => [...r, ...result.assets.map((a) => a.name)]);
-      if (projectId) void addToTimeline(result.assets);
+      queue = queue.then(async () => {
+        if (useEditor.getState().doc) await addToTimeline(result.assets);
+        else await startProjectWith(result.assets, place);
+      });
     });
     return () => {
       off();
       void api.phone.stop();
     };
+    // The place is decided by whoever opened the dialog, and does not change while it is open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   return (
@@ -66,6 +75,6 @@ function PhoneBody({ projectId, close }: { projectId: ID | null; close: () => vo
   );
 }
 
-export function openPhoneDialog(projectId: ID | null): void {
-  void showModal<void>((close) => <PhoneBody projectId={projectId} close={() => close()} />);
+export function openPhoneDialog(projectId: ID | null, place: ProjectPlace = {}): void {
+  void showModal<void>((close) => <PhoneBody projectId={projectId} place={place} close={() => close()} />);
 }
