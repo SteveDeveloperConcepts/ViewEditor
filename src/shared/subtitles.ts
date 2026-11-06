@@ -92,6 +92,16 @@ export function chunkCue(text: string, start: number, end: number, maxChars = 62
   }
   if (line) pieces.push(line);
 
+  // One word left alone on the last line reads badly, so the line before lends it another.
+  const last = pieces.length - 1;
+  if (last > 0 && !pieces[last].includes(' ')) {
+    const before = pieces[last - 1].split(' ');
+    if (before.length > 2) {
+      pieces[last] = `${before.pop()} ${pieces[last]}`;
+      pieces[last - 1] = before.join(' ');
+    }
+  }
+
   const total = pieces.reduce((n, p) => n + p.length, 0) || 1;
   let cursor = start;
   return pieces.map((piece, i) => {

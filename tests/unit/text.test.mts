@@ -78,3 +78,10 @@ test('file sizes', () => {
   assert.equal(formatBytes(1536), '1.50 KB');
   assert.equal(formatBytes(5 * 1024 ** 3), '5.00 GB');
 });
+
+test('a subtitle never ends on one word alone', () => {
+  const cues = chunkCue('Every morning the bakery opens its doors at seven', 0, 4, 44);
+  assert.ok(cues.length > 1);
+  assert.ok(cues.every((c) => c.text.includes(' ')), JSON.stringify(cues.map((c) => c.text)));
+  assert.equal(cues.map((c) => c.text).join(' '), 'Every morning the bakery opens its doors at seven');
+});
