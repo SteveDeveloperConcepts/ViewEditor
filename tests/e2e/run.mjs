@@ -911,7 +911,9 @@ section('recorder', async () => {
   await page.click('button:has-text("Stop recording")');
   await page.waitForSelector('.editor .clip.video', { timeout: 15000 });
   await app.evaluate(() => globalThis.captureTarget?.destroy());
-  check((await library()).projects.length === before + 1, 'recording from the dashboard opens a new project with the footage in place');
+  check((await library()).projects.length === before + 1, 'recording from the left menu opens a new project with the footage in place');
+  const recordings = (await library()).assets.filter((a) => a.source === 'recording');
+  check(recordings.length === 2 && recordings.every((a) => a.scope === 'workspace'), 'recordings are kept in Media wherever Record was pressed', String(recordings.length));
 });
 
 section('script', async () => {

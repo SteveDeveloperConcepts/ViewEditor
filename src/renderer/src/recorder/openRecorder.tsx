@@ -297,14 +297,13 @@ function RecorderBody({ options, close }: { options: RecorderOptions; close: () 
     const name = `${mode === 'audio' ? 'Voice-over' : 'Recording'} ${stamp}`;
     const id = recId.current!;
     try {
+      // Wherever Record was pressed, the recording is kept in Media.
+      const asset = await api.recorder.finish(id, name, { scope: 'workspace' });
+      close();
       if (options.projectId) {
-        const asset = await api.recorder.finish(id, name, { scope: 'project', projectId: options.projectId });
-        close();
         if (options.addToTimeline) await addToTimeline([asset]);
-        toast('Recording added.', { kind: 'success' });
+        toast('Recording saved to Media and added to the timeline.', { kind: 'success' });
       } else {
-        const asset = await api.recorder.finish(id, name, { scope: 'workspace' });
-        close();
         await startProjectWithAsset(asset, name);
       }
     } catch (err) {
