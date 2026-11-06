@@ -24,6 +24,7 @@ import {
 import { isActive } from '@shared/ai';
 import { projectDuration } from '@shared/timeline';
 import type { ID } from '@shared/types';
+import { forgetDrafts } from '@/ai/drafts';
 import { Modal } from '@/components/Modal';
 import { Button, IconButton, Spinner } from '@/components/ui';
 import { api, errorMessage, isMod, isTyping, MOD_LABEL } from '@/lib/api';
@@ -369,6 +370,7 @@ export function EditorPage({ projectId, welcome, showAi }: { projectId: ID; welc
       live = false;
       off();
       pause();
+      forgetDrafts(projectId);
       void closeProject(projectId);
     };
   }, [projectId, welcome, showAi]);

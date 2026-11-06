@@ -27,6 +27,7 @@ import { reportRejected } from '@/editor/importing';
 import { loadModels, useAi, useConnected, useModels } from '@/store/ai';
 import { useLibrary } from '@/store/library';
 import { openConnections } from './ConnectionsDialog';
+import { formDraft, saveFormDraft } from './drafts';
 
 const LAST_MODEL = 'vieweditor.ai.model.';
 
@@ -62,11 +63,12 @@ function lengthFor(model: AiModel, previous: AiChoices, seconds: number | undefi
   return chooseFrom(option, undefined) ?? pickDuration(option, typeof previous.duration === 'number' ? previous.duration : 5);
 }
 
-function initialChoices(model: AiModel, width: number, height: number, previous: AiChoices, seconds: number | undefined): AiChoices {
+function initialChoices(model: AiModel, width: number, height: number, previous: AiChoices, seconds: number | undefined, shapePicked: boolean): AiChoices {
+  const keepShape = shapePicked && previous.aspect !== undefined && model.aspect?.values?.includes(previous.aspect);
   return {
     prompt: previous.prompt,
     duration: lengthFor(model, previous, seconds),
-    aspect: model.aspect ? pickAspect(model.aspect, width, height) : undefined,
+    aspect: keepShape ? previous.aspect : model.aspect ? pickAspect(model.aspect, width, height) : undefined,
     resolution: chooseFrom(model.resolution, previous.resolution),
     sound: model.sound ? (previous.sound ?? model.sound.default) : undefined,
   };
@@ -125,6 +127,8 @@ export interface AiFormProps {
   height: number;
   /** The length to aim for, such as that of the clip being edited. */
   seconds?: number;
+  /** Keeps what was entered for as long as the project is open. Forms that come and go should have one. */
+  draftKey?: string;
   promptLabel?: string;
   promptPlaceholder?: string;
   submitLabel?: string;
@@ -134,15 +138,17 @@ export interface AiFormProps {
 }
 
 export function AiForm(props: AiFormProps): ReactNode {
-  const { task, projectId, placement, width, height, seconds, promptLabel = 'Prompt', promptPlaceholder, submitLabel = 'Generate', note, onSubmitted } = props;
+  const { task, projectId, placement, width, height, seconds, draftKey, promptLabel = 'Prompt', promptPlaceholder, submitLabel = 'Generate', note, onSubmitted } = props;
   const models = useModels(task);
   const providers = useAi((s) => s.providers);
   const connected = useConnected();
+  const [draft] = useState(() => formDraft(draftKey));
   const [modelKey, setModelKey] = useState<string | null>(() => rememberedModel(task));
-  const [choices, setChoices] = useState<AiChoices>({});
-  const [image, setImage] = useState<AiMediaRef | null>(props.image ?? null);
-  const [video, setVideo] = useState<AiMediaRef | null>(props.video ?? null);
-  const [audio, setAudio] = useState<AiMediaRef | null>(props.audio ?? null);
+  const [choices, setChoices] = useState<AiChoices>(draft?.choices ?? {});
+  const [shapePicked, setShapePicked] = useState(draft?.shapePicked ?? false);
+  const [image, setImage] = useState<AiMediaRef | null>(props.image ?? draft?.image ?? null);
+  const [video, setVideo] = useState<AiMediaRef | null>(props.video ?? draft?.video ?? null);
+  const [audio, setAudio] = useState<AiMediaRef | null>(props.audio ?? draft?.audio ?? null);
   const [price, setPrice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -152,14 +158,20 @@ export function AiForm(props: AiFormProps): ReactNode {
 
   useEffect(() => {
     if (!model) return;
-    setChoices((c) => initialChoices(model, width, height, c, seconds));
+    setChoices((c) => initialChoices(model, width, height, c, seconds, shapePicked));
     setPrice(null);
     let live = true;
     void api.ai.price(model.key).then((p) => live && setPrice(p));
     return () => {
       live = false;
     };
+    // Picking a shape only matters the next time the form is set up.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [model, width, height, seconds]);
+
+  useEffect(() => {
+    if (draftKey) saveFormDraft(draftKey, { choices, shapePicked, image, video, audio });
+  }, [draftKey, choices, shapePicked, image, video, audio]);
 
   const groups = useMemo(() => {
     const byProvider = new Map<string, AiModel[]>();
@@ -306,7 +318,10 @@ export function AiForm(props: AiFormProps): ReactNode {
               className="select"
               aria-label="Shape"
               value={String(choices.aspect)}
-              onChange={(e) => set({ aspect: model.aspect?.values?.find((x) => String(x) === e.target.value) })}
+              onChange={(e) => {
+                setShapePicked(true);
+                set({ aspect: model.aspect?.values?.find((x) => String(x) === e.target.value) });
+              }}
             >
               {model.aspect.values.map((v) => (
                 <option key={String(v)} value={String(v)}>

@@ -1247,6 +1247,21 @@ section('ai', async () => {
     await p.keyboard.press('Home');
     await wait(100);
 
+    // Looking at a clip must not cost what was typed into the form.
+    await p.click('.rail-item:has-text("AI tools")');
+    await p.waitForSelector('.ai-form textarea');
+    await p.fill('.ai-form textarea', 'Still here after looking at a clip');
+    const shortest = await p.$eval('.ai-form select[aria-label="Length"] option', (o) => o.value);
+    await p.selectOption('.ai-form select[aria-label="Length"]', shortest);
+    await selectClip(first.id);
+    await p.click('.rail-item:has-text("AI tools")');
+    await p.waitForSelector('.ai-form textarea');
+    await wait(150);
+    check((await p.inputValue('.ai-form textarea')) === 'Still here after looking at a clip', 'the AI form keeps its prompt when a clip is clicked');
+    check((await p.inputValue('.ai-form select[aria-label="Length"]')) === shortest, 'and its length');
+    await p.fill('.ai-form textarea', '');
+    await selectClip(first.id);
+
     // Edit with AI
     await p.click('.panel button:has-text("Edit with AI")');
     await p.waitForSelector('.modal .ai-form select[aria-label="Model"]');

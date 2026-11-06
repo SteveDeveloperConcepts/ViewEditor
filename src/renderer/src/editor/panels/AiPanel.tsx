@@ -8,6 +8,7 @@ import type { ID } from '@shared/types';
 import { IconButton } from '@/components/ui';
 import { AiForm } from '@/ai/AiForm';
 import { openConnections } from '@/ai/ConnectionsDialog';
+import { draftTask, saveDraftTask } from '@/ai/drafts';
 import { JobList } from '@/ai/JobList';
 import { useEditor } from '@/store/editor';
 
@@ -21,8 +22,12 @@ const TASKS: { task: AiTask; label: string; placeholder: string; hint?: string }
 
 export function AiPanel({ projectId }: { projectId: ID }): ReactNode {
   const doc = useEditor((s) => s.doc)!;
-  const [task, setTask] = useState<AiTask>('text-to-video');
+  const [task, setTask] = useState<AiTask>(() => draftTask(projectId) ?? 'text-to-video');
   const current = TASKS.find((t) => t.task === task)!;
+  const choose = (next: AiTask): void => {
+    setTask(next);
+    saveDraftTask(projectId, next);
+  };
   return (
     <div className="panel-body">
       <div className="row">
@@ -31,7 +36,7 @@ export function AiPanel({ projectId }: { projectId: ID }): ReactNode {
           <Settings2 size={15} />
         </IconButton>
       </div>
-      <select className="select" aria-label="What to generate" value={task} onChange={(e) => setTask(e.target.value as AiTask)}>
+      <select className="select" aria-label="What to generate" value={task} onChange={(e) => choose(e.target.value as AiTask)}>
         {TASKS.map((t) => (
           <option key={t.task} value={t.task}>
             {t.label}
@@ -42,6 +47,7 @@ export function AiPanel({ projectId }: { projectId: ID }): ReactNode {
       <AiForm
         key={task}
         task={task}
+        draftKey={`${projectId}:${task}`}
         projectId={projectId}
         placement={{ kind: 'timeline' }}
         width={doc.settings.width}
