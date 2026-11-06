@@ -306,15 +306,6 @@ export function Inspector({ projectId }: { projectId: ID }): ReactNode {
         </p>
       )}
       <PastTheEnd item={item} doc={doc} />
-      {item.type === 'text' && <TextControls item={item} />}
-      {(item.type === 'video' || item.type === 'image') && <PictureControls item={item} />}
-      {isTimed(item) && <AudioControls item={item} asset={asset} />}
-      <Timing item={item} asset={asset} />
-      {item.type !== 'text' && (
-        <Button size="small" icon={<Replace size={13} />} onClick={() => void replaceMediaFor(item, projectId)}>
-          Replace media
-        </Button>
-      )}
       {actionsFor(item).length > 0 && (
         <section>
           <h3>AI</h3>
@@ -324,6 +315,15 @@ export function Inspector({ projectId }: { projectId: ID }): ReactNode {
             </Button>
           ))}
         </section>
+      )}
+      {item.type === 'text' && <TextControls item={item} />}
+      {(item.type === 'video' || item.type === 'image') && <PictureControls item={item} />}
+      {isTimed(item) && <AudioControls item={item} asset={asset} />}
+      <Timing item={item} asset={asset} />
+      {item.type !== 'text' && (
+        <Button size="small" icon={<Replace size={13} />} onClick={() => void replaceMediaFor(item, projectId)}>
+          Replace media
+        </Button>
       )}
       {asset?.origin?.prompt && (
         <section>
