@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { FONT_FAMILIES } from '@shared/constants';
 import { formatClock } from '@shared/time';
-import { isTimed, itemEnd, nearestFreeStart, trimEndTo, updateItems } from '@shared/timeline';
+import { isTimed, itemEnd, nearestFreeStart, setSourceRange, trimEndTo, updateItems } from '@shared/timeline';
 import type { Asset, ID, Item, MediaItem, ProjectDoc, TextItem, TextStyle } from '@shared/types';
 import { Button, ColorField, FieldRow, IconButton, Notice, NumberInput, Segmented, Slider, Switch, TimeInput } from '@/components/ui';
 import { actionLabel, actionsFor, openClipAi } from '@/ai/clipActions';
@@ -46,39 +46,58 @@ import { extractAudioFrom, replaceMediaFor } from '../actions';
 
 const SPEEDS = ['0.5', '1', '1.5', '2'];
 
+/** Moving a clip and trimming it are different things, so they get a section each. */
 function Timing({ item, asset }: { item: Item; asset: Asset | undefined }): ReactNode {
+  const change = (next: (doc: ProjectDoc, current: Item) => Item): void => {
+    apply((doc) => {
+      const current = doc.items.find((it) => it.id === item.id);
+      return current ? updateItems(doc, [item.id], () => next(doc, current)) : doc;
+    });
+  };
   return (
-    <section>
-      <h3>Timing</h3>
-      <div className="form-grid">
+    <>
+      <section>
+        <h3>Position</h3>
         <label className="field">
-          <span className="label">Start</span>
+          <span className="label">Starts at</span>
           <TimeInput
-            label="Start time"
+            label="Starts at"
             value={item.start}
-            onCommit={(t) =>
-              apply((doc) => {
-                const start = nearestFreeStart(doc, item.trackId, Math.max(0, t), item.duration, new Set([item.id]));
-                return updateItems(doc, [item.id], (it) => ({ ...it, start }) as Item);
-              })
-            }
+            onCommit={(t) => change((doc, it) => ({ ...it, start: nearestFreeStart(doc, it.trackId, Math.max(0, t), it.duration, new Set([it.id])) }) as Item)}
           />
+          <span className="hint">Moves the whole clip along the timeline.</span>
         </label>
-        <label className="field">
-          <span className="label">End</span>
-          <TimeInput
-            label="End time"
-            value={itemEnd(item)}
-            onCommit={(t) =>
-              apply((doc) => {
-                const current = doc.items.find((it) => it.id === item.id);
-                return current ? updateItems(doc, [item.id], () => trimEndTo(doc, current, t, asset)) : doc;
-              })
-            }
-          />
-        </label>
-      </div>
-    </section>
+      </section>
+      {isTimed(item) ? (
+        <section>
+          <h3>Trim</h3>
+          <div className="form-grid">
+            <label className="field">
+              <span className="label">Plays from</span>
+              <TimeInput
+                label="Plays from"
+                value={item.trimStart}
+                onCommit={(t) => change((doc, it) => (isTimed(it) ? setSourceRange(doc, it, t, it.trimStart + it.duration * it.speed, asset) : it))}
+              />
+            </label>
+            <label className="field">
+              <span className="label">To</span>
+              <TimeInput
+                label="Plays to"
+                value={item.trimStart + item.duration * item.speed}
+                onCommit={(t) => change((doc, it) => (isTimed(it) ? setSourceRange(doc, it, it.trimStart, t, asset) : it))}
+              />
+            </label>
+          </div>
+          <span className="hint">Which part of the file this clip plays. Nothing is deleted.</span>
+        </section>
+      ) : (
+        <section>
+          <h3>Length</h3>
+          <TimeInput label="Length" value={item.duration} onCommit={(t) => change((doc, it) => trimEndTo(doc, it, it.start + t, asset))} />
+        </section>
+      )}
+    </>
   );
 }
 

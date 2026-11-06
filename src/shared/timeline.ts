@@ -296,6 +296,15 @@ export function trimEndTo(doc: ProjectDoc, it: Item, newEnd: number, asset: Asse
   return { ...it, duration: end - it.start } as Item;
 }
 
+/** Changes which stretch of its file a clip plays. The clip stays where it starts on the timeline. */
+export function setSourceRange(doc: ProjectDoc, it: MediaItem, from: number, to: number, asset: Asset | undefined): MediaItem {
+  const { nextStart } = neighbourBounds(doc, it);
+  const length = asset && asset.duration > 0 ? asset.duration : Infinity;
+  const trimStart = Math.max(0, Math.min(from, length - MIN_ITEM_DURATION * it.speed));
+  const wanted = (Math.min(to, length) - trimStart) / it.speed;
+  return { ...it, trimStart, duration: Math.max(MIN_ITEM_DURATION, Math.min(wanted, nextStart - it.start)) };
+}
+
 /**
  * Puts a video clip's sound on a row of its own, lined up with the clip, and mutes the clip. The row is
  * the first sound-only row below the clip with room, or a new one straight below it.

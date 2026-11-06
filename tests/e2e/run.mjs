@@ -478,13 +478,25 @@ section('review', async () => {
   doc = await storedDoc();
   const heading = doc.items.find((i) => i.type === 'text');
   check(Math.abs(heading.duration - Math.min(5, footage)) < 0.05, 'new text lasts no longer than the video', `${heading.duration} on ${footage}`);
-  await page.fill('[aria-label="End time"]', '00:09.0');
+  await page.fill('[aria-label="Length"]', '00:09.0');
   await page.keyboard.press('Enter');
   await page.waitForSelector('.notice.warning:has-text("past the end of your video")');
   await page.click('button:has-text("End with the video")');
   await sleep(150);
   check(!(await page.$('.notice.warning')), 'a warning offers to end text with the video');
   check(Math.abs((await storedDoc()).items.find((i) => i.type === 'text').duration - footage) < 0.05, 'and does it');
+
+  // Moving and trimming are separate, and say which is which.
+  const video = (await videos())[0];
+  await page.click(clipSel(video.id));
+  await page.fill('[aria-label="Starts at"]', '00:01.0');
+  await page.keyboard.press('Enter');
+  await sleep(100);
+  await page.fill('[aria-label="Plays to"]', '00:02.0');
+  await page.keyboard.press('Enter');
+  await sleep(150);
+  const cut = (await storedDoc()).items.find((i) => i.type === 'video');
+  check(Math.abs(cut.start - 1) < 0.05 && Math.abs(cut.duration - 2) < 0.05, 'Starts at moves the clip and Plays to trims it', JSON.stringify({ s: cut.start, d: cut.duration }));
 });
 
 section('text', async () => {

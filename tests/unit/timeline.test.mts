@@ -23,6 +23,7 @@ import {
   rangeFree,
   removeItems,
   resizeCanvas,
+  setSourceRange,
   snapClip,
   snapPoints,
   snapValue,
@@ -74,6 +75,16 @@ test('extracted sound stops where the file does, and only video has any to give'
   const result = detachAudio(doc, doc.items[0].id, sound)!;
   assert.equal(result.doc.items.find((i) => i.id === result.audioId)!.duration, 4);
   assert.equal(detachAudio(result.doc, result.audioId, sound), null);
+});
+
+test('choosing which part of a file plays keeps the clip where it starts', () => {
+  const doc = docWith(clipAt(2, 4, 1), clipAt(8, 2));
+  const clip = doc.items[0] as VideoItem;
+  const later = setSourceRange(doc, clip, 3, 5, asset());
+  assert.deepEqual({ start: later.start, trimStart: later.trimStart, duration: later.duration }, { start: 2, trimStart: 3, duration: 2 });
+  assert.equal(setSourceRange(doc, clip, 0, 9, asset()).duration, 6, 'it stops at the next clip');
+  assert.equal(setSourceRange(doc, { ...clip, start: 20 }, 9, 30, asset()).duration, 1, 'and at the end of the file');
+  assert.equal(setSourceRange(doc, { ...clip, speed: 2 }, 0, 4, asset()).duration, 2, 'and speed is taken into account');
 });
 
 test('project length is the end of the last element unless fixed', () => {
