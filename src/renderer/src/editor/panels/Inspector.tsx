@@ -9,6 +9,7 @@ import {
   ArrowLeft,
   Bold,
   CaseUpper,
+  CircleAlert,
   Group,
   Italic,
   Maximize,
@@ -21,8 +22,8 @@ import {
 import { FONT_FAMILIES } from '@shared/constants';
 import { formatClock } from '@shared/time';
 import { isTimed, itemEnd, nearestFreeStart, trimEndTo, updateItems } from '@shared/timeline';
-import type { Asset, ID, Item, MediaItem, TextItem, TextStyle } from '@shared/types';
-import { Button, ColorField, FieldRow, IconButton, NumberInput, Segmented, Slider, Switch, TimeInput } from '@/components/ui';
+import type { Asset, ID, Item, MediaItem, ProjectDoc, TextItem, TextStyle } from '@shared/types';
+import { Button, ColorField, FieldRow, IconButton, Notice, NumberInput, Segmented, Slider, Switch, TimeInput } from '@/components/ui';
 import { actionLabel, actionsFor, openClipAi } from '@/ai/clipActions';
 import { openConnections } from '@/ai/ConnectionsDialog';
 import { useConnected } from '@/store/ai';
@@ -77,6 +78,24 @@ function Timing({ item, asset }: { item: Item; asset: Asset | undefined }): Reac
         </label>
       </div>
     </section>
+  );
+}
+
+/** Text or a picture that outlasts the footage makes the video longer, which is easy to miss. */
+function PastTheEnd({ item, doc }: { item: Item; doc: ProjectDoc }): ReactNode {
+  if (item.type !== 'text' && item.type !== 'image') return null;
+  const footage = doc.items.filter(isTimed);
+  if (!footage.length) return null;
+  const end = Math.max(...footage.map(itemEnd));
+  const over = itemEnd(item) - end;
+  if (over < 0.05 || end <= item.start) return null;
+  return (
+    <Notice kind="warning" icon={<CircleAlert size={15} />}>
+      This runs {over.toFixed(1)} s past the end of your video, which makes the video longer.{' '}
+      <button type="button" className="link-btn inline" onClick={() => updateItem(item.id, { duration: end - item.start })}>
+        End with the video
+      </button>
+    </Notice>
   );
 }
 
@@ -286,6 +305,7 @@ export function Inspector({ projectId }: { projectId: ID }): ReactNode {
           {asset.isHdr && ' · HDR converted to SDR'}
         </p>
       )}
+      <PastTheEnd item={item} doc={doc} />
       {item.type === 'text' && <TextControls item={item} />}
       {(item.type === 'video' || item.type === 'image') && <PictureControls item={item} />}
       {isTimed(item) && <AudioControls item={item} asset={asset} />}

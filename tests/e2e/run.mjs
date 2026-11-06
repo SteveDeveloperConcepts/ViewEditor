@@ -366,6 +366,23 @@ section('review', async () => {
   await page.keyboard.press(`${MOD}+z`);
   await page.keyboard.press(`${MOD}+z`);
   await sleep(100);
+
+  // New text fits the video instead of lengthening it.
+  await newProject([media('clip-b.mp4')]);
+  const footage = (await storedDoc()).items[0].duration;
+  await page.click('.rail-item:has-text("Text")');
+  await page.click('button:has-text("Add a heading")');
+  await sleep(200);
+  doc = await storedDoc();
+  const heading = doc.items.find((i) => i.type === 'text');
+  check(Math.abs(heading.duration - Math.min(5, footage)) < 0.05, 'new text lasts no longer than the video', `${heading.duration} on ${footage}`);
+  await page.fill('[aria-label="End time"]', '00:09.0');
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('.notice.warning:has-text("past the end of your video")');
+  await page.click('button:has-text("End with the video")');
+  await sleep(150);
+  check(!(await page.$('.notice.warning')), 'a warning offers to end text with the video');
+  check(Math.abs((await storedDoc()).items.find((i) => i.type === 'text').duration - footage) < 0.05, 'and does it');
 });
 
 section('text', async () => {
@@ -380,13 +397,15 @@ section('text', async () => {
   const sel = await box('.stage-selection');
   const frame = await box('.stage-frame');
   check(Math.abs(sel.x + sel.width / 2 - (frame.x + frame.width / 2)) < 3, 'text starts centred on the canvas');
-  await drag(sel.x + sel.width / 2, sel.y + sel.height / 2, sel.x + sel.width / 2 + 200, sel.y + sel.height / 2 - 120);
+  // Not so far that the box runs off the window, or its handles could not be reached below.
+  await drag(sel.x + sel.width / 2, sel.y + sel.height / 2, sel.x + sel.width / 2 + 60, sel.y + sel.height / 2 - 120);
   const after = await box('.stage-selection');
-  check(after.x > sel.x + 150, 'text can be dragged on the canvas', `${sel.x} -> ${after.x}`);
+  check(after.x > sel.x + 40, 'text can be dragged on the canvas', `${sel.x} -> ${after.x}`);
   const w0 = after.width;
   const handle = await box('.stage-handle.se');
   await drag(handle.x + 5, handle.y + 5, handle.x - 120, handle.y - 40);
-  check((await box('.stage-selection')).width < w0, 'corner handles resize it');
+  const resized = await box('.stage-selection');
+  check(resized.width < w0, 'corner handles resize it', JSON.stringify({ w0, after, handle, resized }));
   await page.keyboard.press(`${MOD}+z`);
   await page.keyboard.press(`${MOD}+z`);
   await sleep(150);

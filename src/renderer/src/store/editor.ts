@@ -9,6 +9,7 @@ import {
   canvasForMedia,
   canvasTextScale,
   closeGap,
+  contentEnd,
   fitBox,
   type Gap,
   groupItems,
@@ -320,6 +321,12 @@ function overlayTrack(doc: ProjectDoc, start: number, duration: number, accept: 
   return insertTrack(doc, 0);
 }
 
+/** How long a new text or picture lasts: up to the end of the video, so adding it does not make the video longer. */
+function overlayLength(doc: ProjectDoc, start: number): number {
+  const room = contentEnd(doc) - start;
+  return room >= 0.5 ? Math.min(5, room) : 5;
+}
+
 /** The row a video should use at a given time: a footage row with room there, or a new row above them. */
 function footageRow(doc: ProjectDoc, start: number, duration: number): { doc: ProjectDoc; trackId: ID } {
   const rows = doc.tracks.filter((t) => hasVideo(doc, t));
@@ -353,7 +360,7 @@ export function addAsset(asset: Asset, where: Placement = {}): ID | null {
     }
     const fps = doc.settings.fps;
     const playhead = snapToFrame(get().playhead, fps);
-    const duration = asset.kind === 'image' ? 5 : Math.max(MIN_ITEM_DURATION, asset.duration);
+    const duration = asset.kind === 'image' ? overlayLength(doc, where.at ?? playhead) : Math.max(MIN_ITEM_DURATION, asset.duration);
     let trackId: ID;
     let start: number;
 
@@ -437,17 +444,22 @@ const TEXT_KINDS: Record<TextKind, { text: string; style: Partial<TextStyle> }> 
 
 export function addText(kind: TextKind, style: Partial<TextStyle> = {}): ID | null {
   let id: ID | null = null;
+  let lengthens = false;
   apply((before) => {
     const playhead = snapToFrame(get().playhead, before.settings.fps);
-    const placed = overlayTrack(before, playhead, 5, () => true);
+    const duration = overlayLength(before, playhead);
+    const placed = overlayTrack(before, playhead, duration, () => true);
     const preset = TEXT_KINDS[kind];
-    let item = makeTextItem(placed.doc, placed.trackId, playhead, preset.text, { ...preset.style, ...style });
+    let item = makeTextItem(placed.doc, placed.trackId, playhead, preset.text, { ...preset.style, ...style }, { duration });
     item = refitText(item);
     item = { ...item, y: (placed.doc.settings.height - item.h) / 2 };
     id = item.id;
+    const end = contentEnd(before);
+    lengthens = end > 0 && playhead + duration > end + 1e-6;
     return { ...placed.doc, items: [...placed.doc.items, item] };
   });
   if (id) select([id]);
+  if (lengthens) toast('This text runs past the end of your video, so the video is now longer.');
   return id;
 }
 
