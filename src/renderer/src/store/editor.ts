@@ -638,19 +638,24 @@ export function deleteSelection(): void {
   if (selection.length) apply((doc) => removeItems(doc, selection));
 }
 
-/** Cuts the selected elements at the playhead; with nothing selected, everything under the playhead. */
+/**
+ * Cuts at the playhead: the selected clips if the playhead is over one of them, otherwise whatever is
+ * under the playhead. When there is nothing to cut, it says so.
+ */
 export function splitAtPlayhead(): boolean {
   const s = get();
   const doc = s.doc;
   if (!doc) return false;
   const t = snapToFrame(s.playhead, doc.settings.fps);
-  const targets = s.selection.length ? s.selection : doc.items.filter((it) => it.start < t && itemEnd(it) > t).map((it) => it.id);
+  const under = doc.items.filter((it) => it.start < t && itemEnd(it) > t).map((it) => it.id);
+  const chosen = under.filter((id) => s.selection.includes(id));
   let did = false;
   apply((d) => {
-    const result = splitAt(d, targets, t);
+    const result = splitAt(d, chosen.length ? chosen : under, t);
     did = result.created.length > 0;
     return result.doc;
   });
+  if (!did) toast('There is no clip under the playhead to split. Move the playhead onto a clip first.');
   return did;
 }
 

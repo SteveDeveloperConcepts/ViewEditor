@@ -317,6 +317,32 @@ section('timeline', async () => {
   check((await clips(page)).length === count, 'paste can be undone');
 });
 
+// Behaviour that came out of the design review of 0.1.0.
+section('review', async () => {
+  await newProject([media('clip-a.mp4')]);
+  const videos = async () => (await clips(page)).filter((c) => c.type === 'video').sort((a, b) => a.left - b.left);
+  let list = await videos();
+  const b0 = await box(clipSel(list[0].id));
+  await page.mouse.click(b0.x + b0.width / 2, b0.y + 20);
+  await seekTo(2);
+  await page.keyboard.press('s');
+  await sleep(120);
+  list = await videos();
+  check(list.length === 2, 'S splits the selected clip', String(list.length));
+  const left = await box(clipSel(list[0].id));
+  await page.mouse.click(left.x + 10, left.y + 20);
+  await seekTo(4);
+  await page.keyboard.press('s');
+  await sleep(120);
+  check((await videos()).length === 3, 'Split cuts the clip under the playhead when the selected clip is not there', String((await videos()).length));
+  await seekTo(5.99);
+  await page.keyboard.press('End');
+  await sleep(100);
+  await page.keyboard.press('s');
+  await page.waitForSelector('.toast:has-text("no clip under the playhead")', { timeout: 3000 });
+  check(true, 'Split says why when there is nothing to cut');
+});
+
 section('text', async () => {
   await newProject([media('clip-b.mp4')]);
   await page.click('.rail-item:has-text("Text")');
@@ -1437,7 +1463,7 @@ section('topic', async () => {
 
 // ---------------------------------------------------------------- run
 
-const order = ['timeline', 'text', 'export', 'formats', 'library', 'persistence', 'phone', 'recorder', 'script', 'brand', 'tools', 'rotation', 'themes', 'update', 'topic', 'ai'];
+const order = ['timeline', 'review', 'text', 'export', 'formats', 'library', 'persistence', 'phone', 'recorder', 'script', 'brand', 'tools', 'rotation', 'themes', 'update', 'topic', 'ai'];
 for (const name of order) {
   if (only.length && !only.includes(name)) continue;
   console.log(`\n== ${name}`);
