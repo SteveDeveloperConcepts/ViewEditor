@@ -65,17 +65,17 @@ and serves their real published schemas, so they cost nothing and need no keys.
 
 | Documentation | In ViewEditor |
 | --- | --- |
-| **Dashboard:** home page, left navigation, Recents, Assets, Brand, Templates, More apps | All there. More apps has the Recorder. |
+| **Dashboard:** home page, left navigation, Recents, Assets, Brand, Templates, More apps | All there, regrouped. The left menu has Create (Edit my footage, Generate with AI, Video from a script, Record) and Library (Projects, Media, Templates, Brand). |
 | **AI Studio and AI Playground:** talking videos, AI images and video, from a prompt or a script | Through the AI services you connect. See [AI video](#ai-video). |
-| **Project Library:** cards, ••• menu (edit, rename, duplicate, move, save as template, resize for social, download, trash), multi-select | All there. "Share" is replaced by Show in folder, since nothing is hosted. |
-| **Spaces and folders** | Create, rename, delete, nest. Deleting one never deletes projects. |
+| **Project Library:** cards, ••• menu (edit, rename, duplicate, move, save as template, resize for social, download, trash), multi-select | All there, under Projects. Resize for social is Copy in a new shape, and download is Save video. "Share" is replaced by Show in folder, since nothing is hosted. |
+| **Spaces and folders** | Create, rename, delete, nest. Deleting one never deletes projects. Spaces stay out of sight until you make a second one, from the ••• menu on Projects. |
 | **Trash:** 30 days, restore, delete permanently | All there. |
-| **Timeline:** play, frame skip, playhead, resize, zoom, select, right-click menu, trim, split, download section, group, close gaps, reorder with snapping, layers | All there. |
-| **New projects:** from a prompt, a script, a template, a blank project, or a recording | All there, with the differences below. |
-| **Upload:** to the workspace, to a project, drag and drop, several at once, from a phone | All there. Phone upload works over your Wi-Fi with a QR code. |
+| **Timeline:** play, frame skip, playhead, resize, zoom, select, right-click menu, trim, split, download section, group, close gaps, reorder with snapping, layers | All there. Rows have names, with controls to hide their picture or mute their sound. |
+| **New projects:** from a prompt, a script, a template, a blank project, or a recording | All there, with the differences below. A project is only created once there is something to put in it. |
+| **Upload:** to the workspace, to a project, drag and drop, several at once, from a phone | All there. Everything you add, record or generate is kept in one Media library. Phone upload works over your Wi-Fi with a QR code. |
 | **Formats:** MP4, M4V, MOV, MKV, WEBM, AVI, OGV, FLV, TS, GIF · MP3, M4A, OGG, OGA, WAV, AAC, FLAC · JPG, PNG, WEBP, AVIF | All import. Formats the editor cannot play get a preview proxy; export always reads the original. |
-| **Export:** quality presets, Advanced, H.264 + AAC in MP4, bt709, variable bitrate by default, constant-bitrate YouTube presets, HDR to SDR | All there. No resolution is locked behind a plan. |
-| **Download:** MP4, MP3, GIF from the video page | All there. Drafts must be exported first. |
+| **Export:** quality presets, Advanced, H.264 + AAC in MP4, bt709, variable bitrate by default, constant-bitrate YouTube presets, HDR to SDR | All there, in the Export dialog, with the size of your footage as the default. No resolution is locked behind a plan. |
+| **Download:** MP4, MP3, GIF from the video page | All there. The Export dialog can also make any of the three directly, for the whole project, the selected clips or a stretch of time. |
 | **Recorder:** screen, camera or both | All there, plus audio only. System audio can be recorded on Windows. |
 | **Brand Kits:** logos, colours, fonts | All there. |
 
@@ -94,18 +94,22 @@ What you can do once connected:
 
 | Where | What |
 | --- | --- |
-| **Create video** (home page) | Turn a script into **AI scenes** (a generated clip per moment of narration) or a **talking character** (a photo, lip-synced to the voice-over). The project opens in the editor and clips land as they finish. |
-| **AI tools panel** (editor) | Generate video from text or an image, pictures, and talking photos, straight onto the timeline. |
-| **Select a clip** (editor) | **Edit with AI** (describe a change), **Extend with AI**, **Lip-sync with AI**. On an image: **Animate with AI**, **Make it talk**. Undo brings the original back. |
-| **Create asset** | Generate into your asset library, for use in any project. |
+| **Generate with AI** (left menu) | Opens the editor on the AI tools panel, with nothing to set up first. |
+| **AI tools panel** (editor) | Every AI tool in one place: video from text or an image, pictures, talking photos, editing a video and lip-sync. A new clip can take its sound from a stretch of anything in Media, and lands lined up with it. |
+| **Select a clip** (editor) | **Edit with AI** (describe a change), **Extend with AI**, **Lip-sync with AI**. On an image: **Animate with AI**, **Make it talk**. These open the AI tools panel with the clip filled in, and **Restore original** brings back what was replaced. |
+| **Video from a script** | Turn a script into **AI scenes** (a generated clip per moment of narration) or a **talking character** (a photo, lip-synced to the voice-over). The project opens in the editor and clips land as they finish. |
+| **Subtitles panel** (editor) | **Make subtitles automatically** from the speech in the project. This uses fal.ai. |
 
-Generated clips are ordinary clips: trim, split, layer, subtitle and export them like anything else.
+Generated clips are ordinary clips: trim, split, layer, subtitle and export them like anything else. They are
+kept in Media too, for use in any project.
 
 - **Models are not hard-coded.** The app reads each service's published model schemas, so new models appear
   by themselves and it can only send settings the chosen model accepts. Lists are cached for a day, with a
   copy shipped in the app (`npm run ai:catalog` refreshes that copy).
 - **Costs.** Generating is billed to your account with that service. The price is shown where the service
-  publishes one, and multi-clip work is confirmed first.
+  publishes one, with what the clip comes to, and multi-clip work is confirmed first.
+- **Lengths.** A model that cannot make the length you ask for makes the next one up, and the clip is trimmed
+  when it lands. The form says when this happens.
 - **Privacy.** Nothing is sent until you press Generate. Only what is needed goes: the used part of a clip,
   not the whole file.
 - **Reliability.** A job is saved the moment the service accepts it, so closing the app does not lose a
@@ -117,7 +121,7 @@ To add a service, implement the small `AiProvider` interface in `src/main/ai/pro
 
 - **Voices come from your operating system.** Script videos are narrated on your computer, with subtitles
   timed to the voice.
-- **Drafting a script from a topic uses the Claude API** with your own key, added under Settings and
+- **Drafting a script from a topic uses the Claude API** with your own key, added under AI connections and
   encrypted by your operating system. Pasting your own script needs no key.
 
 ### Left out
