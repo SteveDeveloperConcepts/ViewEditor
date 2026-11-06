@@ -74,7 +74,9 @@ export function summary(errors) {
     console.log(`  page error: ${e}`);
     if (process.env.GITHUB_ACTIONS) console.log(`::error::page error: ${e}`.replace(/\s+/g, ' ').slice(0, 500));
   }
-  console.log(`\n${passes} passed, ${failures} failed, ${unexpected.length} page errors`);
+  const result = `${passes} passed, ${failures} failed, ${unexpected.length} page errors`;
+  console.log(`\n${result}`);
+  if (process.env.GITHUB_ACTIONS) console.log(`::notice::App test on ${process.platform}: ${result}`);
   return failures + unexpected.length;
 }
 
