@@ -1,9 +1,9 @@
 // Editing commands that are reachable from more than one place (toolbar, right-click menu, keyboard).
 
-import { ClipboardPaste, Copy, CopyPlus, Download, Group, Replace, Scissors, Sparkles, Trash2, Ungroup, Volume2, VolumeX } from 'lucide-react';
+import { AudioLines, ClipboardPaste, Copy, CopyPlus, Download, Group, Replace, Scissors, Sparkles, Trash2, Ungroup, Volume2, VolumeX } from 'lucide-react';
 import { formatClock } from '@shared/time';
-import { isTimed, itemEnd } from '@shared/timeline';
-import type { ID, Item } from '@shared/types';
+import { detachAudio, isTimed, itemEnd } from '@shared/timeline';
+import type { Asset, ID, Item } from '@shared/types';
 import { actionLabel, actionsFor, openClipAi } from '@/ai/clipActions';
 import { openConnections } from '@/ai/ConnectionsDialog';
 import type { MenuEntry } from '@/components/Menu';
@@ -11,6 +11,8 @@ import { api, errorMessage, MOD_LABEL } from '@/lib/api';
 import { useAi } from '@/store/ai';
 import { startRender } from '@/lib/exporter';
 import {
+  addAsset,
+  apply,
   copySelection,
   deleteSelection,
   duplicateSelection,
@@ -19,6 +21,7 @@ import {
   hasClipboard,
   paste,
   replaceMedia,
+  select,
   selectedItems,
   selectionHasGroup,
   splitAtPlayhead,
@@ -26,8 +29,9 @@ import {
   updateItem,
   useEditor,
 } from '@/store/editor';
+import { getAssets } from '@/store/library';
 import { toast } from '@/store/ui';
-import { reportRejected } from './importing';
+import { rememberAssets, reportRejected } from './importing';
 
 /** The stretch of timeline covered by the selected elements. */
 export function selectionRange(): { start: number; end: number } | null {
@@ -64,6 +68,38 @@ export async function replaceMediaFor(item: Item, projectId: ID): Promise<void> 
   }
 }
 
+/** Pulls a clip's sound out: it becomes its own clip, lined up underneath, and the video is muted. */
+export async function extractAudioFrom(item: Item): Promise<void> {
+  if (item.type !== 'video') return;
+  try {
+    const sound = await api.assets.extractAudio(item.assetId);
+    rememberAssets([sound]);
+    let audioId: ID | null = null;
+    apply((doc) => {
+      const result = detachAudio(doc, item.id, sound);
+      if (!result) return doc;
+      audioId = result.audioId;
+      return result.doc;
+    });
+    if (!audioId) return;
+    select([audioId], { inspect: false });
+    toast('The sound is now its own clip, and the video is muted.', { kind: 'success' });
+  } catch (err) {
+    toast(errorMessage(err), { kind: 'error' });
+  }
+}
+
+/** Takes the sound of a video in Media and puts it on the timeline at the playhead. */
+export async function addSoundOf(video: Asset): Promise<void> {
+  try {
+    const sound = await api.assets.extractAudio(video.id);
+    rememberAssets([sound]);
+    addAsset(sound);
+  } catch (err) {
+    toast(errorMessage(err), { kind: 'error' });
+  }
+}
+
 /** Right-click menu of a timeline element. */
 export function itemMenu(item: Item, projectId: ID): MenuEntry[] {
   const s = useEditor.getState();
@@ -89,6 +125,9 @@ export function itemMenu(item: Item, projectId: ID): MenuEntry[] {
         icon: item.muted ? <Volume2 size={15} /> : <VolumeX size={15} />,
         onSelect: () => updateItem(item.id, { muted: !item.muted }),
       },
+    item.type === 'video' &&
+      !many &&
+      getAssets()[item.assetId]?.hasAudio && { label: 'Extract audio', icon: <AudioLines size={15} />, onSelect: () => void extractAudioFrom(item) },
     !many && actionsFor(item).length > 0 && null,
     ...(many ? [] : actionsFor(item)).map((action) => ({
       label: actionLabel(action),

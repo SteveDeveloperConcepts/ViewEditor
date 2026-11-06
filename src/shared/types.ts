@@ -8,7 +8,7 @@ export type ID = string;
 // ---------------------------------------------------------------- assets
 
 export type AssetKind = 'video' | 'audio' | 'image';
-export type AssetSource = 'upload' | 'recording' | 'voiceover' | 'generated' | 'phone' | 'ai';
+export type AssetSource = 'upload' | 'recording' | 'voiceover' | 'generated' | 'phone' | 'ai' | 'extracted';
 
 /** Where AI-generated media came from. */
 export interface AssetOrigin {
@@ -30,6 +30,8 @@ export interface Asset {
   createdAt: number;
   source: AssetSource;
   origin?: AssetOrigin | null;
+  /** The video this sound was taken from. */
+  extractedFrom?: ID | null;
   /** 'workspace' assets show in the asset library; 'project' assets belong to one project. */
   scope: 'workspace' | 'project';
   projectId: ID | null;

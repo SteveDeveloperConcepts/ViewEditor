@@ -296,6 +296,26 @@ export function trimEndTo(doc: ProjectDoc, it: Item, newEnd: number, asset: Asse
   return { ...it, duration: end - it.start } as Item;
 }
 
+/**
+ * Puts a video clip's sound on a row of its own, lined up with the clip, and mutes the clip. The row is
+ * the first sound-only row below the clip with room, or a new one straight below it.
+ */
+export function detachAudio(doc: ProjectDoc, itemId: ID, sound: Asset): { doc: ProjectDoc; audioId: ID } | null {
+  const it = findItem(doc, itemId);
+  if (!it || it.type !== 'video') return null;
+  const duration = Math.min(it.duration, (sound.duration - it.trimStart) / it.speed);
+  if (duration <= EPS) return null;
+  const below = doc.tracks.slice(trackIndex(doc, it.trackId) + 1);
+  const home = below.find((t) => {
+    const items = itemsOnTrack(doc, t.id);
+    return items.length > 0 && items.every((o) => o.type === 'audio') && rangeFree(doc, t.id, it.start, it.start + duration);
+  });
+  const made = home ? { doc, trackId: home.id } : insertTrack(doc, trackIndex(doc, it.trackId) + 1);
+  const audio: AudioItem = { ...makeAudioItem(sound, made.trackId, it.start), duration, trimStart: it.trimStart, speed: it.speed, volume: it.volume, fadeAudio: it.fadeAudio };
+  const next = updateItems(made.doc, [it.id], (x) => ({ ...x, muted: true }) as Item);
+  return { doc: { ...next, items: [...next.items, audio] }, audioId: audio.id };
+}
+
 // ---------------------------------------------------------------- gaps
 
 export interface Gap {

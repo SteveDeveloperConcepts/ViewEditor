@@ -393,7 +393,34 @@ section('review', async () => {
   await sleep(150);
   check(Math.abs(seconds(await readout()) - 4) < 0.1, 'the playhead comes back to the new end after a delete', await readout());
 
+  // Extract audio
+  await newProject([media('clip-a.mp4')]);
+  const original = (await videos())[0];
+  const ob = await box(clipSel(original.id));
+  await page.mouse.click(ob.x + ob.width / 2, ob.y + 20, { button: 'right' });
+  await page.click('.menu-item:has-text("Extract audio")');
+  await page.waitForSelector('.clip.audio', { timeout: 15000 });
+  await sleep(150);
+  let withSound = await storedDoc();
+  const pulled = withSound.items.find((i) => i.type === 'audio');
+  const muted = withSound.items.find((i) => i.type === 'video');
+  check(muted.muted && Math.abs(pulled.duration - muted.duration) < 0.05 && pulled.start === muted.start, 'Extract audio lines the sound up under the video and mutes the video', JSON.stringify({ a: pulled.duration, v: muted.duration }));
+  check((await library()).assets.some((a) => a.kind === 'audio' && a.id === pulled.assetId), 'the sound is a real audio item');
+  await page.click(clipSel(original.id));
+  await page.keyboard.press('Delete');
+  await sleep(150);
+  withSound = await storedDoc();
+  check(withSound.items.length === 1 && withSound.items[0].type === 'audio', 'deleting the video leaves the sound');
+  await page.keyboard.press(`${MOD}+z`);
+  await sleep(100);
+  await page.click('.rail-item:has-text("Audio")');
+  await page.click('.panel button:has-text("Extract audio from a video")');
+  await page.waitForSelector('.menu-item:has-text("clip-a.mp4")');
+  check(true, 'the Audio panel offers Extract audio too');
+  await page.keyboard.press('Escape');
+
   // Media tiles add at the playhead, as they say they do.
+  await newProject([media('clip-a.mp4')]);
   await page.click('.rail-item:has-text("Video")');
   await seekTo(1);
   await page.click('.asset-tile:has-text("clip-a.mp4")');

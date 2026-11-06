@@ -32,7 +32,7 @@ export function hasFiles(data: DataTransfer | null): boolean {
  * Makes new assets known to the page at once. The library update that carries them arrives a moment
  * after the import call returns, and until then the timeline would show them as missing.
  */
-function rememberAssets(assets: Asset[]): void {
+export function rememberAssets(assets: Asset[]): void {
   useLibrary.setState((s) => ({ assetsById: { ...s.assetsById, ...Object.fromEntries(assets.map((a) => [a.id, a])) } }));
 }
 

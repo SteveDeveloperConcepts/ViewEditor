@@ -2,13 +2,16 @@
 
 import type { DragEvent as ReactDragEvent, ReactNode } from 'react';
 import { useMemo, useState } from 'react';
-import { CircleAlert, Image as ImageIcon, Mic, Music, Plus, Search, Speech, Upload, Video } from 'lucide-react';
+import { AudioLines, CircleAlert, Image as ImageIcon, Mic, Music, Plus, Search, Speech, Upload, Video } from 'lucide-react';
 import { formatClock } from '@shared/time';
 import type { Asset, AssetKind, ID } from '@shared/types';
+import { openMenuAt, type MenuEntry } from '@/components/Menu';
 import { Button, Spinner } from '@/components/ui';
 import { assetUrl } from '@/lib/media';
-import { addAsset } from '@/store/editor';
+import { addAsset, selectedItems } from '@/store/editor';
 import { useLibrary } from '@/store/library';
+import { toast } from '@/store/ui';
+import { addSoundOf, extractAudioFrom } from '../actions';
 import { ASSET_DRAG_TYPE, droppedPaths, hasFiles, importPathsIntoProject, pickIntoProject, SUPPORTED_SUMMARY } from '../importing';
 import { openRecorder } from '@/recorder/openRecorder';
 import { openSpeechDialog } from './SpeechDialog';
@@ -59,6 +62,30 @@ export function AssetTile({ asset, onAdd }: { asset: Asset; onAdd: (a: Asset) =>
       <span className="asset-tile-name truncate">{asset.name}</span>
     </button>
   );
+}
+
+/** What the Audio panel can take sound from: the selected clip, your videos, or a file on the computer. */
+function extractEntries(assets: Asset[], projectId: ID): MenuEntry[] {
+  const selected = selectedItems();
+  const clip = selected.length === 1 && selected[0].type === 'video' ? selected[0] : null;
+  const videos = assets.filter((a) => a.kind === 'video' && a.hasAudio).reverse().slice(0, 8);
+  return [
+    clip && { label: 'The selected clip', onSelect: () => void extractAudioFrom(clip) },
+    clip && null,
+    videos.length > 0 && 'From your media',
+    ...videos.map((a) => ({ label: a.name, onSelect: () => void addSoundOf(a) })),
+    videos.length > 0 && null,
+    {
+      label: 'A video on your computer…',
+      onSelect: () => {
+        void pickIntoProject('video', projectId, false).then((added) => {
+          const video = added.find((a) => a.hasAudio);
+          if (video) void addSoundOf(video);
+          else if (added.length) toast(`${added[0].name} has no sound.`);
+        });
+      },
+    },
+  ];
 }
 
 export function MediaPanel({ kind, projectId }: { kind: AssetKind; projectId: ID }): ReactNode {
@@ -126,6 +153,9 @@ export function MediaPanel({ kind, projectId }: { kind: AssetKind; projectId: ID
           </Button>
           <Button icon={<Speech size={14} />} onClick={() => openSpeechDialog(projectId)}>
             Text to speech
+          </Button>
+          <Button className="span-2" icon={<AudioLines size={14} />} onClick={(e) => openMenuAt(e.currentTarget, extractEntries(assets ?? [], projectId))}>
+            Extract audio from a video
           </Button>
         </div>
       )}

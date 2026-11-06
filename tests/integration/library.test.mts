@@ -184,3 +184,18 @@ test('templates and brand kits', async () => {
   await assets.remove([mark.id]);
   assert.deepEqual(lib.data.brandKits[0].logoAssetIds, [], 'deleted logos leave the kit');
 });
+
+test('extracting audio gives a real audio file, once, with the sound of the video', async () => {
+  const { assets, lib } = await open();
+  const { assets: [video] } = await assets.importFiles([media('clip-a.mp4')], { scope: 'workspace' });
+  const sound = await assets.extractAudio(video.id);
+  assert.equal(sound.kind, 'audio');
+  assert.equal(sound.name, 'clip-a sound.flac');
+  assert.ok(Math.abs(sound.duration - video.duration) < 0.1, String(sound.duration));
+  assert.equal((await assets.extractAudio(video.id)).id, sound.id, 'asking again gives the same file');
+  await assets.whenIdle();
+  assert.ok(lib.asset(sound.id)!.hasWave, 'it gets a waveform like any audio');
+
+  const { assets: [picture] } = await assets.importFiles([media('logo.png')], { scope: 'workspace' });
+  await assert.rejects(assets.extractAudio(picture.id), /no sound/);
+});

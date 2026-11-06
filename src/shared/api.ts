@@ -105,6 +105,8 @@ export interface Api {
     importPaths(paths: string[], target: ImportTarget): Promise<ImportResult>;
     /** Imports media the app produced itself (a generated background, a pasted image). */
     importData(name: string, data: Uint8Array, target: ImportTarget): Promise<ImportResult>;
+    /** The sound of a video as an audio file of its own. Asking again gives the same one. */
+    extractAudio(id: ID): Promise<Asset>;
     remove(ids: ID[]): Promise<void>;
     usage(): Promise<Record<ID, number>>;
     requestProxy(id: ID): Promise<void>;
@@ -194,7 +196,7 @@ export const API_METHODS: { [N in Namespace]: (keyof Api[N])[] } = {
     'saveAsTemplate', 'createFromTemplate', 'renameTemplate', 'deleteTemplate',
     'createBrandKit', 'updateBrandKit', 'deleteBrandKit', 'pickBrandFonts', 'removeBrandFont', 'updateSettings',
   ],
-  assets: ['pickAndImport', 'importPaths', 'importData', 'remove', 'usage', 'requestProxy', 'markPreviewChecked', 'putImageDerivatives'],
+  assets: ['pickAndImport', 'importPaths', 'importData', 'extractAudio', 'remove', 'usage', 'requestProxy', 'markPreviewChecked', 'putImageDerivatives'],
   render: ['begin', 'putOverlay', 'run', 'cancel', 'current', 'download', 'revealExport'],
   recorder: ['sources', 'prepare', 'begin', 'chunk', 'finish', 'discard', 'setActive'],
   voice: ['list', 'speak'],

@@ -183,6 +183,7 @@ export function registerIpc(s: Services): void {
         await rm(dir, { recursive: true, force: true, maxRetries: 4, retryDelay: 150 }).catch(() => undefined);
       }
     },
+    extractAudio: (id) => assets.extractAudio(id),
     remove: (ids) => assets.remove(ids),
     usage: () => lib.assetUsage(),
     requestProxy: (id) => assets.requestProxy(id),

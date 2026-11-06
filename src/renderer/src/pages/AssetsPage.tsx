@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
-import { Ellipsis, FolderUp, Image as ImageIcon, Music, Scissors, Trash2, Upload, Video, Wand2 } from 'lucide-react';
+import { AudioLines, Ellipsis, FolderUp, Image as ImageIcon, Music, Scissors, Trash2, Upload, Video, Wand2 } from 'lucide-react';
 import { formatBytes, formatClock } from '@shared/time';
 import type { Asset, AssetKind } from '@shared/types';
 import { JobList } from '@/ai/JobList';
@@ -35,9 +35,19 @@ async function removeAsset(asset: Asset): Promise<void> {
   }
 }
 
+async function extractAudio(asset: Asset): Promise<void> {
+  try {
+    const sound = await api.assets.extractAudio(asset.id);
+    toast(`The sound is in Media as ${sound.name}.`, { kind: 'success' });
+  } catch (err) {
+    toast(errorMessage(err), { kind: 'error' });
+  }
+}
+
 function menuFor(asset: Asset): MenuEntry[] {
   return [
     { label: 'Start a project with this', icon: <Scissors size={15} />, onSelect: () => void startProjectWithAsset(asset, asset.name.replace(/\.[^.]+$/, '')).catch((err) => toast(errorMessage(err), { kind: 'error' })) },
+    asset.kind === 'video' && asset.hasAudio && { label: 'Extract audio', icon: <AudioLines size={15} />, onSelect: () => void extractAudio(asset) },
     null,
     { label: 'Delete', icon: <Trash2 size={15} />, danger: true, onSelect: () => void removeAsset(asset) },
   ];

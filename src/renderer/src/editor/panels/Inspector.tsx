@@ -7,6 +7,7 @@ import {
   AlignLeft,
   AlignRight,
   ArrowLeft,
+  AudioLines,
   Bold,
   CaseUpper,
   CircleAlert,
@@ -41,7 +42,7 @@ import {
   useEditor,
 } from '@/store/editor';
 import { useLibrary } from '@/store/library';
-import { replaceMediaFor } from '../actions';
+import { extractAudioFrom, replaceMediaFor } from '../actions';
 
 const SPEEDS = ['0.5', '1', '1.5', '2'];
 
@@ -145,6 +146,11 @@ function AudioControls({ item, asset }: { item: MediaItem; asset: Asset | undefi
           <FieldRow label="Fade audio in/out">
             <Switch label="Fade audio in and out" checked={item.fadeAudio} onChange={(fadeAudio) => updateItem(item.id, { fadeAudio })} />
           </FieldRow>
+          {item.type === 'video' && (
+            <Button size="small" icon={<AudioLines size={13} />} onClick={() => void extractAudioFrom(item)}>
+              Extract audio
+            </Button>
+          )}
         </section>
       )}
     </>

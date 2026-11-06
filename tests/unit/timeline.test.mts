@@ -4,6 +4,7 @@ import {
   canvasForMedia,
   cloneItems,
   closeGap,
+  detachAudio,
   fitBox,
   gapAt,
   groupItems,
@@ -50,6 +51,30 @@ function docWith(...items: ((doc: ProjectDoc, track: string) => Item)[]): Projec
 }
 
 const clipAt = (start: number, duration: number, trimStart = 0) => (doc: ProjectDoc, track: string): VideoItem => ({ ...makeVideoItem(asset(), doc, track, start), duration, trimStart });
+
+test('extracting audio lines the sound up under the clip, and mutes the clip', () => {
+  const sound = asset({ id: 'a2', kind: 'audio', duration: 20, width: 0, height: 0 });
+  const doc = docWith(clipAt(2, 3, 5));
+  const clip = { ...doc.items[0], volume: 0.5 } as VideoItem;
+  const result = detachAudio({ ...doc, items: [clip] }, clip.id, sound)!;
+  const audio = result.doc.items.find((i) => i.id === result.audioId) as VideoItem;
+  assert.equal(audio.type, 'audio');
+  assert.deepEqual({ start: audio.start, duration: audio.duration, trimStart: audio.trimStart, volume: audio.volume }, { start: 2, duration: 3, trimStart: 5, volume: 0.5 });
+  assert.equal((result.doc.items.find((i) => i.id === clip.id) as VideoItem).muted, true);
+  assert.equal(result.doc.tracks.findIndex((t) => t.id === audio.trackId), 1, 'on a row of its own, below the clip');
+
+  const later = clipAt(10, 3)(result.doc, clip.trackId);
+  const second = detachAudio({ ...result.doc, items: [...result.doc.items, later] }, later.id, sound)!;
+  assert.equal(second.doc.tracks.length, 2, 'an existing sound row with room is used');
+});
+
+test('extracted sound stops where the file does, and only video has any to give', () => {
+  const sound = asset({ id: 'a2', kind: 'audio', duration: 4 });
+  const doc = docWith(clipAt(0, 6));
+  const result = detachAudio(doc, doc.items[0].id, sound)!;
+  assert.equal(result.doc.items.find((i) => i.id === result.audioId)!.duration, 4);
+  assert.equal(detachAudio(result.doc, result.audioId, sound), null);
+});
 
 test('project length is the end of the last element unless fixed', () => {
   const doc = docWith(clipAt(0, 4), clipAt(6, 2));

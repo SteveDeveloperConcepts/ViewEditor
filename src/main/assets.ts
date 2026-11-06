@@ -3,8 +3,8 @@
 
 import { constants as fsConstants, existsSync } from 'node:fs';
 import { copyFile, mkdir, rename, rm, stat, unlink, writeFile } from 'node:fs/promises';
-import { basename } from 'node:path';
-import { ALL_MEDIA_EXTS, extOf } from '../shared/constants.ts';
+import { basename, join } from 'node:path';
+import { ALL_MEDIA_EXTS, extOf, fileTitle } from '../shared/constants.ts';
 import { HDR_TO_SDR } from '../shared/render.ts';
 import { newId } from '../shared/time.ts';
 import type { Asset, AssetOrigin, AssetSource, ID, ImportResult } from '../shared/types.ts';
@@ -22,6 +22,8 @@ export interface ImportOptions {
   names?: string[];
   /** For AI-generated media: where it came from. */
   origin?: AssetOrigin;
+  /** For sound taken out of a video: which video. */
+  extractedFrom?: ID;
 }
 
 export interface ImportProgress {
@@ -199,7 +201,7 @@ export class AssetManager {
       const rule = previewRule(info, ext);
       const asset: Asset = {
         id, kind: info.kind, name, ext, size: st.size, createdAt: Date.now(),
-        source: opts.source ?? 'upload', origin: opts.origin ?? null, scope: opts.scope, projectId: opts.scope === 'project' ? (opts.projectId ?? null) : null,
+        source: opts.source ?? 'upload', origin: opts.origin ?? null, extractedFrom: opts.extractedFrom ?? null, scope: opts.scope, projectId: opts.scope === 'project' ? (opts.projectId ?? null) : null,
         duration: info.duration, width: info.width, height: info.height, fps: info.fps,
         hasAudio: info.hasAudio, audioChannels: info.audioChannels, hasAlpha: info.hasAlpha, isHdr: info.isHdr,
         videoCodec: info.videoCodec, audioCodec: info.audioCodec, colorMatrix: info.colorMatrix,
@@ -216,6 +218,29 @@ export class AssetManager {
     } catch (err) {
       await rm(dir, { recursive: true, force: true, maxRetries: 4, retryDelay: 100 }).catch(() => undefined);
       throw err;
+    }
+  }
+
+  /**
+   * Takes the sound out of a video as an audio file of its own, in Media. It is stored losslessly, because
+   * it will be encoded again on export. Any delay before the sound starts is kept, so it stays in sync.
+   */
+  async extractAudio(id: ID): Promise<Asset> {
+    const video = this.lib.asset(id);
+    if (!video) throw new Error('This media is no longer in your library.');
+    if (video.kind !== 'video' || !video.hasAudio) throw new Error('This file has no sound to extract.');
+    const existing = this.lib.data.assets.find((a) => a.extractedFrom === id);
+    if (existing) return existing;
+    const dir = join(this.lib.paths.tmpDir, newId('snd'));
+    await mkdir(dir, { recursive: true });
+    try {
+      const file = join(dir, 'sound.flac');
+      await runFfmpeg(['-i', this.lib.paths.assetOriginal(video), '-map', '0:a:0', '-af', 'aresample=first_pts=0', '-c:a', 'flac', file]);
+      const result = await this.importFiles([file], { scope: 'workspace', move: true, source: 'extracted', names: [`${fileTitle(video.name)} sound.flac`], extractedFrom: id });
+      if (!result.assets.length) throw new Error(result.rejected[0]?.reason ?? 'The sound could not be saved.');
+      return result.assets[0];
+    } finally {
+      await rm(dir, { recursive: true, force: true, maxRetries: 4, retryDelay: 150 }).catch(() => undefined);
     }
   }
 
