@@ -2,19 +2,23 @@
 // something to put in it, so closing this dialog leaves nothing behind.
 
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Clapperboard, Smartphone, Speech, Upload } from 'lucide-react';
 import type { ImportResult } from '@shared/types';
 import { Modal } from '@/components/Modal';
 import { droppedPaths, hasFiles, reportRejected, SUPPORTED_SUMMARY } from '@/editor/importing';
+import { AssetTile } from '@/editor/panels/MediaPanel';
 import { openSpeechDialog } from '@/editor/panels/SpeechDialog';
 import { openPhoneDialog } from '@/editor/PhoneDialog';
 import { openRecorder } from '@/recorder/openRecorder';
+import { useLibrary } from '@/store/library';
 import { showModal, toast } from '@/store/ui';
 import { api, errorMessage } from './api';
 import { startBlankProject, startProjectWith, type ProjectPlace } from './projects';
 
 function StartBody({ place, close }: { place: ProjectPlace; close: () => void }): ReactNode {
+  const assets = useLibrary((s) => s.lib?.assets);
+  const recent = useMemo(() => (assets ?? []).slice(-4).reverse(), [assets]);
   const [over, setOver] = useState(false);
   const then = (action: () => void) => () => {
     close();
@@ -85,6 +89,24 @@ function StartBody({ place, close }: { place: ProjectPlace; close: () => void })
           <span>Turn text into a voice-over</span>
         </button>
       </div>
+      {recent.length > 0 && (
+        <section className="welcome-media">
+          <h3>From your media</h3>
+          <div className="asset-grid wide">
+            {recent.map((a) => (
+              <AssetTile
+                key={a.id}
+                asset={a}
+                hint="Click to start a project with this"
+                onAdd={(chosen) => {
+                  close();
+                  void startProjectWith([chosen], place).catch((err) => toast(errorMessage(err), { kind: 'error' }));
+                }}
+              />
+            ))}
+          </div>
+        </section>
+      )}
       <button type="button" className="link-btn welcome-blank" onClick={then(() => void startBlankProject(place))}>
         Start with an empty project
       </button>

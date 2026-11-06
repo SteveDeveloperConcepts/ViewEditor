@@ -5,9 +5,10 @@ import { useMemo, useState } from 'react';
 import { AudioLines, CircleAlert, Image as ImageIcon, Mic, Music, Plus, Search, Speech, Upload, Video } from 'lucide-react';
 import { formatClock } from '@shared/time';
 import type { Asset, AssetKind, ID } from '@shared/types';
-import { openMenuAt, type MenuEntry } from '@/components/Menu';
+import { openContextMenu, openMenuAt, type MenuEntry } from '@/components/Menu';
 import { Button, Spinner } from '@/components/ui';
 import { assetUrl } from '@/lib/media';
+import { mediaMenu } from '@/lib/mediaActions';
 import { addAsset, selectedItems, useEditor } from '@/store/editor';
 import { useLibrary } from '@/store/library';
 import { toast } from '@/store/ui';
@@ -18,7 +19,7 @@ import { openSpeechDialog } from './SpeechDialog';
 
 const TITLES: Record<AssetKind, string> = { video: 'Video', image: 'Image', audio: 'Audio' };
 
-export function AssetTile({ asset, onAdd }: { asset: Asset; onAdd: (a: Asset) => void }): ReactNode {
+export function AssetTile({ asset, onAdd, hint }: { asset: Asset; onAdd: (a: Asset) => void; hint?: string }): ReactNode {
   const onDragStart = (e: ReactDragEvent): void => {
     e.dataTransfer.setData(ASSET_DRAG_TYPE, asset.id);
     e.dataTransfer.effectAllowed = 'copy';
@@ -32,7 +33,8 @@ export function AssetTile({ asset, onAdd }: { asset: Asset; onAdd: (a: Asset) =>
       draggable
       onDragStart={onDragStart}
       onClick={() => onAdd(asset)}
-      title={`${asset.name}\nClick to add at the playhead, or drag onto the timeline`}
+      onContextMenu={(e) => openContextMenu(e, mediaMenu(asset))}
+      title={`${asset.name}\n${hint ?? 'Click to add at the playhead, drag onto the timeline, or right-click for more'}`}
     >
       <div className={`asset-tile-picture ${asset.kind}`}>
         {asset.hasThumb ? (

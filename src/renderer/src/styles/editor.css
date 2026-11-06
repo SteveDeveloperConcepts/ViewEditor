@@ -198,6 +198,9 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
+.asset-grid.wide {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
 .asset-tile {
   display: flex;
   flex-direction: column;

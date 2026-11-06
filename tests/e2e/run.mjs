@@ -424,9 +424,31 @@ section('review', async () => {
   await page.click('.sidebar .nav-item:has-text("Media")');
   await page.waitForSelector('.asset-card:has-text("clip-a.mp4")');
   check(await page.isVisible('.asset-card:has-text("clip-a sound.flac")'), 'Media holds what was added and extracted in a project');
+  await page.click('.asset-card:has-text("clip-a.mp4") .asset-card-picture');
+  await page.waitForSelector('.modal .preview-stage video');
+  const preview = await page.evaluate(async () => {
+    const v = document.querySelector('.preview-stage video');
+    if (v.readyState < 2) await new Promise((r) => { v.onloadeddata = r; setTimeout(r, 4000); });
+    return v.videoWidth;
+  });
+  check(preview === 1280, 'clicking something in Media previews it', String(preview));
+  await shot(page, '35-media-preview');
+  const offers = await page.$$eval('.modal-foot button', (e) => e.map((b) => b.textContent));
+  check(offers.some((o) => o.startsWith('Use in')) && offers.includes('Start a project') && offers.includes('Extract audio'), 'and offers what to do with it', offers.join());
+  await page.click('.modal-foot button:has-text("Use in")');
+  await page.waitForFunction(() => document.querySelectorAll('.editor .clip.video').length >= 1, null, { timeout: 8000 });
+  check(true, 'Use in adds it to the last project');
+  await home();
   await newProject();
   await page.click('.rail-item:has-text("Video")');
   check((await page.textContent('.panel')).includes('clip-a.mp4'), 'and another project can use it');
+
+  // The start dialog offers what is already in Media.
+  await home();
+  await page.click('.sidebar .nav-item:has-text("Edit my footage")');
+  await page.click('.welcome-media .asset-tile:has-text("clip-a.mp4")');
+  await page.waitForSelector('.editor .clip.video', { timeout: 8000 });
+  check(true, 'a project can start from something already in Media');
 
   // Media tiles add at the playhead, as they say they do.
   await newProject([media('clip-a.mp4')]);

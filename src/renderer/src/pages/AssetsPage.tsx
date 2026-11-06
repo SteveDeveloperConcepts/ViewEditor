@@ -2,61 +2,25 @@
 
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
-import { AudioLines, Ellipsis, FolderUp, Image as ImageIcon, Music, Scissors, Search, Trash2, Upload, Video, Wand2 } from 'lucide-react';
+import { Ellipsis, FolderUp, Image as ImageIcon, Music, Search, Upload, Video, Wand2 } from 'lucide-react';
 import { formatBytes, formatClock } from '@shared/time';
 import type { Asset, AssetKind } from '@shared/types';
 import { JobList } from '@/ai/JobList';
-import { openContextMenu, openMenuAt, type MenuEntry } from '@/components/Menu';
-import { confirmDialog } from '@/components/Modal';
+import { openContextMenu, openMenuAt } from '@/components/Menu';
 import { Button, EmptyState, IconButton, ProgressBar, Segmented } from '@/components/ui';
 import { api, errorMessage } from '@/lib/api';
 import { assetUrl } from '@/lib/media';
-import { startProjectWithAsset } from '@/lib/projects';
+import { mediaMenu, openPreview } from '@/lib/mediaActions';
 import { droppedPaths, hasFiles, reportRejected, SUPPORTED_SUMMARY } from '@/editor/importing';
 import { useLibrary } from '@/store/library';
 import { navigate, toast } from '@/store/ui';
 
 type Filter = 'all' | AssetKind;
 
-async function removeAsset(asset: Asset): Promise<void> {
-  try {
-    const usage = (await api.assets.usage())[asset.id] ?? 0;
-    const ok = await confirmDialog({
-      title: `Delete “${asset.name}”?`,
-      message: usage
-        ? `This file is used in ${usage} project${usage === 1 ? '' : 's'}. Deleting it leaves a “media missing” gap there.`
-        : 'The file is removed from this library. The original on your computer is not touched.',
-      confirmLabel: 'Delete',
-      danger: true,
-    });
-    if (ok) await api.assets.remove([asset.id]);
-  } catch (err) {
-    toast(errorMessage(err), { kind: 'error' });
-  }
-}
-
-async function extractAudio(asset: Asset): Promise<void> {
-  try {
-    const sound = await api.assets.extractAudio(asset.id);
-    toast(`The sound is in Media as ${sound.name}.`, { kind: 'success' });
-  } catch (err) {
-    toast(errorMessage(err), { kind: 'error' });
-  }
-}
-
-function menuFor(asset: Asset): MenuEntry[] {
-  return [
-    { label: 'Start a project with this', icon: <Scissors size={15} />, onSelect: () => void startProjectWithAsset(asset, asset.name.replace(/\.[^.]+$/, '')).catch((err) => toast(errorMessage(err), { kind: 'error' })) },
-    asset.kind === 'video' && asset.hasAudio && { label: 'Extract audio', icon: <AudioLines size={15} />, onSelect: () => void extractAudio(asset) },
-    null,
-    { label: 'Delete', icon: <Trash2 size={15} />, danger: true, onSelect: () => void removeAsset(asset) },
-  ];
-}
-
 function AssetCard({ asset }: { asset: Asset }): ReactNode {
   return (
-    <article className="asset-card" onContextMenu={(e) => openContextMenu(e, menuFor(asset))}>
-      <div className={`asset-card-picture ${asset.kind}`}>
+    <article className="asset-card" onContextMenu={(e) => openContextMenu(e, mediaMenu(asset))}>
+      <button type="button" className={`asset-card-picture ${asset.kind}`} aria-label={`Preview ${asset.name}`} onClick={() => openPreview(asset)}>
         {asset.hasThumb ? (
           <img src={assetUrl(asset, 'thumb')} alt="" draggable={false} loading="lazy" />
         ) : asset.kind === 'audio' && asset.hasWave ? (
@@ -69,7 +33,7 @@ function AssetCard({ asset }: { asset: Asset }): ReactNode {
           <ImageIcon size={24} />
         )}
         {asset.kind !== 'image' && <span className="badge dark tabular">{formatClock(asset.duration)}</span>}
-      </div>
+      </button>
       <div className="project-meta">
         <div className="grow">
           <div className="project-name-label truncate" title={asset.name}>
@@ -79,7 +43,7 @@ function AssetCard({ asset }: { asset: Asset }): ReactNode {
             {asset.kind === 'audio' ? 'Audio' : `${asset.width} × ${asset.height}`} · {formatBytes(asset.size)}
           </div>
         </div>
-        <IconButton small label={`Options for ${asset.name}`} onClick={(e) => openMenuAt(e.currentTarget, menuFor(asset), 'end')}>
+        <IconButton small label={`Options for ${asset.name}`} onClick={(e) => openMenuAt(e.currentTarget, mediaMenu(asset), 'end')}>
           <Ellipsis size={16} />
         </IconButton>
       </div>

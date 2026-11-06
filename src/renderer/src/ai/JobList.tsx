@@ -1,13 +1,14 @@
 // Generations in progress and recently finished.
 
 import type { ReactNode } from 'react';
-import { CircleAlert, CircleCheck, Plus, RefreshCw, X } from 'lucide-react';
+import { CircleAlert, CircleCheck, Eye, Plus, RefreshCw, X } from 'lucide-react';
 import { isActive, type AiJob } from '@shared/ai';
 import { formatRelative } from '@shared/time';
 import type { ID } from '@shared/types';
 import { Button, IconButton, Spinner } from '@/components/ui';
 import { api, errorMessage } from '@/lib/api';
 import { assetUrl } from '@/lib/media';
+import { openPreview } from '@/lib/mediaActions';
 import { startProjectWithAsset } from '@/lib/projects';
 import { addAsset, useEditor } from '@/store/editor';
 import { useLibrary } from '@/store/library';
@@ -61,6 +62,11 @@ function JobRow({ job }: { job: AiJob }): ReactNode {
       {job.state === 'done' && asset && docOpen && job.request.placement.kind === 'timeline' && job.applied && (
         <IconButton small label="Add to the timeline again" onClick={() => void addAsset(asset)}>
           <Plus size={14} />
+        </IconButton>
+      )}
+      {job.state === 'done' && asset && (
+        <IconButton small label="Preview" onClick={() => openPreview(asset)}>
+          <Eye size={14} />
         </IconButton>
       )}
       {job.state === 'done' && asset && !docOpen && (
