@@ -44,7 +44,7 @@ import { textHeight } from '@/lib/textRender';
 import { getAssets, useLibrary } from './library';
 import { toast } from './ui';
 
-export type PanelId = 'ai' | 'video' | 'image' | 'audio' | 'text' | 'subtitles' | 'brand' | 'settings';
+export type PanelId = 'ai' | 'media' | 'audio' | 'text' | 'subtitles' | 'brand';
 
 export interface EditorState {
   doc: ProjectDoc | null;
@@ -75,7 +75,7 @@ const initial: EditorState = {
   playhead: 0,
   playing: false,
   pxPerSec: 80,
-  panel: 'video',
+  panel: 'media',
   inspecting: false,
   canUndo: false,
   canRedo: false,

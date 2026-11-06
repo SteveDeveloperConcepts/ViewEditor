@@ -468,7 +468,7 @@ section('review', async () => {
   check(true, 'Use in adds it to the last project');
   await home();
   await newProject();
-  await page.click('.rail-item:has-text("Video")');
+  await page.click('.rail-item:has-text("Media")');
   check((await page.textContent('.panel')).includes('clip-a.mp4'), 'and another project can use it');
 
   // The start dialog offers what is already in Media.
@@ -480,7 +480,7 @@ section('review', async () => {
 
   // Media tiles add at the playhead, as they say they do.
   await newProject([media('clip-a.mp4')]);
-  await page.click('.rail-item:has-text("Video")');
+  await page.click('.rail-item:has-text("Media")');
   await seekTo(1);
   await page.click('.asset-tile:has-text("clip-a.mp4")');
   await sleep(200);
@@ -733,7 +733,7 @@ section('formats', async () => {
   check(true, 'uploads land in Media, with previews');
   await shot(page, '19-assets');
   await newProject();
-  await page.click('.rail-item:has-text("Image")');
+  await page.click('.rail-item:has-text("Media")');
   check((await page.textContent('.panel')).includes('pic.avif'), 'workspace assets are available inside a project');
   await page.click('.asset-tile:has-text("pic.webp")');
   await sleep(300);
@@ -912,7 +912,7 @@ section('persistence', async () => {
 
 section('phone', async () => {
   await newProject();
-  await page.click('.rail-item:has-text("Video")');
+  await page.click('.rail-item:has-text("Media")');
   await page.evaluate(() => undefined);
   await home();
   await page.click('.sidebar .nav-item:has-text("Edit my footage")');
@@ -1058,7 +1058,7 @@ section('brand', async () => {
   await page.waitForSelector('.kit-editor .swatch');
   await shot(page, '28-brand');
   await newProject();
-  await page.click('.rail-item:has-text("Brand Kit")');
+  await page.click('.rail-item:has-text("Brand")');
   await page.click('.panel .swatch');
   await sleep(200);
   check((await storedDoc()).settings.background === '#ff6600', 'a brand colour applies to the canvas');
@@ -1070,6 +1070,7 @@ section('brand', async () => {
 section('tools', async () => {
   // Text to speech inside a project
   await newProject([media('clip-a.mp4')]);
+  await page.click('.rail-item:has-text("Audio")');
   await page.click('.panel button:has-text("Text to speech")');
   await page.waitForSelector('.modal textarea');
   await page.fill('.modal textarea', 'Hello there. This line was spoken by the computer.');
@@ -1115,7 +1116,7 @@ section('tools', async () => {
   await sleep(150);
 
   // Dragging from the panel onto the timeline
-  await page.click('.rail-item:has-text("Video")');
+  await page.click('.rail-item:has-text("Media")');
   const n = (await clips(page)).length;
   await page.locator('.asset-tile:has-text("clip-b.mp4")').first().dragTo(page.locator('.tl-rows'), { targetPosition: { x: 900, y: 8 } });
   await sleep(300);
@@ -1124,9 +1125,9 @@ section('tools', async () => {
   await sleep(150);
 
   // An image as the background sits under everything and fills the frame
-  await page.click('.rail-item:has-text("Settings")');
+  await page.click('.editor-top [aria-label="Project settings"]');
   await stubOpenDialog(app, [media('wide.jpeg')]);
-  await page.click('.panel button:has-text("Use an image")');
+  await page.click('.modal button:has-text("Use an image")');
   await page.waitForSelector('.clip.image', { timeout: 8000 });
   await sleep(200);
   doc = await storedDoc();
@@ -1161,13 +1162,14 @@ section('tools', async () => {
   check(leftovers, 'nothing keeps rendering after cancelling');
   await page.click('button:has-text("Open in editor")');
   await page.waitForSelector('.clip');
-  await page.click('.rail-item:has-text("Settings")');
+  await page.click('.editor-top [aria-label="Project settings"]');
 
   // Fixed duration
   await page.click('.segmented button:has-text("Fixed")');
   await page.fill('[aria-label="Project length"]', '2');
   await page.keyboard.press('Tab');
   await sleep(150);
+  await page.click('.modal-foot button:has-text("Done")');
   check(!!(await page.$('.tl-project-end')), 'a fixed length is marked on the timeline');
   await page.click('.editor-top button:has-text("Export")');
   await page.selectOption('.modal select[aria-label="Export quality"]', 'draft');

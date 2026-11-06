@@ -68,7 +68,6 @@ import {
   selectGap,
   selectionHasGroup,
   selectItem,
-  setPanel,
   setZoom,
   splitAtPlayhead,
   timelineEnd,
@@ -83,6 +82,7 @@ import { itemMenu, selectionRange } from './actions';
 import { openExportDialog } from './ExportDialog';
 import { ASSET_DRAG_TYPE, droppedPaths, hasFiles, importPathsIntoProject, pickIntoProjectAny } from './importing';
 import { pause, seek, stepFrames, togglePlay } from './player';
+import { openProjectSettings } from './ProjectSettings';
 
 const LEFT_PAD = 14;
 const ROW_GAP = 4;
@@ -475,7 +475,7 @@ function Toolbar({ projectId, onFit }: { projectId: ID; onFit: () => void }): Re
         <Button variant="ghost" size="small" title="Fit the whole project in view" disabled={empty} onClick={onFit}>
           Fit
         </Button>
-        <IconButton label="Project settings" onClick={() => setPanel('settings')}>
+        <IconButton label="Timeline settings" onClick={() => openProjectSettings(projectId)}>
           <Settings size={15} />
         </IconButton>
       </div>

@@ -7,7 +7,7 @@ import {
   CircleAlert,
   Clapperboard,
   Group,
-  Image as ImageIcon,
+  Images,
   Music,
   Palette,
   Redo2,
@@ -17,7 +17,6 @@ import {
   Type,
   Undo2,
   Ungroup,
-  Video,
 } from 'lucide-react';
 import { isActive } from '@shared/ai';
 import { projectDuration } from '@shared/timeline';
@@ -58,23 +57,21 @@ import { AiPanel } from './panels/AiPanel';
 import { BrandPanel } from './panels/BrandPanel';
 import { Inspector } from './panels/Inspector';
 import { MediaPanel } from './panels/MediaPanel';
-import { SettingsPanel, SizeSelect } from './panels/SettingsPanel';
 import { SubtitlesPanel } from './panels/SubtitlesPanel';
 import { TextPanel } from './panels/TextPanel';
 import { pause, seek, stepFrames, togglePlay } from './player';
+import { openProjectSettings, SizeSelect } from './ProjectSettings';
 import { saveAndThumbnail } from './save';
 import { Stage } from './Stage';
 import { Timeline, TimelineResizer } from './Timeline';
 
 const RAIL: { id: PanelId; label: string; icon: ReactNode }[] = [
   { id: 'ai', label: 'AI tools', icon: <Sparkles size={18} /> },
-  { id: 'video', label: 'Video', icon: <Video size={18} /> },
+  { id: 'media', label: 'Media', icon: <Images size={18} /> },
   { id: 'audio', label: 'Audio', icon: <Music size={18} /> },
-  { id: 'image', label: 'Image', icon: <ImageIcon size={18} /> },
-  { id: 'subtitles', label: 'Subtitles', icon: <Captions size={18} /> },
   { id: 'text', label: 'Text', icon: <Type size={18} /> },
-  { id: 'brand', label: 'Brand Kit', icon: <Palette size={18} /> },
-  { id: 'settings', label: 'Settings', icon: <Settings size={18} /> },
+  { id: 'subtitles', label: 'Subtitles', icon: <Captions size={18} /> },
+  { id: 'brand', label: 'Brand', icon: <Palette size={18} /> },
 ];
 
 function SaveState(): ReactNode {
@@ -143,6 +140,9 @@ function TopBar({ projectId, onExport, exporting }: { projectId: ID; onExport: (
         <Redo2 size={16} />
       </IconButton>
       <div className="grow" />
+      <IconButton label="Project settings" onClick={() => openProjectSettings(projectId)}>
+        <Settings size={16} />
+      </IconButton>
       <Button variant="ghost" icon={<Clapperboard size={15} />} onClick={() => void openRecorder({ projectId, addToTimeline: true })}>
         Record
       </Button>
@@ -153,7 +153,7 @@ function TopBar({ projectId, onExport, exporting }: { projectId: ID; onExport: (
   );
 }
 
-function StageBar(): ReactNode {
+function StageBar({ projectId }: { projectId: ID }): ReactNode {
   const doc = useEditor((s) => s.doc)!;
   const selection = useEditor((s) => s.selection);
   return (
@@ -171,11 +171,8 @@ function StageBar(): ReactNode {
       <div className="stage-bar-size">
         <SizeSelect compact />
       </div>
-      <Button size="small" onClick={() => setPanel('settings')}>
+      <Button size="small" onClick={() => openProjectSettings(projectId)}>
         <span className="color-dot" style={{ background: doc.settings.background }} /> Background
-      </Button>
-      <Button size="small" icon={<Settings size={13} />} onClick={() => setPanel('settings')}>
-        Settings
       </Button>
     </div>
   );
@@ -348,15 +345,13 @@ export function EditorPage({ projectId, showAi, add }: { projectId: ID; showAi?:
             <SubtitlesPanel projectId={projectId} projectName={doc.name} />
           ) : panel === 'brand' ? (
             <BrandPanel />
-          ) : panel === 'settings' ? (
-            <SettingsPanel projectId={projectId} />
           ) : (
             <MediaPanel key={panel} kind={panel} projectId={projectId} />
           )}
         </aside>
         <main className="editor-center">
           <Stage projectId={projectId} />
-          <StageBar />
+          <StageBar projectId={projectId} />
         </main>
         {inspecting && (
           <aside className="inspector" aria-label="Clip settings">

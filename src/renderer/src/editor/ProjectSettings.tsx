@@ -1,4 +1,4 @@
-// Project settings: shape, background, length, timeline view and frame rate.
+// Project settings: shape, background, length, timeline view and frame rate. Export has its own dialog.
 
 import type { ReactNode } from 'react';
 import { Image as ImageIcon, Scaling } from 'lucide-react';
@@ -6,13 +6,14 @@ import { BACKGROUND_SWATCHES, FPS_OPTIONS, SIZE_PRESETS, aspectLabel } from '@sh
 import { effectiveFps } from '@shared/render';
 import { contentEnd } from '@shared/timeline';
 import type { ID } from '@shared/types';
+import { Modal } from '@/components/Modal';
 import { ColorField, FieldRow, Segmented, Switch, TimeInput, Button } from '@/components/ui';
 import { api, errorMessage } from '@/lib/api';
 import { addAsset, fitItem, setCanvasSize, updateItem, updateSettings, useEditor } from '@/store/editor';
 import { useLibrary } from '@/store/library';
 import { setPrefs, usePrefs } from '@/store/prefs';
-import { toast } from '@/store/ui';
-import { reportRejected } from '../importing';
+import { showModal, toast } from '@/store/ui';
+import { reportRejected } from './importing';
 
 async function pickBackgroundImage(projectId: ID): Promise<void> {
   try {
@@ -58,7 +59,7 @@ export function SizeSelect({ label = 'Shape', compact = false }: { label?: strin
   );
 }
 
-export function SettingsPanel({ projectId }: { projectId: ID }): ReactNode {
+function SettingsBody({ projectId, close }: { projectId: ID; close: () => void }): ReactNode {
   const doc = useEditor((s) => s.doc)!;
   const assets = useLibrary((s) => s.assetsById);
   const showSoundwaves = usePrefs((s) => s.showSoundwaves);
@@ -67,9 +68,8 @@ export function SettingsPanel({ projectId }: { projectId: ID }): ReactNode {
   const fps = effectiveFps(doc, assets);
 
   return (
-    <div className="panel-body">
-      <h2 className="panel-title">Settings</h2>
-
+    <Modal title="Project settings" onClose={close} footer={<Button variant="primary" onClick={close}>Done</Button>}>
+      <div className="settings-list">
       <section>
         <h3>Shape</h3>
         <SizeSelect />
@@ -86,7 +86,14 @@ export function SettingsPanel({ projectId }: { projectId: ID }): ReactNode {
             <button key={c} type="button" className="swatch" style={{ background: c }} aria-label={`Background ${c}`} aria-pressed={s.background === c} onClick={() => updateSettings({ background: c })} />
           ))}
         </div>
-        <Button size="small" icon={<ImageIcon size={13} />} onClick={() => void pickBackgroundImage(projectId)}>
+        <Button
+          size="small"
+          icon={<ImageIcon size={13} />}
+          onClick={() => {
+            close();
+            void pickBackgroundImage(projectId);
+          }}
+        >
           Use an image
         </Button>
       </section>
@@ -133,6 +140,11 @@ export function SettingsPanel({ projectId }: { projectId: ID }): ReactNode {
         </select>
         {fps < s.fps && <p className="faint panel-note">Your footage runs at {fps} fps, so that is what the export will use.</p>}
       </section>
-    </div>
+      </div>
+    </Modal>
   );
+}
+
+export function openProjectSettings(projectId: ID): void {
+  void showModal<void>((close) => <SettingsBody projectId={projectId} close={() => close()} />);
 }

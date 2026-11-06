@@ -119,10 +119,16 @@
   gap: 14px;
   padding: 12px 14px 20px;
 }
-.panel-body section {
+.panel-body section,
+.settings-list section {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 .panel-title {
   font-size: 15px;

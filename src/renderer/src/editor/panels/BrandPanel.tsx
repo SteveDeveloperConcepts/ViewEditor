@@ -29,7 +29,7 @@ export function BrandPanel(): ReactNode {
   if (!kit) {
     return (
       <div className="panel-body">
-        <h2 className="panel-title">Brand Kit</h2>
+        <h2 className="panel-title">Brand</h2>
         <div className="empty small">
           <div className="empty-icon">
             <Palette size={20} />
@@ -49,7 +49,7 @@ export function BrandPanel(): ReactNode {
 
   return (
     <div className="panel-body">
-      <h2 className="panel-title">Brand Kit</h2>
+      <h2 className="panel-title">Brand</h2>
       {kits.length > 1 && (
         <select className="select" aria-label="Brand kit" value={kit.id} onChange={(e) => setKitId(e.target.value)}>
           {kits.map((k) => (
