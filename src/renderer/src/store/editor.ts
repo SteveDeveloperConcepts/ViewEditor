@@ -656,14 +656,16 @@ export function placeGenerated(asset: Asset, placement: AiPlacement): ID | null 
         const room = nextStart - it.start;
         const box = fitBox(asset.width, asset.height, it.w, it.h, 'contain');
         const placed = { x: it.x + box.x, y: it.y + box.y, w: box.w, h: box.h };
+        // Generating again keeps the first version as the original.
+        const restore = it.restore ?? it;
         if (asset.kind === 'image') {
-          return { id: it.id, type: 'image', trackId: it.trackId, start: it.start, duration: it.duration, groupId: it.groupId, assetId: asset.id, opacity: it.opacity, ...placed };
+          return { id: it.id, type: 'image', trackId: it.trackId, start: it.start, duration: it.duration, groupId: it.groupId, assetId: asset.id, opacity: it.opacity, restore, ...placed };
         }
         const prior = it.type === 'video' ? it : null;
         return {
           id: it.id, type: 'video', trackId: it.trackId, start: it.start, groupId: it.groupId, assetId: asset.id, opacity: it.opacity,
           trimStart: 0, speed: 1, volume: prior?.volume ?? 1, muted: prior?.muted ?? false, fadeAudio: prior?.fadeAudio ?? false,
-          duration: Math.min(asset.duration, room), ...placed,
+          duration: Math.min(asset.duration, room), restore, ...placed,
         };
       }),
     );
@@ -695,6 +697,17 @@ export function placeGenerated(asset: Asset, placement: AiPlacement): ID | null 
     return quantize({ ...next, items: [...next.items, { ...item, start } as Item] });
   });
   return scene;
+}
+
+/** Puts back what an AI result replaced, where the clip is now. */
+export function restoreOriginal(id: ID): void {
+  apply((doc) =>
+    updateItems(doc, [id], (it) => {
+      if ((it.type !== 'video' && it.type !== 'image') || !it.restore) return it;
+      const { nextStart } = neighbourBounds(doc, it);
+      return { ...it.restore, id: it.id, trackId: it.trackId, start: it.start, groupId: it.groupId, duration: Math.min(it.restore.duration, nextStart - it.start) };
+    }),
+  );
 }
 
 export function deleteSelection(): void {

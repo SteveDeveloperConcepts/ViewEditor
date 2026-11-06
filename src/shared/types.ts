@@ -233,7 +233,12 @@ export interface Box {
   h: number;
 }
 
-export interface VideoItem extends BaseItem, Box {
+/** A clip an AI result took the place of, so it can be brought back at any time. */
+interface Replaced {
+  restore?: VideoItem | ImageItem;
+}
+
+export interface VideoItem extends BaseItem, Box, Replaced {
   type: 'video';
   assetId: ID;
   /** In-point inside the source media, seconds. */
@@ -245,7 +250,7 @@ export interface VideoItem extends BaseItem, Box {
   opacity: number;
 }
 
-export interface ImageItem extends BaseItem, Box {
+export interface ImageItem extends BaseItem, Box, Replaced {
   type: 'image';
   assetId: ID;
   opacity: number;

@@ -18,6 +18,7 @@ import {
   Replace,
   Sparkles,
   Trash2,
+  Undo2,
   Ungroup,
 } from 'lucide-react';
 import { FONT_FAMILIES } from '@shared/constants';
@@ -34,6 +35,7 @@ import {
   deleteSelection,
   fitItem,
   groupSelection,
+  restoreOriginal,
   selectionHasGroup,
   setSpeed,
   ungroupSelection,
@@ -339,6 +341,11 @@ export function Inspector({ projectId }: { projectId: ID }): ReactNode {
               {actionLabel(action)}
             </Button>
           ))}
+          {(item.type === 'video' || item.type === 'image') && item.restore && (
+            <Button size="small" icon={<Undo2 size={13} />} onClick={() => restoreOriginal(item.id)}>
+              Restore original
+            </Button>
+          )}
         </section>
       )}
       {item.type === 'text' && <TextControls item={item} />}

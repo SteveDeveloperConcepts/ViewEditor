@@ -1,6 +1,6 @@
 // Editing commands that are reachable from more than one place (toolbar, right-click menu, keyboard).
 
-import { AudioLines, ClipboardPaste, Copy, CopyPlus, Download, Group, Replace, Scissors, Sparkles, Trash2, Ungroup, Volume2, VolumeX } from 'lucide-react';
+import { AudioLines, ClipboardPaste, Copy, CopyPlus, Download, Group, Replace, Scissors, Sparkles, Trash2, Undo2, Ungroup, Volume2, VolumeX } from 'lucide-react';
 import { formatClock } from '@shared/time';
 import { detachAudio, isTimed, itemEnd, updateItems } from '@shared/timeline';
 import type { Asset, ID, Item } from '@shared/types';
@@ -22,6 +22,7 @@ import {
   hasClipboard,
   paste,
   replaceMedia,
+  restoreOriginal,
   select,
   selectedItems,
   selectionHasGroup,
@@ -141,6 +142,7 @@ export function itemMenu(item: Item, projectId: ID): MenuEntry[] {
       !many &&
       getAssets()[item.assetId]?.hasAudio && { label: 'Extract audio', icon: <AudioLines size={15} />, onSelect: () => void extractAudioFrom(item) },
     !many && actionsFor(item).length > 0 && null,
+    !many && (item.type === 'video' || item.type === 'image') && item.restore && { label: 'Restore original', icon: <Undo2 size={15} />, onSelect: () => restoreOriginal(item.id) },
     ...(many ? [] : actionsFor(item)).map((action) => ({
       label: actionLabel(action),
       icon: <Sparkles size={15} />,

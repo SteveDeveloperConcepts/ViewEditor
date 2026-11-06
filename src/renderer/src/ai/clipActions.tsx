@@ -44,8 +44,8 @@ function formProps(item: Item, action: ClipAction): Partial<AiFormProps> {
   if (item.type === 'image') {
     const replace = { placement: { kind: 'replace', itemId: item.id } as const };
     return action === 'talk'
-      ? { image: { assetId: item.assetId }, note: 'This picture and the audio you choose are sent to the service. The result replaces the image on the timeline.', ...replace }
-      : { image: { assetId: item.assetId }, note: 'This picture is sent to the service. The result replaces the image on the timeline.', ...replace };
+      ? { image: { assetId: item.assetId }, note: 'This picture and the audio you choose are sent to the service. The result replaces the image on the timeline, and Restore original brings it back.', ...replace }
+      : { image: { assetId: item.assetId }, note: 'This picture is sent to the service. The result replaces the image on the timeline, and Restore original brings it back.', ...replace };
   }
   const start = item.trimStart;
   const end = item.trimStart + item.duration * item.speed;
@@ -62,7 +62,7 @@ function formProps(item: Item, action: ClipAction): Partial<AiFormProps> {
     video: { assetId: item.assetId, start, end },
     seconds: item.duration,
     placement: { kind: 'replace', itemId: item.id },
-    note: `The ${length} of footage in this clip is sent to the service. The result replaces it on the timeline, and undo brings the original back. If a model refuses a clip this long, split it and edit one piece at a time.`,
+    note: `The ${length} of footage in this clip is sent to the service. The result replaces it on the timeline, and Restore original brings this version back. If a model refuses a clip this long, split it and edit one piece at a time.`,
   };
 }
 

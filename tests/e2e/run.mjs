@@ -1448,6 +1448,13 @@ section('ai', async () => {
     check(doc.items[0].assetId === before.assetId, 'undo brings the original clip back');
     await p.keyboard.press(`${MOD}+Shift+z`);
     await wait(200);
+    await selectClip(first.id);
+    await p.click('.panel button:has-text("Restore original")');
+    await wait(200);
+    doc = await stored();
+    check(doc.items[0].assetId === before.assetId, 'Restore original brings it back, even after leaving the editor');
+    await p.keyboard.press(`${MOD}+z`);
+    await wait(200);
 
     // Extend with AI
     await selectClip(first.id);

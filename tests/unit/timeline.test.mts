@@ -87,6 +87,13 @@ test('choosing which part of a file plays keeps the clip where it starts', () =>
   assert.equal(setSourceRange(doc, { ...clip, speed: 2 }, 0, 4, asset()).duration, 2, 'and speed is taken into account');
 });
 
+test('a piece of a replaced clip no longer offers to restore the whole of it', () => {
+  const doc = docWith(clipAt(0, 6));
+  const clip = { ...doc.items[0], restore: doc.items[0] } as VideoItem;
+  const parts = splitItemAt(clip, 2, 'right')!;
+  assert.ok(parts.every((p) => !('restore' in p)));
+});
+
 test('project length is the end of the last element unless fixed', () => {
   const doc = docWith(clipAt(0, 4), clipAt(6, 2));
   assert.equal(projectDuration(doc), 8);

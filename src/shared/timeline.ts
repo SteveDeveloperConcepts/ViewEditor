@@ -253,8 +253,10 @@ export function removeItems(doc: ProjectDoc, ids: Iterable<ID>): ProjectDoc {
 /** Cuts an item in two at timeline time `t`. Returns null when `t` is not inside the item. */
 export function splitItemAt(it: Item, t: number, rightId: ID): [Item, Item] | null {
   if (t <= it.start + MIN_ITEM_DURATION / 2 || t >= itemEnd(it) - MIN_ITEM_DURATION / 2) return null;
-  const left = { ...it, duration: t - it.start } as Item;
-  const right = { ...it, id: rightId, start: t, duration: itemEnd(it) - t } as Item;
+  // A piece of a clip can no longer go back to being the whole of what it replaced.
+  const { restore: _restore, ...whole } = it as VideoItem;
+  const left = { ...whole, duration: t - it.start } as Item;
+  const right = { ...whole, id: rightId, start: t, duration: itemEnd(it) - t } as Item;
   if (isTimed(it) && isTimed(right)) right.trimStart = it.trimStart + (t - it.start) * it.speed;
   return [left, right];
 }
@@ -520,6 +522,9 @@ export function quantize(doc: ProjectDoc): ProjectDoc {
 
 export function referencedAssetIds(doc: ProjectDoc): ID[] {
   const ids = new Set<ID>();
-  for (const it of doc.items) if (hasAsset(it)) ids.add(it.assetId);
+  for (const it of doc.items) {
+    if (hasAsset(it)) ids.add(it.assetId);
+    if ((it.type === 'video' || it.type === 'image') && it.restore) ids.add(it.restore.assetId);
+  }
   return [...ids];
 }
