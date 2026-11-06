@@ -134,14 +134,14 @@ export function VideoPage({ projectId }: { projectId: string }): ReactNode {
               <>
                 <h2>Make a variant</h2>
                 {origin.mode === 'topic' && (
-                  <Button icon={<RefreshCw size={15} />} onClick={() => void navigate({ page: 'home', prefill: { ...origin, script: '', mode: 'topic' } })}>
+                  <Button icon={<RefreshCw size={15} />} onClick={() => void navigate({ page: 'script', prefill: { ...origin, script: '', mode: 'topic' } })}>
                     Reuse topic
                   </Button>
                 )}
-                <Button icon={<Type size={15} />} onClick={() => void navigate({ page: 'home', prefill: { ...origin, mode: 'script' } })}>
+                <Button icon={<Type size={15} />} onClick={() => void navigate({ page: 'script', prefill: { ...origin, mode: 'script' } })}>
                   Reuse script
                 </Button>
-                <Button icon={<Plus size={15} />} onClick={() => void navigate({ page: 'home' })}>
+                <Button icon={<Plus size={15} />} onClick={() => void navigate({ page: 'script' })}>
                   New video
                 </Button>
               </>

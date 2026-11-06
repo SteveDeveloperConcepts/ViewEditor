@@ -1,13 +1,10 @@
-// "Create asset": makes backgrounds and title cards on this computer and saves them to the asset library.
+// Backgrounds and title cards: made on this computer and saved to Media.
 
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { Info, Save } from 'lucide-react';
-import type { AiTask } from '@shared/ai';
+import { ArrowLeft, Info, Save } from 'lucide-react';
 import { DEFAULT_TEXT_STYLE, FONT_FAMILIES, SIZE_PRESETS } from '@shared/constants';
 import type { TextItem } from '@shared/types';
-import { AiForm } from '@/ai/AiForm';
-import { JobList } from '@/ai/JobList';
 import { Button, ColorField, Field, Notice, Segmented, Slider } from '@/components/ui';
 import { api, errorMessage } from '@/lib/api';
 import { canvasBytes } from '@/lib/media';
@@ -84,59 +81,16 @@ function draw(ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
   }
 }
 
-const AI_TASKS: { task: AiTask; label: string; placeholder: string }[] = [
-  { task: 'text-to-video', label: 'Text to video', placeholder: 'A slow aerial shot over a coastline at sunrise' },
-  { task: 'image-to-video', label: 'Image to video', placeholder: 'The product turns slowly on a marble table' },
-  { task: 'text-to-image', label: 'Text to image', placeholder: 'A clean product photo on a warm background' },
-];
-
-function AiCreator(): ReactNode {
-  const [task, setTask] = useState<AiTask>('text-to-video');
-  const [aspect, setAspect] = useState('16:9');
-  const preset = SIZE_PRESETS.find((p) => p.id === aspect) ?? SIZE_PRESETS[0];
-  const current = AI_TASKS.find((t) => t.task === task)!;
-  return (
-    <div className="create-layout">
-      <div className="create-jobs">
-        <JobList projectId={null} />
-        <p className="faint">What you generate here is saved under Assets, ready to use in any project.</p>
-      </div>
-      <div className="create-controls">
-        <Field label="Create">
-          <Segmented<AiTask> fill label="What to create" value={task} options={AI_TASKS.map((t) => ({ value: t.task, label: t.label }))} onChange={setTask} />
-        </Field>
-        <Field label="Made for">
-          <select className="select" value={aspect} onChange={(e) => setAspect(e.target.value)}>
-            {SIZE_PRESETS.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.label} · {p.hint}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <AiForm key={`${task}${aspect}`} task={task} projectId={null} placement={{ kind: 'none' }} width={preset.width} height={preset.height} promptPlaceholder={current.placeholder} />
-      </div>
-    </div>
-  );
-}
-
 export function CreateAssetPage(): ReactNode {
-  const [mode, setMode] = useState<'ai' | 'design'>('ai');
   return (
     <div className="page">
       <header className="page-head">
-        <h1>Create asset</h1>
-        <Segmented<'ai' | 'design'>
-          label="How to create"
-          value={mode}
-          options={[
-            { value: 'ai', label: 'With AI' },
-            { value: 'design', label: 'Backgrounds and title cards' },
-          ]}
-          onChange={setMode}
-        />
+        <Button variant="ghost" icon={<ArrowLeft size={15} />} onClick={() => void navigate({ page: 'assets' })}>
+          Media
+        </Button>
+        <h1>Make a background</h1>
       </header>
-      {mode === 'ai' ? <AiCreator /> : <Designer />}
+      <Designer />
     </div>
   );
 }

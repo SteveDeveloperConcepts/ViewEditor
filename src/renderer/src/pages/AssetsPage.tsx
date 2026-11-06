@@ -1,10 +1,11 @@
-// The asset library: media kept in the workspace, ready to use in any project.
+// Media: everything kept in the library, ready to use in any project.
 
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
-import { Ellipsis, FolderUp, Image as ImageIcon, Music, Scissors, Trash2, Upload, Video } from 'lucide-react';
+import { Ellipsis, FolderUp, Image as ImageIcon, Music, Scissors, Trash2, Upload, Video, Wand2 } from 'lucide-react';
 import { formatBytes, formatClock } from '@shared/time';
 import type { Asset, AssetKind } from '@shared/types';
+import { JobList } from '@/ai/JobList';
 import { openContextMenu, openMenuAt, type MenuEntry } from '@/components/Menu';
 import { confirmDialog } from '@/components/Modal';
 import { Button, EmptyState, IconButton, ProgressBar, Segmented } from '@/components/ui';
@@ -13,7 +14,7 @@ import { assetUrl } from '@/lib/media';
 import { startProjectWithAsset } from '@/lib/projects';
 import { droppedPaths, hasFiles, reportRejected, SUPPORTED_SUMMARY } from '@/editor/importing';
 import { useLibrary } from '@/store/library';
-import { toast } from '@/store/ui';
+import { navigate, toast } from '@/store/ui';
 
 type Filter = 'all' | AssetKind;
 
@@ -111,7 +112,7 @@ export function AssetsPage(): ReactNode {
       }}
     >
       <header className="page-head">
-        <h1>Assets</h1>
+        <h1>Media</h1>
         <div className="grow" />
         <Segmented<Filter>
           label="Filter assets"
@@ -124,10 +125,14 @@ export function AssetsPage(): ReactNode {
           ]}
           onChange={setFilter}
         />
+        <Button icon={<Wand2 size={15} />} onClick={() => void navigate({ page: 'create-asset' })}>
+          Make a background
+        </Button>
         <Button variant="primary" icon={<Upload size={15} />} onClick={() => void upload()}>
           Upload
         </Button>
       </header>
+      <JobList projectId={null} />
       {importing && (
         <div className="import-progress">
           <span className="truncate">

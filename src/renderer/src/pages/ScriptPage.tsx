@@ -1,4 +1,4 @@
-// "Create video": a prompt box that takes a topic or a finished script and produces a narrated video.
+// "Video from a script": a prompt box that takes a topic or a finished script and produces a narrated video.
 
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
@@ -11,7 +11,6 @@ import { confirmDialog } from '@/components/Modal';
 import { Button, Notice, Spinner } from '@/components/ui';
 import { api, errorMessage } from '@/lib/api';
 import { templateThumbUrl } from '@/lib/media';
-import { openStartDialog } from '@/lib/startDialog';
 import { generateScriptVideo, sceneCount } from '@/lib/scriptVideo';
 import { useAi, useConnected, useModels } from '@/store/ai';
 import { useLibrary } from '@/store/library';
@@ -87,7 +86,7 @@ function Pill({ icon, label, entries }: { icon: ReactNode; label: string; entrie
   );
 }
 
-export function HomePage({ prefill }: { prefill?: ScriptOrigin | null }): ReactNode {
+export function ScriptPage({ prefill }: { prefill?: ScriptOrigin | null }): ReactNode {
   const hasKey = useLibrary((s) => s.lib?.settings.hasApiKey ?? false);
   const providers = useAi((s) => s.providers);
   const assets = useLibrary((s) => s.lib?.assets);
@@ -208,7 +207,7 @@ export function HomePage({ prefill }: { prefill?: ScriptOrigin | null }): ReactN
   return (
     <div className="page home">
       <div className="home-hero">
-        <h1>Create a video</h1>
+        <h1>Video from a script</h1>
         <div className="tabs" role="tablist" aria-label="How to start">
           <button type="button" className="tab" role="tab" aria-selected={mode === 'topic'} onClick={() => { setMode('topic'); setError(''); }}>
             Topic
@@ -405,15 +404,6 @@ export function HomePage({ prefill }: { prefill?: ScriptOrigin | null }): ReactN
         </div>
       </section>
 
-      <section className="home-section">
-        <div className="home-blank">
-          <div>
-            <h2>Editing your own footage?</h2>
-            <p className="muted">Add your files and start cutting.</p>
-          </div>
-          <Button onClick={() => openStartDialog()}>Edit video</Button>
-        </div>
-      </section>
     </div>
   );
 }

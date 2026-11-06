@@ -46,7 +46,7 @@ async function storedDoc() {
 
 async function newProject(files) {
   await home();
-  await page.click('.sidebar .nav-item:has-text("Edit video")');
+  await page.click('.sidebar .nav-item:has-text("Edit my footage")');
   await page.waitForSelector('.modal');
   if (files) {
     await stubOpenDialog(app, files);
@@ -324,7 +324,7 @@ section('review', async () => {
   await home();
   const projectCount = async () => (await library()).projects.length;
   const before = await projectCount();
-  await page.click('.sidebar .nav-item:has-text("Edit video")');
+  await page.click('.sidebar .nav-item:has-text("Edit my footage")');
   await page.waitForSelector('.modal');
   await page.click('.modal [aria-label="Close"]');
   await sleep(150);
@@ -582,14 +582,14 @@ section('formats', async () => {
   await shot(page, '18-proxy');
 
   await home();
-  await page.click('.sidebar .nav-item:has-text("Assets")');
+  await page.click('.sidebar .nav-item:has-text("Media")');
   await stubOpenDialog(app, [media('notes.txt'), media('pic.webp'), media('pic.avif'), media('tone.flac')]);
   await page.click('button:has-text("Upload")');
   await page.waitForSelector('.toast.error', { timeout: 8000 });
   check((await page.textContent('.toast.error')).includes('notes.txt'), 'unsupported files are refused with a reason');
-  await page.waitForFunction(() => document.querySelectorAll('.asset-card').length === 3, null, { timeout: 8000 });
-  await page.waitForFunction(() => [...document.querySelectorAll('.asset-card-picture.image img')].length === 2, null, { timeout: 8000 });
-  check(true, 'workspace uploads land in the asset library, with previews');
+  await page.waitForFunction(() => ['pic.webp', 'pic.avif', 'tone.flac'].every((n) => [...document.querySelectorAll('.asset-card')].some((c) => c.textContent.includes(n))), null, { timeout: 8000 });
+  await page.waitForFunction(() => [...document.querySelectorAll('.asset-card-picture.image img')].length >= 2, null, { timeout: 8000 });
+  check(true, 'uploads land in Media, with previews');
   await shot(page, '19-assets');
   await newProject();
   await page.click('.rail-item:has-text("Image")');
@@ -601,7 +601,7 @@ section('formats', async () => {
 
 section('library', async () => {
   await home();
-  await page.click('.sidebar .view-all');
+  await page.click('.sidebar .nav-item:has-text("Projects")');
   await page.waitForSelector('.project-card');
   const count = (await page.$$('.project-card')).length;
   check(count >= 1, 'View all shows the projects');
@@ -688,7 +688,7 @@ section('library', async () => {
   await home();
 
   // Trash
-  await page.click('.sidebar .view-all');
+  await page.click('.sidebar .nav-item:has-text("Projects")');
   await page.waitForSelector('.project-card');
   const t = page.locator('.project-card', { hasText: 'Launch film copy' }).first();
   await t.hover();
@@ -773,7 +773,7 @@ section('phone', async () => {
   await page.click('.rail-item:has-text("Video")');
   await page.evaluate(() => undefined);
   await home();
-  await page.click('.sidebar .nav-item:has-text("Edit video")');
+  await page.click('.sidebar .nav-item:has-text("Edit my footage")');
   await page.waitForSelector('.modal');
   await page.click('.welcome-option:has-text("Upload from phone")');
   await page.waitForSelector('.qr svg', { timeout: 8000 });
@@ -830,7 +830,7 @@ section('recorder', async () => {
   const hasPicture = await page.$eval('.stage video', (v) => v.videoWidth > 0);
   check(hasPicture, 'the recording plays in the editor');
 
-  // Starting from the dashboard: More apps › Record ends in a new project with the recording in it.
+  // Starting from the left menu, Record ends in a new project with the recording in it.
   await app.evaluate(({ BrowserWindow }) => {
     const w = new BrowserWindow({ width: 640, height: 400, show: true, title: 'Capture target' });
     void w.loadURL('data:text/html,<title>Capture target</title><body style="margin:0;background:%2300c060"></body>');
@@ -839,8 +839,7 @@ section('recorder', async () => {
   await sleep(800);
   await home();
   const before = (await library()).projects.length;
-  await page.click('.sidebar .nav-item:has-text("More apps")');
-  await page.click('.menu-item:has-text("Record")');
+  await page.click('.sidebar .nav-item:has-text("Record")');
   await page.waitForSelector('.source', { timeout: 10000 });
   await page.click('.segmented button:has-text("Window")');
   await page.waitForSelector('.source:has-text("Capture target")', { timeout: 8000 });
@@ -858,7 +857,7 @@ section('recorder', async () => {
 
 section('script', async () => {
   await home();
-  await page.click('.sidebar .nav-item:has-text("Create video")');
+  await page.click('.sidebar .nav-item:has-text("Video from a script")');
   await page.click('[role="tab"]:has-text("Script")');
   const pills = await page.$$eval('.pill', (e) => e.map((p) => p.textContent));
   check(pills.length >= 6, 'the script settings are shown', pills.join(', '));
@@ -883,7 +882,7 @@ section('script', async () => {
   await page.click('button:has-text("Reuse script")');
   await page.waitForSelector('.prompt-input');
   check((await page.inputValue('.prompt-input')).startsWith('Welcome to the first'), 'Reuse script fills the box again');
-  await page.click('.sidebar .view-all');
+  await page.click('.sidebar .nav-item:has-text("Projects")');
   await page.waitForSelector('.project-card');
   await page.click(`.project-card:has-text("${meta.name.slice(0, 18)}") .project-thumb`);
   await page.waitForSelector('.clip.text', { timeout: 10000 });
@@ -892,7 +891,7 @@ section('script', async () => {
   await home();
 
   // A topic needs a key; without one the message says so instead of failing silently.
-  await page.click('.sidebar .nav-item:has-text("Create video")');
+  await page.click('.sidebar .nav-item:has-text("Video from a script")');
   await page.fill('.prompt-input', 'Why teams should write things down');
   await page.click('button:has-text("Write script")');
   await page.waitForSelector('.notice.error', { timeout: 30000 });
@@ -964,7 +963,7 @@ section('tools', async () => {
   // Dragging from the panel onto the timeline
   await page.click('.rail-item:has-text("Video")');
   const n = (await clips(page)).length;
-  await page.locator('.asset-tile:has-text("clip-b.mp4")').dragTo(page.locator('.tl-rows'), { targetPosition: { x: 900, y: 8 } });
+  await page.locator('.asset-tile:has-text("clip-b.mp4")').first().dragTo(page.locator('.tl-rows'), { targetPosition: { x: 900, y: 8 } });
   await sleep(300);
   check((await clips(page)).length === n + 1, 'an asset can be dragged onto the timeline', `${n} -> ${(await clips(page)).length}`);
   await page.keyboard.press(`${MOD}+z`);
@@ -1024,7 +1023,7 @@ section('tools', async () => {
   check(Math.abs(Number(probe(file).format.duration) - 2) < 0.1, 'a fixed length decides the length of the export', probe(file).format.duration);
 
   // Resize for social
-  await page.click('.sidebar .view-all');
+  await page.click('.sidebar .nav-item:has-text("Projects")');
   await page.waitForSelector('.project-card');
   const card = page.locator('.project-card', { hasText: meta.name }).first();
   await card.hover();
@@ -1043,8 +1042,7 @@ section('tools', async () => {
   await home();
 
   // Key storage: Claude's key lives with the other AI keys.
-  await page.click('.avatar');
-  await page.click('.menu-item:has-text("Settings")');
+  await page.click('.sidebar .nav-item:has-text("Settings")');
   await page.waitForSelector('.modal');
   await shot(page, '32-settings');
   check(!(await page.$('[aria-label="Anthropic API key"]')), 'Settings holds no AI keys of its own');
@@ -1098,7 +1096,7 @@ section('themes', async () => {
   check(bg === 'rgb(14, 16, 20)', 'dark colours apply', bg);
   await shot(page, '29-dark-editor');
   await home();
-  await page.click('.sidebar .view-all');
+  await page.click('.sidebar .nav-item:has-text("Projects")');
   await page.waitForSelector('.project-card');
   await sleep(200);
   await shot(page, '30-dark-library');
@@ -1182,7 +1180,7 @@ section('ai', async () => {
   };
   const blank = async (files) => {
     await toHome();
-    await p.click('.sidebar .nav-item:has-text("Edit video")');
+    await p.click('.sidebar .nav-item:has-text("Edit my footage")');
     await p.waitForSelector('.modal');
     if (files) {
       await stubOpenDialog(a, files);
@@ -1202,7 +1200,7 @@ section('ai', async () => {
 
   try {
     // Choosing AI scenes with nothing connected goes through connecting, and the choice is not lost.
-    await p.click('.sidebar .nav-item:has-text("Create video")');
+    await p.click('.sidebar .nav-item:has-text("Video from a script")');
     await p.click('.pill:has-text("Colour background")');
     await p.click('.menu-item:has-text("AI scenes")');
     await p.waitForSelector('.provider-card');
@@ -1217,8 +1215,7 @@ section('ai', async () => {
     await p.click('.modal-foot button:has-text("Done")');
     await p.waitForSelector('.pill:has-text("AI scenes")', { timeout: 3000 });
     check(true, 'AI scenes is applied once a service is connected');
-    await p.click('.avatar');
-    await p.click('.menu-item:has-text("AI connections")');
+    await p.click('.sidebar .nav-item:has-text("AI connections")');
     await p.click('[data-provider="runway"] button:has-text("Disconnect")');
     await p.waitForSelector('[aria-label="Runway API key"]');
     await p.click('.modal-foot button:has-text("Done")');
@@ -1442,7 +1439,7 @@ section('ai', async () => {
 
     // Talking character from the home page
     await toHome();
-    await p.click('.sidebar .nav-item:has-text("Create video")');
+    await p.click('.sidebar .nav-item:has-text("Video from a script")');
     await p.click('[role="tab"]:has-text("Script")');
     await p.fill('.prompt-input', 'Hello, and welcome to the launch. We have something new to show you today.');
     await p.click('.pill:has-text("Colour background")');
@@ -1471,7 +1468,7 @@ section('ai', async () => {
 
     // AI scenes from the home page
     await toHome();
-    await p.click('.sidebar .nav-item:has-text("Create video")');
+    await p.click('.sidebar .nav-item:has-text("Video from a script")');
     await p.click('[role="tab"]:has-text("Script")');
     await p.fill('.prompt-input', 'The sun rises over the old harbour. Fishing boats head out into the bay. By noon the market is full of people. Night falls and the lights come on.');
     await p.click('.pill:has-text("Colour background")');
@@ -1508,27 +1505,19 @@ section('ai', async () => {
     const file = join(second, 'library', 'exports', m.id, m.lastExport.file);
     check(existsSync(file) && probe(file).streams.some((s) => s.codec_type === 'audio'), 'an AI video exports like any other, with its narration');
 
-    // Generating into the asset library
-    await p.click('.sidebar .nav-item:has-text("Create asset")');
-    await p.waitForSelector('.create-controls .ai-form select[aria-label="Model"]', { timeout: 10000 });
-    await p.click('.create-controls .segmented button:has-text("Text to image")');
-    await p.waitForSelector('.create-controls .ai-form select[aria-label="Model"]');
-    await wait(200);
-    await p.selectOption('.create-controls select[aria-label="Model"]', 'fal:text-to-image:fal-ai/flux/schnell');
-    await p.fill('.create-controls textarea', 'A lighthouse at dusk');
-    await shot(p, '51-ai-create-asset');
-    await p.click('.create-controls button:has-text("Generate")');
-    await p.waitForSelector('.create-jobs .ai-job[data-job-state="done"]', { timeout: 15000 });
-    await p.waitForSelector('.toast:has-text("is ready") button:has-text("View")', { timeout: 3000 });
-    check(await p.isVisible('.create-jobs button:has-text("Use in a project")'), 'a finished picture offers the next step');
-    await p.click('.sidebar .nav-item:has-text("Assets")');
-    await p.waitForSelector('.asset-card:has-text("A lighthouse at dusk")', { timeout: 8000 });
-    check(true, 'generated pictures land in the asset library');
+    // Generate with AI goes straight to the panel, and leaves nothing behind if nothing was made.
+    await toHome();
+    const projectsBefore = (await lib()).projects.length;
+    await p.click('.sidebar .nav-item:has-text("Generate with AI")');
+    await p.waitForSelector('.panel .ai-form textarea', { timeout: 10000 });
+    check(true, 'Generate with AI opens the AI panel');
+    await toHome();
+    await wait(400);
+    check((await lib()).projects.length === projectsBefore, 'walking away from it leaves no empty project');
 
     // Stopping
     await toHome();
-    await p.click('.avatar');
-    await p.click('.menu-item:has-text("AI connections")');
+    await p.click('.sidebar .nav-item:has-text("AI connections")');
     await p.waitForSelector('[data-provider="fal"] button:has-text("Disconnect")');
     await p.click('[data-provider="fal"] button:has-text("Disconnect")');
     await p.waitForSelector('[aria-label="fal.ai API key"]');
