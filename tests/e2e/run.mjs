@@ -1623,6 +1623,15 @@ section('ai', async () => {
     await p.selectOption('.ai-form select[aria-label="Audio"]', { label: 'clip-a.mp4' });
     await p.waitForSelector('.ai-form [aria-label="Use the sound from"]');
     check(true, 'and the stretch to use can be set');
+    await p.selectOption('select[aria-label="What to generate"]', 'image-to-video');
+    await p.waitForSelector('.ai-form select[aria-label="Length"]');
+    const firstModel = await p.inputValue('.ai-form select[aria-label="Model"]');
+    const lengthValues = await p.$$eval('.ai-form select[aria-label="Length"] option', (e) => e.map((o) => o.value));
+    for (const value of lengthValues.slice(0, 3)) {
+      await p.selectOption('.ai-form select[aria-label="Length"]', value);
+      await wait(100);
+    }
+    check((await p.inputValue('.ai-form select[aria-label="Model"]')) === firstModel, 'changing the length never changes the model');
     await p.selectOption('select[aria-label="What to generate"]', 'lip-sync');
     await p.waitForSelector('.panel .notice, .panel .ai-form');
     check(true, 'lip-sync is in the AI panel with the other tools');

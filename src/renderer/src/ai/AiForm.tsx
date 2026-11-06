@@ -228,6 +228,11 @@ export function AiForm(props: AiFormProps): ReactNode {
   const recommended = useMemo(() => recommendedModels(models ?? [], task, wanted), [models, task, wanted]);
   const model = useMemo(() => models?.find((m) => m.key === modelKey) ?? recommended[0] ?? models?.[0] ?? null, [models, modelKey, recommended]);
 
+  // The model on screen stays chosen, or changing the length could change it, since the recommended list follows the length.
+  useEffect(() => {
+    if (model && model.key !== modelKey) setModelKey(model.key);
+  }, [model, modelKey]);
+
   useEffect(() => {
     if (!model) return;
     setChoices((c) => initialChoices(model, width, height, c, wanted, shapePicked));
