@@ -103,7 +103,7 @@ async function chosenModel(origin: ScriptOrigin): Promise<AiModel> {
   const task = origin.settings.visuals === 'talking-character' ? 'talking-photo' : 'text-to-video';
   const models = await api.ai.models(task);
   const model = models.find((m) => m.key === origin.settings.visualModelKey) ?? models[0];
-  if (!model) throw new Error('None of your connected AI tools offers this. Connect one under AI tools.');
+  if (!model) throw new Error('None of your connected AI services offers this. Connect one under AI connections.');
   return model;
 }
 

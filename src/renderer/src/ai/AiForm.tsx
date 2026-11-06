@@ -190,7 +190,7 @@ export function AiForm(props: AiFormProps): ReactNode {
         </div>
         <p>Connect an AI service to generate and edit video.</p>
         <Button variant="primary" onClick={openConnections}>
-          Connect AI tools
+          Connect an AI service
         </Button>
       </div>
     );

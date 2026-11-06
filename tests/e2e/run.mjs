@@ -1026,7 +1026,7 @@ section('tools', async () => {
   await page.waitForSelector('.modal');
   await shot(page, '32-settings');
   check(!(await page.$('[aria-label="Anthropic API key"]')), 'Settings holds no AI keys of its own');
-  await page.click('.modal button:has-text("AI tools")');
+  await page.click('.modal button:has-text("AI connections")');
   await page.fill('[aria-label="Anthropic API key"]', 'sk-ant-e2e-placeholder-value');
   await page.click('[data-provider="claude"] button:has-text("Connect")');
   await page.waitForSelector('[data-provider="claude"] .badge:has-text("Connected")');
@@ -1193,7 +1193,7 @@ section('ai', async () => {
     await p.waitForSelector('.pill:has-text("AI scenes")', { timeout: 3000 });
     check(true, 'AI scenes is applied once a service is connected');
     await p.click('.avatar');
-    await p.click('.menu-item:has-text("AI tools")');
+    await p.click('.menu-item:has-text("AI connections")');
     await p.click('[data-provider="runway"] button:has-text("Disconnect")');
     await p.waitForSelector('[aria-label="Runway API key"]');
     await p.click('.modal-foot button:has-text("Done")');
@@ -1201,11 +1201,11 @@ section('ai', async () => {
     // Not connected yet
     await blank();
     await p.click('.rail-item:has-text("AI tools")');
-    check(await p.isVisible('.panel button:has-text("Connect AI tools")'), 'the AI panel invites connecting a service first');
+    check(await p.isVisible('.panel button:has-text("Connect an AI service")'), 'the AI panel invites connecting a service first');
     await shot(p, '40-ai-not-connected');
 
     // Connecting
-    await p.click('.panel button:has-text("Connect AI tools")');
+    await p.click('.panel button:has-text("Connect an AI service")');
     await p.waitForSelector('.provider-card');
     check((await p.$$('.provider-card')).length === 4, 'three video services and Claude can be connected');
     await p.fill('[aria-label="fal.ai API key"]', 'wrong-key');
@@ -1503,7 +1503,7 @@ section('ai', async () => {
     // Stopping
     await toHome();
     await p.click('.avatar');
-    await p.click('.menu-item:has-text("AI tools")');
+    await p.click('.menu-item:has-text("AI connections")');
     await p.waitForSelector('[data-provider="fal"] button:has-text("Disconnect")');
     await p.click('[data-provider="fal"] button:has-text("Disconnect")');
     await p.waitForSelector('[aria-label="fal.ai API key"]');

@@ -58,7 +58,7 @@ function messageFrom(body: unknown): string | null {
 
 function failure(status: number, service: string, body: unknown): ProviderError {
   const said = messageFrom(body);
-  if (status === 401) return new ProviderError(`${service} did not accept this API key. Check it under AI tools.`, status);
+  if (status === 401) return new ProviderError(`${service} did not accept this API key. Check it under AI connections.`, status);
   if (status === 402) return new ProviderError(said ?? `Your ${service} account has run out of credit.`, status);
   if (status === 403) return new ProviderError(said ?? `${service} refused this request. Your account may not have access to this model.`, status);
   if (status === 429) return new ProviderError(said ?? `${service} is rate limiting this account. Try again shortly.`, status, true);

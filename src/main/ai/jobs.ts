@@ -82,7 +82,7 @@ export class AiJobs {
     const model = await this.o.catalog.find(request.modelKey);
     if (!model) throw new Error('This model is no longer available. Pick another one.');
     const key = this.o.keys.get(model.provider);
-    if (!key) throw new Error(`Connect ${this.provider(model.provider).name} under AI tools first.`);
+    if (!key) throw new Error(`Connect ${this.provider(model.provider).name} under AI connections first.`);
 
     const prompt = request.choices.prompt?.trim() ?? '';
     const job: AiJob = {

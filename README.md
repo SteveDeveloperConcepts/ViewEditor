@@ -81,7 +81,7 @@ and serves their real published schemas, so they cost nothing and need no keys.
 
 ## AI video
 
-Connect a service under **AI tools** (the profile menu, or the AI tools panel in the editor) with your own
+Connect a service under **AI connections** (in the left menu, or the AI tools panel in the editor) with your own
 API key. Keys are encrypted by your operating system and stay out of the interface.
 
 | Service | Reaches | Get a key |

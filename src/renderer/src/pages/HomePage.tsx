@@ -241,7 +241,7 @@ export function HomePage({ prefill }: { prefill?: ScriptOrigin | null }): ReactN
                 { label: 'AI scenes', checked: settings.visuals === 'ai-scenes', onSelect: () => chooseVisuals('ai-scenes') },
                 { label: 'Talking character', checked: settings.visuals === 'talking-character', onSelect: () => chooseVisuals('talking-character') },
                 !aiConnected && null,
-                !aiConnected && { label: 'Connect AI tools…', onSelect: () => void openConnections() },
+                !aiConnected && { label: 'Connect an AI service…', onSelect: () => void openConnections() },
               ]}
             />
             {usingAi && visualModels && visualModels.length > 0 && (
@@ -381,7 +381,7 @@ export function HomePage({ prefill }: { prefill?: ScriptOrigin | null }): ReactN
       </div>
 
       <section className="home-section">
-        <h2>Start with a template</h2>
+        <h2>Starters</h2>
         <div className="starter-grid">
           {STARTERS.map((s) => (
             <button key={s.title} type="button" className="starter" onClick={() => applyStarter(s)}>

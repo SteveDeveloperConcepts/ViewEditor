@@ -166,7 +166,7 @@ function ConnectionsBody({ close }: { close: () => void }): ReactNode {
     void loadProviders(true);
   }, []);
   return (
-    <Modal title="AI tools" size="wide" onClose={close} footer={<Button variant="primary" onClick={close}>Done</Button>}>
+    <Modal title="AI connections" size="wide" onClose={close} footer={<Button variant="primary" onClick={close}>Done</Button>}>
       <p>Connect a service to generate and edit video with AI. New models appear here automatically as each service adds them.</p>
       {providers.map((p) => (
         <ProviderCard key={p.id} provider={p} />

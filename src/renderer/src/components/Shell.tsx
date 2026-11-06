@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { useMemo } from 'react';
-import { Blocks, CircleHelp, Clapperboard, FolderClosed, Keyboard, LayoutTemplate, Palette, Plus, Scissors, Settings, Sparkles, Video } from 'lucide-react';
+import { Blocks, CircleHelp, Clapperboard, FolderClosed, KeyRound, Keyboard, LayoutTemplate, Palette, Plus, Scissors, Settings, Sparkles, Video } from 'lucide-react';
 import { APP_NAME } from '@shared/constants';
 import { openConnections } from '@/ai/ConnectionsDialog';
 import { openRecorder } from '@/recorder/openRecorder';
@@ -101,7 +101,7 @@ export function DashTop(): ReactNode {
             e.currentTarget,
             [
               settings?.workspaceName ?? 'Workspace',
-              { label: 'AI tools', icon: <Sparkles size={15} />, onSelect: openConnections },
+              { label: 'AI connections', icon: <KeyRound size={15} />, onSelect: openConnections },
               { label: 'Settings', icon: <Settings size={15} />, onSelect: openSettings },
             ],
             'end',

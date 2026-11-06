@@ -62,7 +62,7 @@ function SettingsBody({ close }: { close: () => void }): ReactNode {
               void openConnections();
             }}
           >
-            AI tools
+            AI connections
           </Button>
         </div>
       </div>
