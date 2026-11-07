@@ -25,6 +25,14 @@ export async function launch(dataDir, extraEnv = {}) {
     cwd: root,
     env: { ...process.env, VIEWEDITOR_DATA_DIR: dataDir, ELECTRON_RENDERER_URL: '', ...extraEnv },
   });
+  // The app hands web links to the default browser. A test must never open the browser of whoever runs it,
+  // so they're only written down, in globalThis.openedExternally.
+  await app.evaluate(({ shell }) => {
+    globalThis.openedExternally = [];
+    shell.openExternal = async (url) => {
+      globalThis.openedExternally.push(url);
+    };
+  });
   const page = await app.firstWindow();
   const errors = [];
   page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));

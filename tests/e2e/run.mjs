@@ -1341,7 +1341,7 @@ section('update', async () => {
 
   await emit('update:changed', { kind: 'available', version: '9.9.9' });
   await page.waitForSelector('.update-banner');
-  check((await page.textContent('.update-banner')).includes('9.9.9 is available'), 'a Mac is told a new version is out');
+  check((await page.textContent('.update-banner')).includes('9.9.9 is available'), 'a copy that cannot install a new version itself is told it is out');
   check(await page.isVisible(button('Download')), 'with a way to download it');
   await shot(page, '31-update-available');
   await page.click(button('Later'));
@@ -1366,6 +1366,25 @@ section('update', async () => {
   check(await page.isEnabled(button('Restart now')), 'and is possible again afterwards');
   await page.click(button('Later'));
 
+  // A Mac copy on the disk image, or anywhere else outside Applications, can't update itself there.
+  await emit('update:changed', { kind: 'move' });
+  await page.waitForSelector(button('Move to Applications'));
+  check((await page.textContent('.update-banner')).includes('Move ViewEditor to Applications'), 'a Mac copy that cannot update where it is asks to be moved to Applications');
+  await shot(page, '34-update-move');
+  await emit('render:progress', { ...render, state: 'rendering' });
+  await sleep(100);
+  check(await page.isDisabled(button('Move to Applications')), 'moving restarts the app, so it waits for an export to finish');
+  await emit('render:progress', { ...render, state: 'cancelled' });
+  await sleep(100);
+  check(await page.isEnabled(button('Move to Applications')), 'and is possible again afterwards');
+  await page.click(button('Not now'));
+  await sleep(100);
+  check(!(await page.$('.update-banner')), 'Not now puts the request away');
+  await emit('update:changed', { kind: 'available', version: '9.9.12' });
+  await page.waitForSelector('.update-banner');
+  check((await page.textContent('.update-banner')).includes('9.9.12 is available'), 'but a new version still shows');
+  await page.click(button('Later'));
+
   // The notice reaches people in the editor too, and restarting from there keeps their work.
   await newProject([media('clip-a.mp4'), media('logo.png')]);
   await emit('update:changed', { kind: 'ready', version: '9.9.11' });
@@ -1382,6 +1401,18 @@ section('update', async () => {
   const after = await page.evaluate((id) => window.api.library.loadProject(id), before.id);
   check(after.items.length === before.items.length - 1, 'Restart now saves the open project first', `${before.items.length} then ${after.items.length}`);
   await page.click(button('Later'));
+
+  // Moving to Applications restarts the app as well.
+  await emit('update:changed', { kind: 'move' });
+  await page.waitForSelector(button('Move to Applications'));
+  const beforeMove = await storedDoc();
+  await page.click('.clip.video');
+  await page.keyboard.press('Delete');
+  await page.click(button('Move to Applications'));
+  await sleep(400);
+  const afterMove = await page.evaluate((id) => window.api.library.loadProject(id), beforeMove.id);
+  check(afterMove.items.length === beforeMove.items.length - 1, 'and so does Move to Applications', `${beforeMove.items.length} then ${afterMove.items.length}`);
+  await page.click(button('Not now'));
   await home();
 });
 

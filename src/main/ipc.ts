@@ -111,8 +111,10 @@ export function registerIpc(s: Services): void {
   register('update', {
     state: () => s.updater.state(),
     install: () => {
-      // The installer starts before the app closes, so it would end an export without the usual warning.
-      if (s.updater.state()?.kind === 'ready' && jobs.current()) throw new Error('Wait for the export to finish first.');
+      // Installing an update and moving the app to Applications both quit it, so they would end an export
+      // without the usual warning.
+      const kind = s.updater.state()?.kind;
+      if ((kind === 'ready' || kind === 'move') && jobs.current()) throw new Error('Wait for the export to finish first.');
       s.updater.install();
     },
   });

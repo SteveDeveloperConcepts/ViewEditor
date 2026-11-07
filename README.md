@@ -11,7 +11,8 @@ is optional and connects to the service of your choice with your own key.
 
 Installers for Windows and macOS are on the
 [Releases](https://github.com/SteveDeveloperConcepts/ViewEditor/releases) page. Once installed, ViewEditor
-looks for new versions itself.
+looks for new versions itself. On a Mac, drag it into Applications before you open it: it can only update
+itself there.
 
 ## Running it
 
@@ -33,7 +34,8 @@ npm run dist:mac
 ```
 
 Installers land in `release/`. Each platform has to be built on that platform, because FFmpeg is
-downloaded per system when you run `npm install`.
+downloaded per system when you run `npm install`. Mac builds made this way have an ad-hoc signature, so they
+run but can't update themselves. Only the Release workflow signs them with the Developer ID.
 
 Every push to `main` runs [.github/workflows/build.yml](.github/workflows/build.yml) on GitHub, which runs
 the tests on Windows and on a real Mac, then builds the Windows, Apple silicon and Intel Mac installers.
@@ -155,8 +157,9 @@ Your library lives in the app data folder (`%APPDATA%\ViewEditor\library` on Win
   npm installs are not redistributable, so Mac builds swap in another build:
   [docs/RELEASING.md](docs/RELEASING.md#ffmpeg) has the details.
 - **Patents.** H.264 and AAC are covered by patent pools, which can matter for commercial distribution.
-- **Signing.** Builds are unsigned, so Windows SmartScreen and macOS Gatekeeper will warn. Removing the
-  warnings needs a code signing certificate and an Apple Developer account.
+- **Signing.** Released Mac apps are signed with a Developer ID and notarised by Apple, from secrets you add
+  once ([docs/RELEASING.md](docs/RELEASING.md#one-time-setup)). The Windows installer is unsigned, so
+  SmartScreen warns the first time it runs. Removing that warning needs a Windows code signing certificate.
 - **Naming.** Do not use VEED's name or logo for this app.
 
 ## Licence

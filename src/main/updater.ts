@@ -1,7 +1,8 @@
 // Finds new versions on GitHub releases. Installed copies learn where to look from `publish` in
-// electron-builder.yml; the address here is only for the release page the macOS notice opens.
+// electron-builder.yml; the address here is only for the release page of a version a copy can't install
+// itself.
 
-import { app, shell } from 'electron';
+import { app, autoUpdater as squirrel, shell } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import { updateMode, type UpdateState } from '../shared/update.ts';
 
@@ -10,18 +11,23 @@ const FIRST_CHECK_MS = 10_000;
 const CHECK_EVERY_MS = 4 * 60 * 60 * 1000;
 
 export interface Updater {
-  /** The newer version found since the app started, or null. */
+  /** What the update notice shows, or null. */
   state(): UpdateState | null;
-  /** `ready`: quit and install it. `available`: open its release page. */
+  /** `ready`: quit and install it. `available`: open its release page. `move`: move the app to Applications, which restarts it. */
   install(): void;
 }
 
 /** Checks GitHub for a newer version shortly after starting, then every few hours. */
 export function setupUpdater(announce: (state: UpdateState) => void): Updater {
-  const mode = updateMode({ packaged: app.isPackaged, platform: process.platform, testing: !!process.env.VIEWEDITOR_DATA_DIR });
+  const mac = process.platform === 'darwin';
+  const inApplications = mac && app.isPackaged && app.isInApplicationsFolder();
+  const mode = updateMode({ packaged: app.isPackaged, platform: process.platform, testing: !!process.env.VIEWEDITOR_DATA_DIR, inApplications });
   if (!mode) return { state: () => null, install: () => undefined };
 
-  let current: UpdateState | null = null;
+  // Until a newer version turns up, a Mac copy that can't update itself asks to be moved to Applications.
+  let current: UpdateState | null = mac && !inApplications ? { kind: 'move' } : null;
+  /** A version Squirrel.Mac wouldn't install, so it isn't offered as ready again. */
+  let refused: string | null = null;
   const found = (state: UpdateState): void => {
     current = state;
     announce(state);
@@ -36,7 +42,20 @@ export function setupUpdater(announce: (state: UpdateState) => void): Updater {
   autoUpdater.on('update-available', (info) => {
     if (mode === 'notify') found({ kind: 'available', version: info.version });
   });
-  autoUpdater.on('update-downloaded', (info) => found({ kind: 'ready', version: info.version }));
+  autoUpdater.on('update-downloaded', (info) => {
+    if (info.version !== refused) found({ kind: 'ready', version: info.version });
+  });
+  if (mac) {
+    // Squirrel.Mac installs Mac updates from the release's zip. It checks that a download is signed with the
+    // same Developer ID as this copy, and that it can replace this copy, only after the download is
+    // announced as ready. When it refuses (a build without the certificate, or a copy in a folder this
+    // account can't change), offer the release page rather than a restart that would change nothing.
+    squirrel.on('error', () => {
+      if (current?.kind !== 'ready') return;
+      refused = current.version;
+      found({ kind: 'available', version: current.version });
+    });
+  }
 
   // A download can outlast the interval, so never start a second one alongside it.
   let checking = false;
@@ -58,9 +77,18 @@ export function setupUpdater(announce: (state: UpdateState) => void): Updater {
   return {
     state: () => current,
     install: () => {
-      // Silent, then start the new version: the installer already knows where the app is installed.
-      if (current?.kind === 'ready') autoUpdater.quitAndInstall(true, true);
-      else if (current?.kind === 'available') void shell.openExternal(`${RELEASES}/tag/v${current.version}`);
+      if (current?.kind === 'ready') {
+        // Silent, then start the new version. The Windows installer already knows where the app is
+        // installed, and on macOS Squirrel.Mac replaces the app where it is.
+        autoUpdater.quitAndInstall(true, true);
+      } else if (current?.kind === 'available') {
+        void shell.openExternal(`${RELEASES}/tag/v${current.version}`);
+      } else if (current?.kind === 'move') {
+        // Copies the app into Applications, replacing an older copy there, then quits and opens the new
+        // copy. It does nothing if the person cancels the password prompt an account without admin rights
+        // gets, and throws if the copy fails.
+        app.moveToApplicationsFolder();
+      }
     },
   };
 }

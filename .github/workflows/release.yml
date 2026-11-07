@@ -1,5 +1,5 @@
-# Push a version tag (for example v0.2.0) to build the Windows and macOS installers and publish them as a
-# GitHub release. See docs/RELEASING.md.
+# Push a version tag (for example v0.2.0) to build the Windows and macOS installers, sign and notarise the
+# Mac apps, and publish them as a GitHub release. `npm run release` does that for you. See docs/RELEASING.md.
 name: Release
 
 on:
@@ -23,9 +23,19 @@ jobs:
             exit 1
           fi
 
+  # The same build as every push to main, except that the Mac apps are signed with the Developer ID and
+  # notarised. See "One-time setup" in docs/RELEASING.md for the secrets.
   build:
     needs: check
     uses: ./.github/workflows/build.yml
+    with:
+      sign: true
+    secrets:
+      MAC_CERTIFICATE: ${{ secrets.MAC_CERTIFICATE }}
+      MAC_CERTIFICATE_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
   release:
     needs: build

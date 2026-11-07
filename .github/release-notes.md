@@ -7,14 +7,14 @@
 | macOS, Apple silicon (M1 and later) | `ViewEditor-<version>-arm64.dmg` |
 | macOS, Intel | `ViewEditor-<version>-x64.dmg` |
 
-Once it's installed, ViewEditor looks for new versions itself. On Windows it downloads them and installs them when you restart it. On a Mac it tells you when there's a new one to download.
+Once it's installed, ViewEditor looks for new versions itself, downloads them, and installs them when you restart it. The `.zip`, `.yml` and `.blockmap` files below are what it updates from.
+
+**On a Mac with ViewEditor 0.2.0 or earlier,** install this version by hand once: open the disk image and drag ViewEditor into Applications, replacing the old copy. Those versions can only tell you a new one is out. From this one on, ViewEditor updates itself. macOS asks again for permission to use the camera, the microphone and screen recording the first time you record.
 
 ### Opening it the first time
 
-These builds aren't signed with a publisher certificate yet, so your system warns you once:
-
-- **Windows:** when SmartScreen says "Windows protected your PC", click **More info** → **Run anyway**.
-- **macOS:** drag ViewEditor into Applications and open it. When macOS says it can't verify the app, click **Done**. Then open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**.
+- **Windows:** the installer isn't signed with a publisher certificate yet, so Windows warns you once. When SmartScreen says "Windows protected your PC", click **More info** → **Run anyway**.
+- **macOS:** open the disk image, drag ViewEditor into Applications, and open it from there. It can only update itself in Applications.
 
 ### FFmpeg
 

@@ -1,7 +1,8 @@
 # Tests ViewEditor and builds its installers for Windows and macOS. It runs on every push to main, and the
 # Release workflow runs it for a version tag, so a release is built exactly the way main is checked.
 # Mac builds can only be made on a Mac, so this is also how a Windows machine gets them: download the
-# files from the run's Artifacts.
+# files from the run's Artifacts. Those Mac apps have an ad-hoc signature (build/adhoc-mac.yml). Only the
+# Release workflow signs them with the Developer ID and has Apple notarise them.
 name: Build
 
 on:
@@ -10,6 +11,23 @@ on:
   pull_request:
   workflow_dispatch:
   workflow_call:
+    inputs:
+      sign:
+        description: Sign the Mac apps with the Developer ID and have Apple notarise them
+        type: boolean
+        default: false
+    # The Release workflow passes these. See "One-time setup" in docs/RELEASING.md.
+    secrets:
+      MAC_CERTIFICATE:
+        required: false
+      MAC_CERTIFICATE_PASSWORD:
+        required: false
+      APPLE_ID:
+        required: false
+      APPLE_APP_SPECIFIC_PASSWORD:
+        required: false
+      APPLE_TEAM_ID:
+        required: false
 
 permissions:
   contents: read
@@ -34,6 +52,25 @@ jobs:
       run:
         shell: bash
     steps:
+      # A release whose Mac apps weren't signed could never update itself on a Mac, so it must not be built.
+      - name: Check the signing secrets
+        if: runner.os == 'macOS' && inputs.sign
+        env:
+          MAC_CERTIFICATE: ${{ secrets.MAC_CERTIFICATE }}
+          MAC_CERTIFICATE_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          missing=0
+          for secret in MAC_CERTIFICATE MAC_CERTIFICATE_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            if [ -z "${!secret}" ]; then
+              echo "::error::The repository secret $secret is missing, so the Mac apps can't be signed and notarised. See 'One-time setup' in docs/RELEASING.md."
+              missing=1
+            fi
+          done
+          [ "$missing" = 0 ] || exit 1
+
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
@@ -57,36 +94,141 @@ jobs:
           npm run test:integration
 
       - name: Build installers
+        if: runner.os != 'macOS' || !inputs.sign
         run: ${{ matrix.dist }} --publish never
 
+      # electron-builder signs with the certificate in CSC_LINK, and notarises when the three APPLE_ variables
+      # are set. scripts/sign-mac.mjs does the signing, as electron-builder.yml says.
+      - name: Build, sign, and notarise the Mac apps
+        if: runner.os == 'macOS' && inputs.sign
+        env:
+          CSC_LINK: ${{ secrets.MAC_CERTIFICATE }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          npm run build
+          npx electron-builder --mac --x64 --arm64 --publish never
+
       - name: Check the app signatures
-        if: runner.os == 'macOS'
+        if: runner.os == 'macOS' && !inputs.sign
         run: |
           for app in release/mac*/*.app; do
             codesign --verify --deep --strict --verbose=2 "$app"
           done
 
+      # Gatekeeper only opens a notarised app, and macOS only installs an update signed like the copy it
+      # replaces. People download the disk images and updates install from the zips, so the app inside each
+      # gets the same checks as the one that was built.
+      - name: Check the Mac apps are signed, notarised, and complete
+        if: runner.os == 'macOS' && inputs.sign
+        run: |
+          check() {
+            echo "Checking $1"
+            # electron-builder doesn't stop when it finds no Developer ID with a custom sign script: it leaves
+            # the app unsigned.
+            signature=$(codesign --display --verbose=2 "$1" 2>&1 || true)
+            if ! grep -q '^Authority=Developer ID Application:' <<<"$signature"; then
+              echo "$signature"
+              echo "::error::$1 isn't signed with a Developer ID. Check that the MAC_CERTIFICATE secret holds a Developer ID Application certificate and its private key. See 'One-time setup' in docs/RELEASING.md."
+              exit 1
+            fi
+            codesign --verify --deep --strict --verbose=2 "$1"
+            spctl --assess --type execute --verbose=2 "$1"
+            xcrun stapler validate "$1"
+          }
+          version=$(node -p "require('./package.json').version")
+          for dir in mac:x64 mac-arm64:arm64; do
+            arch=${dir##*:}
+            check "release/${dir%%:*}/ViewEditor.app"
+
+            # ditto unpacks the zip the way Squirrel.Mac does when it installs an update.
+            unzipped="$RUNNER_TEMP/zip-$arch"
+            ditto -x -k "release/ViewEditor-$version-$arch.zip" "$unzipped"
+            check "$unzipped/ViewEditor.app"
+
+            mounted="$RUNNER_TEMP/dmg-$arch"
+            mkdir -p "$mounted"
+            hdiutil attach -nobrowse -readonly -mountpoint "$mounted" "release/ViewEditor-$version-$arch.dmg"
+            check "$mounted/ViewEditor.app"
+            hdiutil detach "$mounted" || hdiutil detach -force "$mounted"
+          done
+
+      # FFmpeg runs as a program of its own, so it gets its own checks: the build for each processor, one that
+      # may be passed on, signed by scripts/sign-mac.mjs with no entitlements, and working as it ships, under
+      # the hardened runtime in a release.
       - name: Check the FFmpeg inside the Mac apps
         if: runner.os == 'macOS'
+        env:
+          SIGNED: ${{ inputs.sign }}
         run: |
+          # Intel programs need Rosetta on an Apple silicon Mac. Without it, they're checked but not run.
+          if [ "$(uname -m)" = arm64 ] && ! arch -x86_64 /usr/bin/true 2> /dev/null; then
+            sudo softwareupdate --install-rosetta --agree-to-license > /dev/null 2>&1 || true
+          fi
           check() {
             folder="release/$1/ViewEditor.app/Contents/Resources/app.asar.unpacked/node_modules/ffmpeg-ffprobe-static"
             for tool in ffmpeg ffprobe; do
-              if [ "$(lipo -archs "$folder/$tool")" != "$2" ]; then
+              program="$folder/$tool"
+              if [ "$(lipo -archs "$program")" != "$2" ]; then
                 echo "::error::$1/$tool is not a $2 program"
                 exit 1
               fi
-              if grep -aq -- '--enable-nonfree' "$folder/$tool"; then
+              if grep -aq -- '--enable-nonfree' "$program"; then
                 echo "::error::$1/$tool was compiled with --enable-nonfree, so it can't be passed on"
                 exit 1
               fi
+              entitlements=$(codesign --display --entitlements - --xml "$program" 2> /dev/null || true)
+              if [[ $entitlements == *'<key>'* ]]; then
+                echo "::error::$1/$tool was signed with entitlements, which it doesn't need. See scripts/sign-mac.mjs."
+                exit 1
+              fi
+              if [ "$SIGNED" = true ]; then
+                signature=$(codesign --display --verbose=4 "$program" 2>&1 || true)
+                echo "$signature"
+                for line in '^Authority=Developer ID Application:' '^CodeDirectory .*flags=.*runtime' '^Timestamp='; do
+                  if ! grep -q "$line" <<<"$signature"; then
+                    echo "::error::$1/$tool isn't signed with the Developer ID, the hardened runtime and a secure timestamp, so notarisation would refuse it"
+                    exit 1
+                  fi
+                done
+              fi
             done
+            if arch "-$2" /usr/bin/true 2> /dev/null; then
+              video="$RUNNER_TEMP/ffmpeg-$2.mp4"
+              arch "-$2" "$folder/ffmpeg" -hide_banner -v error -y -f lavfi -i testsrc2=s=320x240:r=30:d=1 \
+                -f lavfi -i sine=f=440:d=1 -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest "$video"
+              streams=$(arch "-$2" "$folder/ffprobe" -v error -show_entries stream=codec_name -of csv=p=0 "$video" | tr '\n' ' ')
+              if [ "$streams" != "h264 aac " ]; then
+                echo "::error::$1's FFmpeg didn't make a working video: $streams"
+                exit 1
+              fi
+              echo "$1's FFmpeg and FFprobe run as they ship"
+            else
+              echo "::warning::This Mac can't run $2 programs, so $1's FFmpeg was checked but not run."
+            fi
           }
           check mac x86_64
           check mac-arm64 arm64
 
+      # Installed copies read latest.yml (Windows) or latest-mac.yml to find a new version. Windows installs
+      # from the installer and a Mac from the zip for its processor, and both use the .blockmap files to
+      # download only what changed. Without these, nobody gets this release as an update.
       - name: Check the update files were written
-        run: ls release/latest*.yml
+        run: |
+          ls release/latest*.yml
+          if [ "$RUNNER_OS" = macOS ]; then
+            version=$(node -p "require('./package.json').version")
+            # Macs on 0.2.0 or earlier have an ad-hoc signature and only read the version, to say there's a
+            # new one.
+            grep -Fx "version: $version" release/latest-mac.yml ||
+              { echo "::error::latest-mac.yml doesn't give the version as $version"; exit 1; }
+            for arch in x64 arm64; do
+              grep -F "url: ViewEditor-$version-$arch.zip" release/latest-mac.yml ||
+                { echo "::error::latest-mac.yml doesn't list ViewEditor-$version-$arch.zip, so those Macs couldn't update"; exit 1; }
+            done
+          fi
 
       # Packing swaps FFmpeg for each architecture, and these tests read exports with it.
       - name: Use this Mac's FFmpeg again
@@ -104,6 +246,7 @@ jobs:
           path: |
             release/*.exe
             release/*.dmg
+            release/*.zip
             release/*.blockmap
             release/latest*.yml
           if-no-files-found: error

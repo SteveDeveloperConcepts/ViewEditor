@@ -39,15 +39,25 @@ nsis:
 mac:
   icon: build/icon.png
   category: public.app-category.video
+  # The disk image is what people download. Updates install from the zip.
   target:
     - dmg
+    - zip
+  artifactName: ViewEditor-${version}-${arch}.${ext}
+  # The Release workflow signs the apps with a Developer ID and has Apple notarise them (docs/RELEASING.md).
+  # electron-builder notarises when APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD and APPLE_TEAM_ID are set.
+  # Builds without the certificate use build/adhoc-mac.yml.
   hardenedRuntime: true
+  # Gatekeeper only accepts the apps once they're notarised, which comes after signing. The Release
+  # workflow checks them then.
   gatekeeperAssess: false
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
+  # Signs the apps as electron-builder would, except that FFmpeg gets build/entitlements.ffmpeg.plist,
+  # which allows nothing. The script explains why.
+  sign: scripts/sign-mac.mjs
   extendInfo:
     NSCameraUsageDescription: ViewEditor uses the camera when you record yourself.
     NSMicrophoneUsageDescription: ViewEditor uses the microphone when you record a voice-over or a video.
 dmg:
   sign: false
-  artifactName: ViewEditor-${version}-${arch}.${ext}

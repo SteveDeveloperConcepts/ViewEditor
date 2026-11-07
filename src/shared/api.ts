@@ -168,9 +168,12 @@ export interface Api {
     stop(): Promise<void>;
   };
   update: {
-    /** The newer version found since the app started, or null. */
+    /** What the update notice shows, or null. */
     state(): Promise<UpdateState | null>;
-    /** Restarts into a downloaded version, or opens the release page of one that has to be fetched by hand. */
+    /**
+     * Restarts into a downloaded version, opens the release page of one that has to be fetched by hand, or
+     * moves a Mac copy to Applications, which restarts it.
+     */
     install(): Promise<void>;
   };
   /** Resolves a dropped File to its path on disk (empty string when it has none). */

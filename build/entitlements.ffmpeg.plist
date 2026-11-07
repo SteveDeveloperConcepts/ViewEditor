@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <!--
+      FFmpeg and FFprobe need no entitlements under the hardened runtime. They are static builds that load
+      only Apple's libraries, never generate code at run time, and never open the camera or microphone:
+      the recorder captures in the window, and FFmpeg only reads and writes files. scripts/sign-mac.mjs
+      signs them with this file instead of build/entitlements.mac.plist.
+    -->
+  </dict>
+</plist>
