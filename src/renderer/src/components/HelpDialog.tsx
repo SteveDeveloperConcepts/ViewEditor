@@ -12,6 +12,7 @@ import { startBlankProject } from '@/lib/projects';
 import { openStartDialog } from '@/lib/startDialog';
 import { openSettings, openShortcuts } from '@/pages/SettingsDialog';
 import { openRecorder } from '@/recorder/openRecorder';
+import { openFreeClips } from '@/store/clips';
 import { addText, redo, selectedItems, setPanel, splitAtPlayhead, undo, useEditor } from '@/store/editor';
 import { navigate, showModal, toast, useUi } from '@/store/ui';
 import { Modal } from './Modal';
@@ -34,6 +35,7 @@ function actions(): Action[] {
     { label: 'Record', words: 'screen camera webcam capture', run: () => void openRecorder(projectId ? { projectId, addToTimeline: true } : {}) },
     { label: 'Go to Projects', words: 'library folders trash all videos', run: () => void navigate({ page: 'library', view: { kind: 'all' } }) },
     { label: 'Go to Media', words: 'files assets library clips audio pictures', run: () => void navigate({ page: 'assets' }) },
+    { label: 'Find free clips', words: 'stock video footage b-roll search browse download pexels pixabay', run: openFreeClips },
     { label: 'Go to Templates', words: 'layouts reuse', run: () => void navigate({ page: 'templates' }) },
     { label: 'Go to Brand', words: 'logo colours fonts kit', run: () => void navigate({ page: 'brand' }) },
     { label: 'AI connections', words: 'keys api fal runway replicate claude accounts', run: () => void openConnections() },
@@ -103,6 +105,16 @@ const TOPICS: { title: string; words: string; steps: string[] }[] = [
     title: 'Use something in another project',
     words: 'reuse media library recording',
     steps: ['Everything you add, record or generate is kept in Media.', 'In a project, find it under Media or Audio in the editor. From Media in the left menu, click it and choose Use in, or Start a project.'],
+  },
+  {
+    title: 'Add free video clips',
+    words: 'stock footage b-roll search pexels pixabay download',
+    steps: [
+      'Open Media in the editor, and choose Free clips.',
+      'The first time, get a free key from Pexels or Pixabay and paste it in.',
+      'Search for what you need, and click a clip to watch it.',
+      'Press Add to timeline. The clip is kept in Media too, ready for other projects.',
+    ],
   },
   {
     title: 'Change the shape of a video',

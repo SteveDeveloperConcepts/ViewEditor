@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { app, BrowserWindow, dialog, globalShortcut, Menu, nativeTheme, safeStorage, session, shell, type MenuItemConstructorOptions } from 'electron';
 import type { AiModel } from '../shared/ai.ts';
 import type { ApiEvents } from '../shared/api.ts';
+import type { ClipServiceId } from '../shared/clips.ts';
 import { APP_NAME } from '../shared/constants.ts';
 import { ScriptWriter } from './ai.ts';
 import { AiCatalog } from './ai/catalog.ts';
@@ -14,6 +15,9 @@ import { runway } from './ai/runway.ts';
 import falSnapshot from './ai/snapshot-fal.json';
 import runwaySnapshot from './ai/snapshot-runway.json';
 import { AssetManager } from './assets.ts';
+import { FreeClips } from './clips/freeClips.ts';
+import { pexels } from './clips/pexels.ts';
+import { pixabay } from './clips/pixabay.ts';
 import { registerIpc } from './ipc.ts';
 import { LibraryStore } from './library.ts';
 import { handleMediaProtocol, registerMediaScheme } from './mediaProtocol.ts';
@@ -188,14 +192,20 @@ async function start(): Promise<void> {
 
   const userData = app.getPath('userData');
   const aiProviders = [fal, runway, replicate];
-  const aiKeys = new KeyStore(join(userData, 'ai-keys.json'), {
+  const cipher = {
     available: () => safeStorage.isEncryptionAvailable(),
-    encrypt: (text) => safeStorage.encryptString(text),
-    decrypt: (data) => safeStorage.decryptString(data),
-  });
+    encrypt: (text: string) => safeStorage.encryptString(text),
+    decrypt: (data: Buffer) => safeStorage.decryptString(data),
+  };
+  const aiKeys = new KeyStore(join(userData, 'ai-keys.json'), cipher);
   await aiKeys.load();
   const aiCatalog = new AiCatalog(userData, aiProviders, aiKeys, { fal: falSnapshot as AiModel[], runway: runwaySnapshot as AiModel[] });
   const aiJobs = new AiJobs({ lib, assets, keys: aiKeys, catalog: aiCatalog, providers: aiProviders, pollMs: Number(process.env.VIEWEDITOR_AI_POLL_MS) || undefined });
+
+  const clipKeys = new KeyStore<ClipServiceId>(join(userData, 'clip-keys.json'), cipher);
+  await clipKeys.load();
+  const clips = new FreeClips({ lib, assets, keys: clipKeys, services: [pexels, pixabay], searchDir: join(userData, 'clip-searches'), onProgress: (p) => send('clips:progress', p) });
+  void clips.tidySearches();
 
   if (lib.data.settings.hasApiKey !== writer.hasKey()) lib.updateSettings({ hasApiKey: writer.hasKey() });
   nativeTheme.themeSource = lib.data.settings.theme;
@@ -214,7 +224,7 @@ async function start(): Promise<void> {
   lib.on('error', (err) => console.error('Could not save the library:', err));
   assets.onImportProgress = (p) => send('assets:importing', p);
 
-  handleMediaProtocol(lib);
+  handleMediaProtocol(lib, (key, what) => clips.address(key, what));
   recorder.install();
 
   // Camera, microphone and screen capture are used by the recorder; nothing else is granted.
@@ -223,7 +233,7 @@ async function start(): Promise<void> {
   session.defaultSession.setPermissionCheckHandler((_wc, permission) => allowed.has(permission));
 
   registerIpc({
-    lib, assets, jobs, recorder, writer, phone, aiProviders, aiKeys, aiCatalog, aiJobs,
+    lib, assets, jobs, recorder, writer, phone, aiProviders, aiKeys, aiCatalog, aiJobs, clips,
     updater: setupUpdater((state) => send('update:changed', state)),
     window: () => mainWindow,
     readyToClose: () => {
@@ -267,6 +277,7 @@ async function start(): Promise<void> {
     event.preventDefault();
     jobs.shutdown();
     aiJobs.shutdown();
+    clips.shutdown();
     globalShortcut.unregisterAll();
     void Promise.allSettled([lib.flush(), phone.stop()]).then(() => {
       flushed = true;

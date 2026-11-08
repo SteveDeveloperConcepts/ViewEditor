@@ -7,7 +7,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
-import { FakeProviders, KEYS } from '../support/fakeProviders.mts';
+import { CLIP_KEYS, CLIPS_IN_LIBRARY, FakeProviders, KEYS } from '../support/fakeProviders.mts';
 import { MOD, check, cleanup, clips, launch, media, newDataDir, shot, stubOpenDialog, stubSaveDialog, summary } from './lib.mjs';
 
 const require = createRequire(import.meta.url);
@@ -1941,9 +1941,203 @@ section('topic', async () => {
   }
 });
 
+section('clips', async () => {
+  // A separate run of the app, pointed at the stand-in for the stock video libraries.
+  const fake = await new FakeProviders().start();
+  const second = newDataDir();
+  const inst = await launch(second, { VIEWEDITOR_AI_HOSTS: fake.hosts });
+  const p = inst.page;
+  const wait = (ms) => p.waitForTimeout(ms);
+  const stock = async () => (await p.evaluate(() => window.api.library.get())).assets.filter((a) => a.source === 'stock');
+  const tile = (key) => `[data-free-clip="${key}"]`;
+  const tiles = () => p.$$eval('[data-free-clip]', (e) => e.length);
+
+  try {
+    await p.click('.sidebar .nav-item:has-text("Edit my footage")');
+    await p.waitForSelector('.modal');
+    await p.click('.modal button:has-text("Start with an empty project")');
+    await p.waitForSelector('.editor .tl-add-media');
+
+    // Not connected yet
+    check(await p.isVisible('.panel .segmented button:has-text("Your media")'), 'Media has a side for your own media');
+    await p.click('.panel .segmented button:has-text("Free clips")');
+    await p.waitForSelector('[data-clip-service="pexels"]');
+    check(await p.isVisible('[data-clip-service="pixabay"]'), 'Free clips offers both libraries');
+    check(await p.isVisible('[data-clip-service="pexels"] a:has-text("Get a free key")'), 'with a way to get a free key');
+    check((await p.getAttribute('[data-clip-service="pexels"] a:has-text("Get a free key")', 'href')) === 'https://www.pexels.com/api/', 'that goes to the right page');
+    check(!fake.calls.some((c) => c.path.startsWith('/pexels') || c.path.startsWith('/pixabay')), 'nothing is sent to a service before it is connected');
+    await shot(p, '50-free-clips-connect');
+
+    // Connecting
+    await p.fill('[aria-label="Pexels API key"]', 'wrong-key');
+    await p.click('[data-clip-service="pexels"] button:has-text("Connect")');
+    await p.waitForSelector('[data-clip-service="pexels"] .notice.error');
+    check((await p.textContent('[data-clip-service="pexels"] .notice.error')).includes('did not accept'), 'a bad key is refused with a clear message');
+    check(!existsSync(join(second, 'clip-keys.json')), 'and is not stored');
+    await p.fill('[aria-label="Pexels API key"]', CLIP_KEYS.pexels);
+    await p.click('[data-clip-service="pexels"] button:has-text("Connect")');
+    await p.waitForSelector('[data-free-clip]');
+    check(await p.isVisible('.free-clips h3:has-text("Popular")'), 'connecting shows what is popular straight away');
+    check((await tiles()) === 20, 'a page of clips is shown');
+    check(fake.callsTo('/v1/videos/popular').filter((c) => c.path.includes('per_page=20')).length === 1, 'connecting asks the service once, since a free key has a limit');
+    check(!readFileSync(join(second, 'clip-keys.json'), 'utf8').includes(CLIP_KEYS.pexels), 'the key is stored encrypted');
+    check((await p.getAttribute('.clip-sources a:has-text("Pexels")', 'href')) === 'https://www.pexels.com', 'the panel links to the library, as its terms ask');
+    check((await p.textContent(`${tile('pexels:1')} .clip-by`)).includes('Ruvim Miksanskiy'), 'each clip names who made it');
+    const picture = await p.$eval(`${tile('pexels:1')} img`, (img) => new Promise((resolve) => (img.complete ? resolve(img.naturalWidth) : (img.onload = () => resolve(img.naturalWidth)))));
+    check(picture > 0, 'the picture of a clip loads');
+    await shot(p, '51-free-clips');
+
+    // Searching
+    await p.fill('[aria-label="Search free clips"]', 'beach');
+    await p.keyboard.press('Enter');
+    await p.waitForSelector('.free-clips h3:has-text("Results for “beach”")');
+    check(fake.callsTo('query=beach').length === 1, 'pressing Enter searches for what was typed');
+    await p.click('.free-clips .segmented button:has-text("Tall")');
+    await p.waitForSelector(tile('pexels:1'));
+    await wait(150);
+    check(fake.callsTo('orientation=portrait').length === 1, 'choosing a shape searches for that shape');
+    await p.click('.free-clips .segmented button:has-text("Any")');
+    await wait(150);
+    check(fake.callsTo('query=beach').filter((c) => !c.path.includes('orientation')).length === 1, 'going back to a search does not ask the service twice');
+    await p.fill('[aria-label="Search free clips"]', 'sunset');
+    await p.click('.free-clips .segmented button:has-text("Wide")');
+    await p.waitForSelector('.free-clips h3:has-text("Results for “sunset”")');
+    check(fake.callsTo('query=sunset').length === 1, 'choosing a shape searches for what is in the box, even before pressing Enter');
+    await p.click('.free-clips .segmented button:has-text("Any")');
+    await p.fill('[aria-label="Search free clips"]', 'beach');
+    await p.keyboard.press('Enter');
+    await p.waitForSelector('.free-clips h3:has-text("Results for “beach”")');
+
+    // More results, up to the end of them
+    await p.click('.free-clips button:has-text("Show more")');
+    await p.waitForFunction((n) => document.querySelectorAll('[data-free-clip]').length === n, CLIPS_IN_LIBRARY);
+    check(!(await p.isVisible('.free-clips button:has-text("Show more")')), 'Show more goes once there is nothing more');
+
+    // Results stay while looking at something else
+    await p.click('.rail-item:has-text("Text")');
+    await p.click('.rail-item:has-text("Media")');
+    await p.waitForSelector('[data-free-clip]');
+    check((await p.inputValue('[aria-label="Search free clips"]')) === 'beach' && (await tiles()) === CLIPS_IN_LIBRARY, 'the search is still there after looking at another panel');
+
+    // Watching a clip
+    await p.click(`${tile('pexels:1')} .asset-tile-picture`);
+    await p.waitForSelector('.modal video');
+    await p.waitForFunction(() => document.querySelector('.modal video')?.videoWidth > 0, null, { timeout: 8000 });
+    check(fake.callsTo('clip-1-sd.mp4').length > 0, 'a clip plays from a small copy');
+    check(!(await p.$eval('.modal video', (v) => v.autoplay)), 'and only starts when asked');
+    const credit = await p.textContent('.modal-body');
+    check(credit.includes('Video by Ruvim Miksanskiy on Pexels'), 'the preview credits who made it');
+    check(credit.includes('commercial work'), 'and says what it may be used for');
+    check((await p.getAttribute('.modal-body a:has-text("Read the licence")', 'href')) === 'https://www.pexels.com/license/', 'with the licence a click away');
+    check(fake.callsTo('clip-1-hd.mp4').length === 0, 'nothing is fetched just by watching');
+    await shot(p, '52-free-clip-preview');
+
+    // Adding one
+    await p.click('.modal-foot button:has-text("Add to timeline")');
+    await p.waitForFunction(() => document.querySelectorAll('.clip').length === 1, null, { timeout: 15000 });
+    check(fake.callsTo('clip-1-hd.mp4').length === 1 && fake.callsTo('clip-1-4k.mp4').length === 0, 'the size that fits the project is fetched');
+    const [added] = await stock();
+    check(added?.name === 'Waves on a beach.mp4', 'the clip is in Media under its own name');
+    check(added?.credit?.creator === 'Ruvim Miksanskiy' && added?.credit?.pageUrl.includes('pexels.com'), 'with its credit kept');
+    await p.waitForSelector(`${tile('pexels:1')} .clip-kept`);
+    check(true, 'the clip is marked as being in Media');
+
+    // Adding it again uses what is already there
+    await p.click(`${tile('pexels:1')} .clip-add`);
+    await p.waitForFunction(() => document.querySelectorAll('.clip').length === 2, null, { timeout: 8000 });
+    check(fake.callsTo('clip-1-hd.mp4').length === 1 && (await stock()).length === 1, 'adding a clip twice fetches it once');
+
+    // Stopping a download
+    fake.holdClipFiles = true;
+    await p.click(`${tile('pexels:2')} .clip-add`);
+    await p.waitForSelector(`${tile('pexels:2')} .clip-dl`);
+    await shot(p, '53-free-clip-downloading');
+    await p.click(`${tile('pexels:2')} .clip-dl .icon-btn`);
+    await p.waitForSelector(`${tile('pexels:2')} .clip-add`);
+    fake.releaseClipFiles();
+    await wait(200);
+    check((await stock()).length === 1 && (await clips(p)).length === 2, 'stopping a download adds nothing');
+
+    // A service having a bad moment
+    fake.refuseClips = 429;
+    await p.fill('[aria-label="Search free clips"]', 'waves');
+    await p.keyboard.press('Enter');
+    await p.waitForSelector('.free-clips .notice.error');
+    check((await p.textContent('.free-clips .notice.error')).includes('Too many requests'), 'a refused search says why');
+    fake.refuseClips = null;
+    await p.click('.free-clips .notice.error button:has-text("Try again")');
+    await p.waitForSelector('.free-clips h3:has-text("Results for “waves”")');
+    check(!(await p.isVisible('.free-clips .notice.error')), 'and can be tried again');
+    await p.fill('[aria-label="Search free clips"]', 'nothing like this');
+    await p.keyboard.press('Enter');
+    await p.waitForSelector('.free-clips .panel-note:has-text("No clips match")');
+    check(true, 'a search that finds nothing says so');
+
+    // A second library, from Manage
+    await p.click('.clip-sources button:has-text("Manage")');
+    await p.waitForSelector('.modal [data-clip-service="pixabay"]');
+    check(await p.isVisible('.modal [data-clip-service="pexels"] .badge:has-text("Connected")'), 'Manage shows what is connected');
+    await p.fill('.modal [aria-label="Pixabay API key"]', CLIP_KEYS.pixabay);
+    await p.click('.modal [data-clip-service="pixabay"] button:has-text("Connect")');
+    await p.waitForSelector('.modal [data-clip-service="pixabay"] .badge:has-text("Connected")');
+    await p.click('.modal-foot button:has-text("Done")');
+    await p.fill('[aria-label="Search free clips"]', 'flowers');
+    await p.click('.clip-find button:has-text("Search")');
+    await p.waitForSelector(tile('pixabay:1001'));
+    check(await p.isVisible(tile('pexels:1')), 'results from both libraries are shown together');
+    check((await p.textContent('.clip-sources')).includes('Pexels and Pixabay'), 'and both are named');
+
+    // The Media page has the same thing, without a timeline
+    await p.click('[aria-label="Back to Projects"]');
+    await p.click('.sidebar .nav-item:has-text("Media")');
+    await p.waitForSelector('.free-clips.wide [data-free-clip]');
+    check(await p.isVisible('.page-head .segmented button:has-text("Free clips")'), 'the Media page has Free clips too');
+    await shot(p, '54-free-clips-page');
+    await p.click(`${tile('pixabay:1001')} .clip-add`);
+    await p.waitForSelector(`${tile('pixabay:1001')} .clip-kept`, { timeout: 15000 });
+    check(fake.callsTo('clip-1001-medium.mp4').length === 1, 'adding from the Media page fetches the Full HD file');
+    check((await stock()).length === 2, 'the clip is in Media');
+    check(!(await p.$(`${tile('pixabay:1001')} .clip-add`)), 'and there is nothing more to add');
+    await p.click('.toast button:has-text("Use it")');
+    await p.waitForSelector('.modal video');
+    check((await p.textContent('.modal-body')).includes('Coverr-Free-Footage'), 'a free clip in Media still shows who made it');
+    check(await p.isVisible('.modal-foot button:has-text("Start a project")'), 'and can start a project');
+    await p.click('.modal [aria-label="Close"]');
+
+    await p.click('.page-head .segmented button:has-text("Your media")');
+    await p.waitForSelector('.asset-card');
+    check((await p.$$('.asset-card')).length === 2, 'free clips sit with everything else in Media');
+
+    // Finding it from How do I…
+    await p.keyboard.press(`${MOD}+k`);
+    await p.fill('[aria-label="Search for something to do"]', 'stock footage');
+    await p.click('.help-action:has-text("Find free clips")');
+    await p.waitForSelector('.free-clips.wide');
+    check(true, 'How do I… finds free clips by the words people use');
+
+    // Disconnecting
+    await p.click('.clip-sources button:has-text("Manage")');
+    await p.click('.modal [data-clip-service="pexels"] button:has-text("Disconnect")');
+    await p.click('.modal [data-clip-service="pixabay"] button:has-text("Disconnect")');
+    await p.waitForSelector('.modal [aria-label="Pixabay API key"]');
+    await p.click('.modal-foot button:has-text("Done")');
+    await p.waitForSelector('.free-clips [data-clip-service="pexels"]');
+    check(!(await p.$('[data-free-clip]')), 'with nothing connected the results go, and the way to connect is back');
+    check((await stock()).length === 2, 'clips already in Media stay');
+  } catch (err) {
+    await shot(p, 'fail-clips-run').catch(() => undefined);
+    throw err;
+  } finally {
+    allErrors.push(...inst.errors);
+    await inst.app.close().catch(() => undefined);
+    await fake.close();
+    cleanup(second);
+  }
+});
+
 // ---------------------------------------------------------------- run
 
-const order = ['start', 'timeline', 'review', 'text', 'export', 'formats', 'library', 'persistence', 'phone', 'recorder', 'script', 'brand', 'tools', 'rotation', 'themes', 'update', 'topic', 'ai'];
+const order = ['start', 'timeline', 'review', 'text', 'export', 'formats', 'library', 'persistence', 'phone', 'recorder', 'script', 'brand', 'tools', 'rotation', 'themes', 'update', 'topic', 'ai', 'clips'];
 for (const name of order) {
   if (only.length && !only.includes(name)) continue;
   console.log(`\n== ${name}`);

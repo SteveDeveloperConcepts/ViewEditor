@@ -21,6 +21,11 @@ export function exportUrl(meta: ProjectMeta): string | null {
   return meta.lastExport ? `media://export/${meta.id}/${meta.lastExport.file}` : null;
 }
 
+/** A clip from a search. The page cannot reach the services itself, so these come through the main process too. */
+export function clipUrl(key: string, what: 'picture' | 'preview'): string {
+  return `media://clip/${encodeURIComponent(key)}/${what}`;
+}
+
 export function brandFontUrl(kitId: string, file: string): string {
   return `media://brand/${kitId}/${file}`;
 }

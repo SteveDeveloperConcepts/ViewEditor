@@ -6,12 +6,15 @@ import { Ellipsis, FolderUp, Image as ImageIcon, Music, Search, Upload, Video, W
 import { formatBytes, formatClock } from '@shared/time';
 import type { Asset, AssetKind } from '@shared/types';
 import { JobList } from '@/ai/JobList';
+import { FreeClips } from '@/clips/FreeClips';
 import { openContextMenu, openMenuAt } from '@/components/Menu';
 import { Button, EmptyState, IconButton, ProgressBar, Segmented } from '@/components/ui';
 import { api, errorMessage } from '@/lib/api';
 import { assetUrl } from '@/lib/media';
 import { mediaMenu, openPreview } from '@/lib/mediaActions';
 import { droppedPaths, hasFiles, reportRejected, SUPPORTED_SUMMARY } from '@/editor/importing';
+import { MediaTabs } from '@/editor/panels/MediaPanel';
+import { useClips } from '@/store/clips';
 import { useLibrary } from '@/store/library';
 import { navigate, toast } from '@/store/ui';
 
@@ -54,6 +57,7 @@ function AssetCard({ asset }: { asset: Asset }): ReactNode {
 export function AssetsPage(): ReactNode {
   const assets = useLibrary((s) => s.lib?.assets);
   const importing = useLibrary((s) => s.importing);
+  const free = useClips((s) => s.tab === 'free');
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
   const [over, setOver] = useState(false);
@@ -93,28 +97,33 @@ export function AssetsPage(): ReactNode {
     >
       <header className="page-head">
         <h1>Media</h1>
+        <MediaTabs />
         <div className="grow" />
-        <div className="search-box">
-          <Search size={14} />
-          <input className="input" placeholder="Search media" aria-label="Search media" value={query} onChange={(e) => setQuery(e.target.value)} />
-        </div>
-        <Segmented<Filter>
-          label="Filter media"
-          value={filter}
-          options={[
-            { value: 'all', label: 'All' },
-            { value: 'video', label: 'Video' },
-            { value: 'audio', label: 'Audio' },
-            { value: 'image', label: 'Images' },
-          ]}
-          onChange={setFilter}
-        />
-        <Button icon={<Wand2 size={15} />} onClick={() => void navigate({ page: 'create-asset' })}>
-          Make a background
-        </Button>
-        <Button variant="primary" icon={<Upload size={15} />} onClick={() => void upload()}>
-          Add files
-        </Button>
+        {!free && (
+          <>
+            <div className="search-box">
+              <Search size={14} />
+              <input className="input" placeholder="Search media" aria-label="Search media" value={query} onChange={(e) => setQuery(e.target.value)} />
+            </div>
+            <Segmented<Filter>
+              label="Filter media"
+              value={filter}
+              options={[
+                { value: 'all', label: 'All' },
+                { value: 'video', label: 'Video' },
+                { value: 'audio', label: 'Audio' },
+                { value: 'image', label: 'Images' },
+              ]}
+              onChange={setFilter}
+            />
+            <Button icon={<Wand2 size={15} />} onClick={() => void navigate({ page: 'create-asset' })}>
+              Make a background
+            </Button>
+            <Button variant="primary" icon={<Upload size={15} />} onClick={() => void upload()}>
+              Add files
+            </Button>
+          </>
+        )}
       </header>
       <JobList projectId={null} />
       {importing && (
@@ -125,7 +134,9 @@ export function AssetsPage(): ReactNode {
           <ProgressBar value={(importing.done + 0.5) / importing.total} />
         </div>
       )}
-      {list.length ? (
+      {free ? (
+        <FreeClips wide />
+      ) : list.length ? (
         <div className="project-grid">
           {list.map((a) => (
             <AssetCard key={a.id} asset={a} />
@@ -133,7 +144,7 @@ export function AssetsPage(): ReactNode {
         </div>
       ) : (
         <EmptyState icon={<FolderUp size={22} />} title={query ? 'Nothing matches that search' : filter === 'all' ? 'No media yet' : 'Nothing here yet'}>
-          <p>Everything you add, record or generate is kept here, ready for any project. Drag files onto this page or use Add files.</p>
+          <p>Everything you add, record or generate is kept here, ready for any project. Drag files onto this page, use Add files, or look in Free clips.</p>
           <p className="faint">{SUPPORTED_SUMMARY}</p>
         </EmptyState>
       )}

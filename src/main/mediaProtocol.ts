@@ -1,13 +1,18 @@
 // media:// — how the renderer reads files from the library. The renderer never gets raw file
 // access: it can only name a library object (an asset, a project thumbnail, an export, a brand font)
-// and this handler maps that to a file inside the library folder.
+// and this handler maps that to a file inside the library folder. Free clips come through here too,
+// so the page can show them while its security policy still keeps it from reaching outside the app.
 
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import { Readable } from 'node:stream';
 import { protocol } from 'electron';
+import { resolveUrl } from './ai/http.ts';
 import type { LibraryStore } from './library.ts';
+
+/** Where the still or the small copy of a clip from a search is. Null for anything a search has not shown. */
+export type ClipAddress = (key: string, what: string) => string | null;
 
 const MIME: Record<string, string> = {
   '.mp4': 'video/mp4', '.m4v': 'video/mp4', '.mov': 'video/quicktime', '.webm': 'video/webm', '.mkv': 'video/x-matroska',
@@ -96,11 +101,29 @@ async function serve(request: Request, file: string): Promise<Response> {
   return new Response(body, { status: 200, headers: { ...headers, 'Content-Length': String(size) } });
 }
 
+/** Passes a clip on from the service that has it. Byte ranges go through, so a clip can be scrubbed while watching it. */
+async function relay(request: Request, address: string): Promise<Response> {
+  const range = request.headers.get('range');
+  const answer = await fetch(resolveUrl(address), { headers: range ? { Range: range } : {}, signal: request.signal });
+  const headers = new Headers({ 'Access-Control-Allow-Origin': '*' });
+  for (const name of ['content-type', 'content-length', 'content-range', 'accept-ranges']) {
+    const value = answer.headers.get(name);
+    if (value) headers.set(name, value);
+  }
+  return new Response(answer.body, { status: answer.status, headers });
+}
+
 /** Must run after the app is ready. */
-export function handleMediaProtocol(lib: LibraryStore): void {
+export function handleMediaProtocol(lib: LibraryStore, clipAddress: ClipAddress): void {
   protocol.handle('media', async (request) => {
     try {
-      const file = resolve(lib, new URL(request.url));
+      const url = new URL(request.url);
+      if (url.hostname === 'clip') {
+        const [key, what] = url.pathname.split('/').filter(Boolean);
+        const address = key && what ? clipAddress(decodeURIComponent(key), what) : null;
+        return address ? await relay(request, address) : new Response('Not found', { status: 404 });
+      }
+      const file = resolve(lib, url);
       return file ? await serve(request, file) : new Response('Not found', { status: 404 });
     } catch {
       return new Response('Error', { status: 500 });

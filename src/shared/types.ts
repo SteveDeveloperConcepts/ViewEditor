@@ -8,13 +8,24 @@ export type ID = string;
 // ---------------------------------------------------------------- assets
 
 export type AssetKind = 'video' | 'audio' | 'image';
-export type AssetSource = 'upload' | 'recording' | 'voiceover' | 'generated' | 'phone' | 'ai' | 'extracted';
+export type AssetSource = 'upload' | 'recording' | 'voiceover' | 'generated' | 'phone' | 'ai' | 'extracted' | 'stock';
 
 /** Where AI-generated media came from. */
 export interface AssetOrigin {
   provider: string;
   model: string;
   prompt: string;
+}
+
+/** Where a free clip came from, so the person who made it can be credited and its licence found again. */
+export interface AssetCredit {
+  /** Which clip this is, across services: 'pexels:1448735'. */
+  key: string;
+  service: string;
+  creator: string;
+  creatorUrl: string | null;
+  pageUrl: string;
+  licenseUrl: string;
 }
 
 /** Colour matrix of the source pixels, resolved at import so export never has to guess. */
@@ -30,6 +41,7 @@ export interface Asset {
   createdAt: number;
   source: AssetSource;
   origin?: AssetOrigin | null;
+  credit?: AssetCredit | null;
   /** The video this sound was taken from. */
   extractedFrom?: ID | null;
   /** Everything in Media is 'workspace'. 'project' is left over from when media belonged to one project. */

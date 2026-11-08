@@ -4,7 +4,7 @@ import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path';
 import { app, dialog, ipcMain, shell, type BrowserWindow, type OpenDialogOptions, type SaveDialogOptions } from 'electron';
 import { API_METHODS, type Api, type AppInfo, type ImportTarget, type PickKind } from '../shared/api.ts';
-import { ALL_MEDIA_EXTS, APP_NAME, AUDIO_EXTS, FONT_EXTS, IMAGE_EXTS, VIDEO_EXTS, extOf } from '../shared/constants.ts';
+import { ALL_MEDIA_EXTS, APP_NAME, AUDIO_EXTS, FONT_EXTS, IMAGE_EXTS, VIDEO_EXTS, extOf, safeFileName } from '../shared/constants.ts';
 import type { AiProviderStatus } from '../shared/ai.ts';
 import { newId } from '../shared/time.ts';
 import type { ScriptWriter } from './ai.ts';
@@ -13,6 +13,7 @@ import type { AiJobs } from './ai/jobs.ts';
 import type { KeyStore } from './ai/keys.ts';
 import type { AiProvider } from './ai/provider.ts';
 import type { AssetManager, ImportOptions } from './assets.ts';
+import type { FreeClips } from './clips/freeClips.ts';
 import type { LibraryStore } from './library.ts';
 import type { PhoneUpload } from './phone.ts';
 import { STOP_SHORTCUT, type Recorder } from './recorder.ts';
@@ -31,6 +32,7 @@ export interface Services {
   aiKeys: KeyStore;
   aiCatalog: AiCatalog;
   aiJobs: AiJobs;
+  clips: FreeClips;
   updater: Updater;
   window: () => BrowserWindow | null;
   /** The renderer has saved its work; the window may go. */
@@ -48,12 +50,6 @@ function register<N extends Namespace>(ns: N, impl: Impl<N>): void {
     const fn = impl[name] as unknown as (...args: unknown[]) => unknown;
     ipcMain.handle(`${ns}:${String(name)}`, (_event, ...args: unknown[]) => fn(...args));
   }
-}
-
-/** Makes a string safe to use as a file name on Windows and macOS. */
-function safeFileName(name: string): string {
-  const s = name.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_').replace(/[. ]+$/, '').trim().slice(0, 120);
-  return s || 'video';
 }
 
 async function folderSize(dir: string): Promise<number> {
@@ -310,6 +306,15 @@ export function registerIpc(s: Services): void {
     cancel: (jobId) => s.aiJobs.cancel(jobId),
     dismiss: (jobId) => s.aiJobs.dismiss(jobId),
     markApplied: (jobId) => s.aiJobs.markApplied(jobId),
+  });
+
+  register('clips', {
+    services: () => s.clips.services(),
+    connect: (id, key) => s.clips.connect(id, key),
+    disconnect: (id) => s.clips.disconnect(id),
+    search: (input) => s.clips.search(input),
+    add: (request) => s.clips.add(request),
+    cancel: (key) => s.clips.cancel(key),
   });
 
   register('phone', {

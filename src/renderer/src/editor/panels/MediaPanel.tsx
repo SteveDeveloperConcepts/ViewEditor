@@ -5,10 +5,12 @@ import { useMemo, useState } from 'react';
 import { AudioLines, CircleAlert, Image as ImageIcon, Mic, Music, Plus, Search, Smartphone, Speech, Upload, Video } from 'lucide-react';
 import { formatClock } from '@shared/time';
 import type { Asset, ID } from '@shared/types';
+import { FreeClips } from '@/clips/FreeClips';
 import { openContextMenu, openMenuAt, type MenuEntry } from '@/components/Menu';
-import { Button, Spinner } from '@/components/ui';
+import { Button, Segmented, Spinner } from '@/components/ui';
 import { assetUrl } from '@/lib/media';
 import { mediaMenu } from '@/lib/mediaActions';
+import { setMediaTab, useClips, type MediaTab } from '@/store/clips';
 import { addAsset, selectedItems, useEditor } from '@/store/editor';
 import { useLibrary } from '@/store/library';
 import { toast } from '@/store/ui';
@@ -90,7 +92,38 @@ function extractEntries(assets: Asset[], projectId: ID): MenuEntry[] {
   ];
 }
 
+/** Media has two sides: what you have, and free clips you can get. */
+export function MediaTabs({ fill }: { fill?: boolean }): ReactNode {
+  const tab = useClips((s) => s.tab);
+  return (
+    <Segmented<MediaTab>
+      fill={fill}
+      label="Your media or free clips"
+      value={tab}
+      options={[
+        { value: 'mine', label: 'Your media' },
+        { value: 'free', label: 'Free clips' },
+      ]}
+      onChange={setMediaTab}
+    />
+  );
+}
+
 export function MediaPanel({ kind, projectId }: { kind: 'media' | 'audio'; projectId: ID }): ReactNode {
+  const tab = useClips((s) => s.tab);
+  if (kind === 'media' && tab === 'free') {
+    return (
+      <div className="panel-body">
+        <h2 className="panel-title">Media</h2>
+        <MediaTabs fill />
+        <FreeClips />
+      </div>
+    );
+  }
+  return <YourMedia kind={kind} projectId={projectId} />;
+}
+
+function YourMedia({ kind, projectId }: { kind: 'media' | 'audio'; projectId: ID }): ReactNode {
   const assets = useLibrary((s) => s.lib?.assets);
   const items = useEditor((s) => s.doc?.items);
   const title = kind === 'audio' ? 'Audio' : 'Media';
@@ -112,6 +145,7 @@ export function MediaPanel({ kind, projectId }: { kind: 'media' | 'audio'; proje
   return (
     <div className="panel-body">
       <h2 className="panel-title">{title}</h2>
+      {kind === 'media' && <MediaTabs fill />}
       <div
         className={`dropzone compact${over ? ' over' : ''}`}
         role="button"

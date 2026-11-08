@@ -60,8 +60,8 @@ against the real FFmpeg, checking actual pixels and audio levels in exported fil
 drives the built app with real clicks and drags. Set `VIEWEDITOR_E2E_EXE` to run it against a packaged
 build. Screenshots are saved in `tests/e2e/.artifacts`.
 
-AI tests run against `tests/support/fakeProviders.mts`, a local stand-in that speaks each service's protocol
-and serves their real published schemas, so they cost nothing and need no keys.
+AI and free clip tests run against `tests/support/fakeProviders.mts`, a local stand-in that speaks each service's
+protocol and serves their real published schemas, so they cost nothing and need no keys.
 
 ## What the documentation covers, and where it is here
 
@@ -80,6 +80,25 @@ and serves their real published schemas, so they cost nothing and need no keys.
 | **Download:** MP4, MP3, GIF from the video page | All there. The Export dialog can also make any of the three directly, for the whole project, the selected clips or a stretch of time. |
 | **Recorder:** screen, camera or both | All there, plus audio only. System audio can be recorded on Windows. |
 | **Brand Kits:** logos, colours, fonts | All there. |
+
+## Free clips
+
+Search free stock video without leaving the app, under **Free clips** in Media, in the editor or on the Media page.
+Connect [Pexels](https://www.pexels.com/api/) or [Pixabay](https://pixabay.com/api/docs/#api_search_videos) with a
+free key, which is encrypted by your operating system. Each person uses their own key, because a key built into the
+app could be copied out of it, and everyone would share one limit.
+
+- **Adding a clip.** Click a clip to watch it, then add it to the timeline or to Media. It downloads at the size
+  that fits your project, and stays in Media for other projects, with who made it and a link to its licence.
+- **Limits.** A free Pexels key allows 200 requests an hour and 20,000 a month. A free Pixabay key allows 100 a
+  minute. Searches are kept for 24 hours, as Pixabay requires, so repeating one uses none of them.
+- **Licences.** Clips from both are free to use, including in commercial work, and no credit is needed. There are
+  limits, such as not selling a clip on its own. Read the [Pexels licence](https://www.pexels.com/license/) and the
+  [Pixabay licence](https://pixabay.com/service/license-summary/).
+- **Privacy.** What you search for goes to the services you connect. Pictures and previews come through the main
+  process, so the interface itself still cannot reach outside the app.
+
+To add a library, implement the small `ClipService` interface in `src/main/clips/service.ts`.
 
 ## AI video
 
@@ -129,7 +148,7 @@ To add a service, implement the small `AiProvider` interface in `src/main/ai/pro
 ### Left out
 
 - AI dubbing, AI clips and voice cloning.
-- Stock video, music and images, which need a licensed library.
+- Stock music and images. Stock video is under [Free clips](#free-clips).
 - Accounts, teams, collaborators, comments, credits and billing, which only make sense for a hosted service.
 - Interface languages other than English.
 
@@ -140,6 +159,7 @@ To add a service, implement the small `AiProvider` interface in `src/main/ai/pro
 | `src/shared` | Pure logic used everywhere: the data model, timeline operations, and the plan that turns a project into FFmpeg commands. |
 | `src/main` | Electron main process: library storage, media import, render jobs, recorder, voices, phone upload. |
 | `src/main/ai` | AI service connections, the model catalogue, and generation jobs. |
+| `src/main/clips` | Stock video libraries: searching them, and downloading a clip into Media. |
 | `src/preload` | The only bridge between the page and the system, limited to the calls in `src/shared/api.ts`. |
 | `src/renderer` | The React interface. |
 
@@ -161,6 +181,8 @@ Your library lives in the app data folder (`%APPDATA%\ViewEditor\library` on Win
   once ([docs/RELEASING.md](docs/RELEASING.md#one-time-setup)). The Windows installer is unsigned, so
   SmartScreen warns the first time it runs. Removing that warning needs a Windows code signing certificate.
 - **Naming.** Do not use VEED's name or logo for this app.
+- **Free clips.** Pexels' API terms say an app may not copy its core functionality, and do not mention video
+  editors, so ask Pexels to confirm this use before giving the app to many people.
 
 ## Licence
 
