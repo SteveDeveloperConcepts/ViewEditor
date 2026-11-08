@@ -2,6 +2,7 @@
 // object of this shape as `window.api`; every method is an IPC round trip.
 
 import type { AiJob, AiModel, AiProviderId, AiProviderStatus, AiRequest, AiTask, TimedText } from './ai.ts';
+import type { ClipProgress, ClipRequest, ClipResults, ClipSearch, ClipServiceId, ClipServiceStatus } from './clips.ts';
 import type { ExportFormat, OutputSpec, TimeWindow } from './render.ts';
 import type {
   AppSettings,
@@ -163,6 +164,17 @@ export interface Api {
     dismiss(jobId: ID): Promise<void>;
     markApplied(jobId: ID): Promise<void>;
   };
+  clips: {
+    /** The stock video libraries and whether each is connected. */
+    services(): Promise<ClipServiceStatus[]>;
+    /** Tests a key against the service and stores it if it works. */
+    connect(id: ClipServiceId, key: string): Promise<ClipServiceStatus>;
+    disconnect(id: ClipServiceId): Promise<void>;
+    search(input: ClipSearch): Promise<ClipResults>;
+    /** The clip in Media, downloading it first if it is not there. Null when the download was cancelled. */
+    add(request: ClipRequest): Promise<Asset | null>;
+    cancel(key: string): Promise<void>;
+  };
   phone: {
     start(target: ImportTarget): Promise<PhoneSession>;
     stop(): Promise<void>;
@@ -187,6 +199,7 @@ export interface ApiEvents {
   'menu:action': 'undo' | 'redo' | 'selectAll';
   'app:closing': null;
   'update:changed': UpdateState;
+  'clips:progress': ClipProgress;
 }
 
 type Namespace = Exclude<keyof Api, 'on' | 'pathForFile'>;
@@ -206,10 +219,11 @@ export const API_METHODS: { [N in Namespace]: (keyof Api[N])[] } = {
   recorder: ['sources', 'prepare', 'begin', 'chunk', 'finish', 'discard', 'setActive'],
   voice: ['list', 'speak'],
   ai: ['setKey', 'writeScript', 'writeScenePrompts', 'providers', 'connect', 'disconnect', 'models', 'price', 'generate', 'transcribe', 'cancel', 'dismiss', 'markApplied'],
+  clips: ['services', 'connect', 'disconnect', 'search', 'add', 'cancel'],
   phone: ['start', 'stop'],
   update: ['state', 'install'],
 };
 
 export const API_EVENTS: (keyof ApiEvents)[] = [
-  'library:changed', 'render:progress', 'assets:importing', 'recorder:stop', 'phone:received', 'menu:action', 'app:closing', 'update:changed',
+  'library:changed', 'render:progress', 'assets:importing', 'recorder:stop', 'phone:received', 'menu:action', 'app:closing', 'update:changed', 'clips:progress',
 ];

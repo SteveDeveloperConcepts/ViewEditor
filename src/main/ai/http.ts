@@ -107,9 +107,18 @@ export async function call<T = unknown>(url: string, service: string, opts: Call
 }
 
 /** Saves a remote file. Returns the type the server says it is. */
-export async function download(url: string, file: string, service: string, signal?: AbortSignal): Promise<string> {
+export async function download(url: string, file: string, service: string, signal?: AbortSignal, onProgress?: (done: number, total: number | null) => void): Promise<string> {
   const res = await send(url, service, { signal, timeoutMs: 10 * 60_000 });
   if (!res.ok || !res.body) throw failure(res.status, service, null);
-  await pipeline(Readable.fromWeb(res.body as never), createWriteStream(file), { signal });
+  const total = Number(res.headers.get('content-length')) || null;
+  let done = 0;
+  async function* counted(chunks: AsyncIterable<Buffer>): AsyncGenerator<Buffer> {
+    for await (const chunk of chunks) {
+      done += chunk.length;
+      onProgress?.(done, total);
+      yield chunk;
+    }
+  }
+  await pipeline(Readable.fromWeb(res.body as never), counted, createWriteStream(file), { signal });
   return res.headers.get('content-type') ?? '';
 }

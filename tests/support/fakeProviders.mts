@@ -1,6 +1,6 @@
-// A local stand-in for fal.ai, Runway and Replicate. It speaks each service's real protocol and serves
-// their real published schemas (saved in tests/fixtures/ai), so the app can be tested end to end without
-// spending anything. It records every request, so tests can check exactly what the app sent.
+// A local stand-in for fal.ai, Runway, Replicate, Pexels and Pixabay. It speaks each service's real protocol
+// and serves their real published schemas (saved in tests/fixtures/ai), so the app can be tested end to end
+// without spending anything. It records every request, so tests can check exactly what the app sent.
 
 import { readFileSync } from 'node:fs';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
@@ -11,6 +11,11 @@ const here = dirname(fileURLToPath(import.meta.url));
 const fixtures = join(here, '..', 'fixtures');
 
 export const KEYS = { fal: 'fal-good-key', runway: 'runway-good-key', replicate: 'replicate-good-key' };
+
+export const CLIP_KEYS = { pexels: 'pexels-good-key', pixabay: 'pixabay-good-key' };
+
+/** How many clips each stand-in library holds, so paging has an end to reach. */
+export const CLIPS_IN_LIBRARY = 25;
 
 export interface FakeCall {
   method: string;
@@ -29,6 +34,9 @@ interface Task {
   /** The job writes down speech, so its result is text, not a file. */
   speech?: boolean;
 }
+
+/** How much of a held clip file arrives before it stops. */
+const HELD_BYTES = 1000;
 
 const REPLICATE_MODELS = [
   {
@@ -100,7 +108,16 @@ export class FakeProviders {
   failJobsWith: string | null = null;
   /** The next submission is refused with this status. */
   refuseSubmit: number | null = null;
+  /** Searches of the clip libraries are refused with this status while it is set. */
+  refuseClips: number | null = null;
+  /** Only Pixabay refuses, to test one library failing while the other answers. */
+  refusePixabayOnly = false;
+  /** Clip files stop part of the way through until released, so a download can be watched or stopped. */
+  holdClipFiles = false;
+  /** Clip files have gone from the service. */
+  clipFilesGone = false;
 
+  private readonly held: ServerResponse[] = [];
   private server!: Server;
   private readonly tasks = new Map<string, Task>();
   private nextId = 1;
@@ -123,7 +140,15 @@ export class FakeProviders {
       'https://api.dev.runwayml.com': `${this.base}/runway`,
       'https://docs.dev.runwayml.com': `${this.base}/runway-docs`,
       'https://api.replicate.com/v1': `${this.base}/replicate/v1`,
+      'https://api.pexels.com': `${this.base}/pexels`,
+      'https://pixabay.com/api': `${this.base}/pixabay-api`,
     });
+  }
+
+  /** Lets clip files that were held back finish. */
+  releaseClipFiles(): void {
+    this.holdClipFiles = false;
+    for (const res of this.held.splice(0)) res.end(this.video.subarray(HELD_BYTES));
   }
 
   async start(): Promise<this> {
@@ -179,9 +204,19 @@ export class FakeProviders {
     const p = url.pathname;
     if (p.startsWith('/files/')) {
       const image = p.endsWith('.png');
-      res.writeHead(200, { 'Content-Type': image ? 'image/png' : 'video/mp4' });
-      res.end(image ? this.picture : this.video);
-    } else if (p.startsWith('/fal-')) this.fal(req, res, url, body, raw);
+      if (p.includes('/clip-') && this.clipFilesGone) {
+        res.writeHead(404).end();
+      } else if (p.includes('/clip-') && this.holdClipFiles) {
+        res.writeHead(200, { 'Content-Type': 'video/mp4', 'Content-Length': String(this.video.length) });
+        res.write(this.video.subarray(0, HELD_BYTES));
+        this.held.push(res);
+      } else {
+        res.writeHead(200, { 'Content-Type': image ? 'image/png' : 'video/mp4', 'Content-Length': String((image ? this.picture : this.video).length) });
+        res.end(image ? this.picture : this.video);
+      }
+    } else if (p.startsWith('/pexels/')) this.pexels(req, res, url);
+    else if (p.startsWith('/pixabay-api/')) this.pixabay(res, url);
+    else if (p.startsWith('/fal-')) this.fal(req, res, url, body, raw);
     else if (p.startsWith('/runway-docs/')) {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(this.runwaySpec);
@@ -191,6 +226,78 @@ export class FakeProviders {
     } else if (p.startsWith('/runway/')) this.runway(req, res, p, body);
     else if (p.startsWith('/replicate/')) this.replicate(req, res, p, body, raw);
     else res.writeHead(404).end();
+  }
+
+  // ---- Pexels and Pixabay, shaped like the examples in their documentation
+
+  /** Which clips of the library a page holds. */
+  private pageOfClips(url: URL, defaultSize: number): { ids: number[]; page: number; perPage: number; total: number } {
+    const page = Number(url.searchParams.get('page') ?? 1);
+    const perPage = Number(url.searchParams.get('per_page') ?? defaultSize);
+    const empty = /nothing/.test(url.searchParams.get('query') ?? url.searchParams.get('q') ?? '');
+    const total = empty ? 0 : CLIPS_IN_LIBRARY;
+    const from = (page - 1) * perPage;
+    return { ids: Array.from({ length: Math.max(0, Math.min(perPage, total - from)) }, (_, i) => from + i + 1), page, perPage, total };
+  }
+
+  private pexelsVideo(id: number, tall: boolean): unknown {
+    const [w, h] = tall ? [2160, 3840] : [3840, 2160];
+    const file = (n: number, quality: string, width: number | null, height: number | null, name: string): unknown => ({ id: n, quality, file_type: 'video/mp4', width, height, link: `${this.base}/files/clip-${id}-${name}` });
+    return {
+      id, width: w, height: h, url: `https://www.pexels.com/video/waves-on-a-beach-${id}/`,
+      image: `${this.base}/files/still-${id}.png`, duration: 8,
+      user: { id: 574687, name: 'Ruvim Miksanskiy', url: 'https://www.pexels.com/@digitech' },
+      video_files: [
+        file(1, 'sd', Math.round(w / 6), Math.round(h / 6), 'sd.mp4'),
+        file(2, 'hd', w / 2, h / 2, 'hd.mp4'),
+        file(3, 'hd', w, h, '4k.mp4'),
+        // The documentation's example lists its stream as an mp4, with no size.
+        file(4, 'hls', null, null, 'stream.m3u8'),
+      ],
+      video_pictures: [{ id: 1, picture: `${this.base}/files/still-${id}.png`, nr: 0 }],
+    };
+  }
+
+  private pexels(req: IncomingMessage, res: ServerResponse, url: URL): void {
+    // Both refusals are copied from what the real services answered to a wrong key.
+    if (req.headers.authorization !== CLIP_KEYS.pexels) return this.json(res, 401, { status: 401, code: 'Unauthorized', message: 'Invalid API key' });
+    if (this.refuseClips && !this.refusePixabayOnly) return this.json(res, this.refuseClips, { error: 'Too many requests' });
+    const popular = url.pathname.endsWith('/v1/videos/popular');
+    if (!popular && !url.pathname.endsWith('/v1/videos/search')) return void res.writeHead(404).end();
+    const { ids, page, perPage, total } = this.pageOfClips(url, 15);
+    const asked = url.searchParams.get('orientation');
+    const videos = ids.map((id) => this.pexelsVideo(id, asked === 'portrait' || (popular && id % 5 === 0)));
+    this.json(res, 200, { page, per_page: perPage, total_results: total, url: 'https://www.pexels.com/videos/', videos });
+  }
+
+  private pixabay(res: ServerResponse, url: URL): void {
+    if (url.pathname !== '/pixabay-api/videos/') return void res.writeHead(404).end();
+    if (url.searchParams.get('key') !== CLIP_KEYS.pixabay) {
+      res.writeHead(400, { 'Content-Type': 'text/plain' });
+      return void res.end('[ERROR 400] Invalid or missing API key (https://pixabay.com/api/docs/).');
+    }
+    if (this.refuseClips) {
+      res.writeHead(this.refuseClips, { 'Content-Type': 'text/plain' });
+      return void res.end('API rate limit exceeded');
+    }
+    const { ids, total } = this.pageOfClips(url, 20);
+    const file = (id: number, width: number, height: number, name: string): unknown => ({ url: `${this.base}/files/clip-${id}-${name}.mp4`, width, height, size: 1000, thumbnail: `${this.base}/files/still-${id}-${name}.png` });
+    const hits = ids.map((n) => {
+      const id = 1000 + n;
+      return {
+        id, pageURL: `https://pixabay.com/videos/id-${id}/`, type: 'film', tags: 'flowers, yellow, blossom', duration: 12,
+        videos: {
+          // "If a large video version is not available, an empty URL value and a size of zero is returned."
+          large: { url: '', width: 0, height: 0, size: 0, thumbnail: '' },
+          medium: file(id, 1920, 1080, 'medium'),
+          small: file(id, 1280, 720, 'small'),
+          tiny: file(id, 960, 540, 'tiny'),
+        },
+        views: 4462, downloads: 1464, likes: 18, comments: 0, user_id: 1281706, user: 'Coverr-Free-Footage',
+        userImageURL: 'https://cdn.pixabay.com/user/2015/10/16/09-28-45-303_250x250.png',
+      };
+    });
+    this.json(res, 200, { total, totalHits: total, hits });
   }
 
   // ---- fal.ai

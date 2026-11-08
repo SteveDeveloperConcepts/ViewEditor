@@ -7,7 +7,7 @@ import { basename, join } from 'node:path';
 import { ALL_MEDIA_EXTS, extOf, fileTitle } from '../shared/constants.ts';
 import { HDR_TO_SDR } from '../shared/render.ts';
 import { newId } from '../shared/time.ts';
-import type { Asset, AssetOrigin, AssetSource, ID, ImportResult } from '../shared/types.ts';
+import type { Asset, AssetCredit, AssetOrigin, AssetSource, ID, ImportResult } from '../shared/types.ts';
 import { ffmpegCaps, runFfmpeg } from './ffmpeg.ts';
 import type { LibraryStore } from './library.ts';
 import { probeMedia, type ProbeInfo } from './probe.ts';
@@ -22,6 +22,8 @@ export interface ImportOptions {
   names?: string[];
   /** For AI-generated media: where it came from. */
   origin?: AssetOrigin;
+  /** For free clips: who made it and where it came from. */
+  credit?: AssetCredit;
   /** For sound taken out of a video: which video. */
   extractedFrom?: ID;
 }
@@ -204,7 +206,7 @@ export class AssetManager {
       const rule = previewRule(info, ext);
       const asset: Asset = {
         id, kind: info.kind, name, ext, size: st.size, createdAt: Date.now(),
-        source: opts.source ?? 'upload', origin: opts.origin ?? null, extractedFrom: opts.extractedFrom ?? null, scope: opts.scope, projectId: opts.scope === 'project' ? (opts.projectId ?? null) : null,
+        source: opts.source ?? 'upload', origin: opts.origin ?? null, credit: opts.credit ?? null, extractedFrom: opts.extractedFrom ?? null, scope: opts.scope, projectId: opts.scope === 'project' ? (opts.projectId ?? null) : null,
         duration: info.duration, width: info.width, height: info.height, fps: info.fps,
         hasAudio: info.hasAudio, audioChannels: info.audioChannels, hasAlpha: info.hasAlpha, isHdr: info.isHdr,
         videoCodec: info.videoCodec, audioCodec: info.audioCodec, colorMatrix: info.colorMatrix,

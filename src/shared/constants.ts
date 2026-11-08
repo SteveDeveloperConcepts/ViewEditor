@@ -20,6 +20,12 @@ export function fileTitle(name: string): string {
   return name.replace(/\.[^.]+$/, '') || name;
 }
 
+/** Makes a string safe to use as a file name on Windows and macOS. */
+export function safeFileName(name: string): string {
+  const s = name.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_').replace(/[. ]+$/, '').trim().slice(0, 120);
+  return s || 'video';
+}
+
 // ---------------------------------------------------------------- limits
 
 export const TRASH_RETENTION_DAYS = 30;
