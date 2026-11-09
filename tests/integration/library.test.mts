@@ -1,7 +1,7 @@
 // The storage layer against a real folder on disk and the real ffmpeg binaries.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { TRASH_RETENTION_MS } from '../../src/shared/constants.ts';
 import { makeImageItem, makeVideoItem } from '../../src/shared/timeline.ts';
@@ -153,6 +153,26 @@ test('projects: create, save, rename, duplicate, move, trash, restore, delete', 
   const again = await open(root);
   assert.deepEqual(again.lib.data.projects.map((p) => p.name), ['Untitled video 2']);
   assert.equal(again.lib.data.spaces.length, 1);
+});
+
+test('adopts a project file left without an index entry, but only one named after a project ID', async () => {
+  const { lib, root } = await open();
+  const project = await lib.createProject();
+  const doc = await lib.loadProject(project.id);
+  await lib.flush();
+  // A project file whose index entry was lost, say in a crash, comes back on the next start…
+  writeFileSync(lib.paths.projectFile('prj_0123456789abcdef'), JSON.stringify({ ...doc, id: 'prj_0123456789abcdef', name: 'Recovered' }));
+  // …but one named `...json` doesn't: its ID would be '..', and its exports folder the library itself.
+  writeFileSync(join(lib.paths.projectsDir, '...json'), JSON.stringify({ ...doc, id: '..', name: 'Odd' }));
+
+  const again = await open(root);
+  assert.deepEqual(again.lib.data.projects.map((p) => p.name).sort(), ['Recovered', 'Untitled video']);
+
+  // And one that got into the index some other way can't take the library with it when it is deleted.
+  again.lib.data.projects.push({ ...again.lib.project(project.id), id: '..' });
+  await again.lib.deleteProjectsForever(['..']);
+  assert.ok(existsSync(again.lib.paths.projectFile(project.id)), 'the rest of the library is still there');
+  assert.ok(again.lib.project(project.id));
 });
 
 test('templates and brand kits', async () => {

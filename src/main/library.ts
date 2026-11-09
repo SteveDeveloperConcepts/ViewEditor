@@ -25,6 +25,9 @@ import type {
 } from '../shared/types.ts';
 import { Paths } from './paths.ts';
 
+/** The IDs newId('prj') makes. A project file named anything else isn't one of ours. */
+const PROJECT_ID = /^prj_[0-9a-f]{16}$/;
+
 async function writeAtomic(file: string, text: string | Uint8Array): Promise<void> {
   const tmp = `${file}.${process.pid}.tmp`;
   await writeFile(tmp, text);
@@ -120,7 +123,9 @@ export class LibraryStore extends EventEmitter {
     this.data.projects = this.data.projects.filter((m) => onDisk.has(m.id));
     const known = new Set(this.data.projects.map((m) => m.id));
     for (const id of onDisk) {
-      if (known.has(id)) continue;
+      // Only files named after a project ID. One named `...json` would have the ID '..', whose exports
+      // folder is the library itself, which deleting the project would remove.
+      if (known.has(id) || !PROJECT_ID.test(id)) continue;
       try {
         const doc = JSON.parse(await readFile(this.paths.projectFile(id), 'utf8')) as ProjectDoc;
         if (doc?.id !== id || !Array.isArray(doc.items)) continue;
@@ -289,7 +294,8 @@ export class LibraryStore extends EventEmitter {
     for (const m of doomed) {
       await rm(this.paths.projectFile(m.id), { force: true });
       await rm(this.paths.projectThumb(m.id), { force: true });
-      await rm(this.paths.projectExports(m.id), { recursive: true, force: true });
+      // Its exports folder is named after its ID, so only a real project ID can be trusted to stay inside exports.
+      if (PROJECT_ID.test(m.id)) await rm(this.paths.projectExports(m.id), { recursive: true, force: true });
     }
     await this.collectGarbage();
     this.changed();
