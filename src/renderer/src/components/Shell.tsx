@@ -30,7 +30,7 @@ function NavItem({ icon, label, note, page, onClick }: { icon: ReactNode; label:
 
 export function Sidebar(): ReactNode {
   const projects = useLibrary((s) => s.lib?.projects);
-  const hasClaude = useLibrary((s) => s.lib?.settings.hasApiKey ?? false);
+  const hasClaude = useLibrary((s) => !!(s.lib?.settings.hasApiKey || s.lib?.settings.claudeCode));
   const services = useAi((s) => s.providers.filter((p) => p.connected).length);
   const connected = services + (hasClaude ? 1 : 0);
   const recents = useMemo(

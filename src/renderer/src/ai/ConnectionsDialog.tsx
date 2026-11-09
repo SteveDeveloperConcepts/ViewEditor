@@ -91,10 +91,15 @@ function ProviderCard({ provider }: { provider: AiProviderStatus }): ReactNode {
   );
 }
 
-/** Claude writes scripts rather than video, but it is one more AI account, so its key lives here with the others. */
+/**
+ * Claude writes scripts rather than video, but it is one more AI account, so it is set up here with the
+ * others: with an API key, or through Claude Code with the user's own Claude plan.
+ */
 function ClaudeCard(): ReactNode {
   const hasKey = useLibrary((s) => s.lib?.settings.hasApiKey ?? false);
+  const usesPlan = useLibrary((s) => s.lib?.settings.claudeCode ?? false);
   const [key, setKey] = useState('');
+  const [checking, setChecking] = useState(false);
   const [error, setError] = useState('');
 
   const save = async (value: string | null): Promise<void> => {
@@ -107,49 +112,74 @@ function ClaudeCard(): ReactNode {
     }
   };
 
+  /** Turning the plan on first checks that Claude Code is installed and signed in. */
+  const usePlan = async (on: boolean): Promise<void> => {
+    setError('');
+    setChecking(on);
+    try {
+      await api.ai.useClaudeCode(on);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const connected = hasKey || usesPlan;
   return (
     <section className="provider-card" data-provider="claude">
       <div className="row">
         <h3 className="grow provider-name">Claude</h3>
-        {hasKey && (
+        {connected && (
           <span className="badge success">
             <KeyRound size={11} /> Connected
           </span>
         )}
       </div>
       <p>Writes a script for you from a topic, in Video from a script. It does not make video, and everything else works without it.</p>
-      {hasKey ? (
+      {connected ? (
         <div className="row">
+          <span className="muted">{usesPlan ? 'Through Claude Code, with your Claude plan' : 'With an API key'}</span>
           <span className="grow" />
-          <Button size="small" onClick={() => void save(null)}>
+          <Button size="small" onClick={() => void (usesPlan ? usePlan(false) : save(null))}>
             Disconnect
           </Button>
         </div>
       ) : (
-        <div className="row">
-          <input
-            className="input"
-            type="password"
-            autoComplete="off"
-            spellCheck={false}
-            aria-label="Anthropic API key"
-            placeholder="API key"
-            value={key}
-            onChange={(e) => setKey(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && key.trim()) {
-                e.preventDefault();
-                void save(key);
-              }
-            }}
-          />
-          <Button variant="primary" disabled={!key.trim()} onClick={() => void save(key)}>
-            Connect
-          </Button>
-          <a className="btn ghost" href="https://platform.claude.com/settings/keys" target="_blank" rel="noreferrer">
-            Get a key <ExternalLink size={13} />
-          </a>
-        </div>
+        <>
+          <div className="row">
+            <input
+              className="input"
+              type="password"
+              autoComplete="off"
+              spellCheck={false}
+              aria-label="Anthropic API key"
+              placeholder="API key"
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && key.trim()) {
+                  e.preventDefault();
+                  void save(key);
+                }
+              }}
+            />
+            <Button variant="primary" disabled={!key.trim()} onClick={() => void save(key)}>
+              Connect
+            </Button>
+            <a className="btn ghost" href="https://platform.claude.com/settings/keys" target="_blank" rel="noreferrer">
+              Get a key <ExternalLink size={13} />
+            </a>
+          </div>
+          <div className="row">
+            <span className="grow muted">
+              Have a Claude subscription? Use it instead of a key, through Claude Code installed and signed in on this computer.
+            </span>
+            <Button disabled={checking} icon={checking ? <Spinner /> : undefined} onClick={() => void usePlan(true)}>
+              Use my Claude plan
+            </Button>
+          </div>
+        </>
       )}
       {error && (
         <Notice kind="error" icon={<CircleAlert size={15} />}>

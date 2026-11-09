@@ -174,6 +174,8 @@ export interface AppSettings {
   theme: ThemeSetting;
   /** Whether an Anthropic API key is stored (the key itself never leaves the main process). */
   hasApiKey: boolean;
+  /** Whether scripts are written with Claude Code and the user's Claude plan instead of an API key. Set by the main process only. */
+  claudeCode: boolean;
   lastSpaceId: ID | null;
 }
 

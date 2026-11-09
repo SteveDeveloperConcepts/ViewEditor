@@ -146,6 +146,8 @@ export interface Api {
   };
   ai: {
     setKey(key: string | null): Promise<void>;
+    /** Writes scripts with Claude Code and the user's Claude plan instead of an API key. Turning it on checks that Claude Code is installed and signed in first. */
+    useClaudeCode(on: boolean): Promise<void>;
     writeScript(input: { topic: string; targetSeconds: number; brief?: ScriptBrief }): Promise<string>;
     /** Visual prompts for script scenes. Null when Claude is not set up or the attempt did not work. */
     writeScenePrompts(input: { scenes: string[]; topic: string }): Promise<string[] | null>;
@@ -221,7 +223,7 @@ export const API_METHODS: { [N in Namespace]: (keyof Api[N])[] } = {
   render: ['begin', 'putOverlay', 'run', 'cancel', 'current', 'download', 'revealExport', 'addToMedia'],
   recorder: ['sources', 'prepare', 'begin', 'chunk', 'finish', 'discard', 'setActive'],
   voice: ['list', 'speak'],
-  ai: ['setKey', 'writeScript', 'writeScenePrompts', 'providers', 'connect', 'disconnect', 'models', 'price', 'generate', 'transcribe', 'cancel', 'dismiss', 'markApplied'],
+  ai: ['setKey', 'useClaudeCode', 'writeScript', 'writeScenePrompts', 'providers', 'connect', 'disconnect', 'models', 'price', 'generate', 'transcribe', 'cancel', 'dismiss', 'markApplied'],
   clips: ['services', 'connect', 'disconnect', 'search', 'add', 'cancel'],
   phone: ['start', 'stop'],
   update: ['state', 'install'],

@@ -8,6 +8,7 @@ import { ALL_MEDIA_EXTS, APP_NAME, AUDIO_EXTS, FONT_EXTS, IMAGE_EXTS, VIDEO_EXTS
 import type { AiProviderStatus } from '../shared/ai.ts';
 import { newId } from '../shared/time.ts';
 import type { ScriptWriter } from './ai.ts';
+import { checkClaudeCode } from './claude-code.ts';
 import type { AiCatalog } from './ai/catalog.ts';
 import type { AiJobs } from './ai/jobs.ts';
 import type { KeyStore } from './ai/keys.ts';
@@ -146,8 +147,8 @@ export function registerIpc(s: Services): void {
     },
     removeBrandFont: (kitId, fontId) => lib.removeBrandFont(kitId, fontId),
     updateSettings: (patch) => {
-      // Whether a key is stored is decided here, never by the renderer.
-      const { hasApiKey: _ignored, ...rest } = patch ?? {};
+      // Whether a key is stored, or Claude Code is used, is decided here, never by the renderer.
+      const { hasApiKey: _key, claudeCode: _claudeCode, ...rest } = patch ?? {};
       lib.updateSettings(rest);
     },
   });
@@ -267,8 +268,12 @@ export function registerIpc(s: Services): void {
       await writer.setKey(key);
       lib.updateSettings({ hasApiKey: writer.hasKey() });
     },
+    useClaudeCode: async (on) => {
+      if (on) await checkClaudeCode();
+      lib.updateSettings({ claudeCode: !!on });
+    },
     writeScript: ({ topic, targetSeconds, brief }) => writer.writeScript(String(topic ?? ''), Number(targetSeconds), brief),
-    writeScenePrompts: ({ scenes, topic }) => (writer.hasKey() ? writer.writeScenePrompts(scenes, topic) : null),
+    writeScenePrompts: ({ scenes, topic }) => (writer.ready() ? writer.writeScenePrompts(scenes, topic) : null),
     providers: async (check) => {
       const status = async (p: AiProvider): Promise<AiProviderStatus> => {
         const key = s.aiKeys.get(p.id);

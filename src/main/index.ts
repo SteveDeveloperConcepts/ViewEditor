@@ -187,7 +187,7 @@ async function start(): Promise<void> {
   const assets = new AssetManager(lib);
   const jobs = new RenderJobs(lib, (p) => send('render:progress', p));
   const recorder = new Recorder(lib, assets, () => mainWindow);
-  const writer = new ScriptWriter(join(app.getPath('userData'), 'anthropic.key'));
+  const writer = new ScriptWriter(join(app.getPath('userData'), 'anthropic.key'), () => lib.data.settings.claudeCode);
   const phone = new PhoneUpload(lib, assets, (r) => send('phone:received', r));
 
   const userData = app.getPath('userData');

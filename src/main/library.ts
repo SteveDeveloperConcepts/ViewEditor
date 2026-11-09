@@ -41,7 +41,7 @@ function defaultLibrary(): Library {
     templates: [],
     assets: [],
     brandKits: [],
-    settings: { workspaceName: 'My Workspace', profileName: '', theme: 'system', hasApiKey: false, lastSpaceId: null },
+    settings: { workspaceName: 'My Workspace', profileName: '', theme: 'system', hasApiKey: false, claudeCode: false, lastSpaceId: null },
   };
 }
 
@@ -491,6 +491,7 @@ export class LibraryStore extends EventEmitter {
     if (patch.profileName !== undefined) s.profileName = patch.profileName.trim().slice(0, 80);
     if (patch.theme === 'system' || patch.theme === 'light' || patch.theme === 'dark') s.theme = patch.theme;
     if (patch.hasApiKey !== undefined) s.hasApiKey = patch.hasApiKey;
+    if (patch.claudeCode !== undefined) s.claudeCode = patch.claudeCode;
     if (patch.lastSpaceId !== undefined) s.lastSpaceId = patch.lastSpaceId;
     this.changed();
   }

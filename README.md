@@ -142,8 +142,17 @@ To add a service, implement the small `AiProvider` interface in `src/main/ai/pro
 
 - **Voices come from your operating system.** Script videos are narrated on your computer, with subtitles
   timed to the voice.
-- **Drafting a script from a topic uses the Claude API** with your own key, added under AI connections and
-  encrypted by your operating system. Pasting your own script needs no key.
+- **Drafting a script from a topic uses Claude**, set up under AI connections in one of two ways. With your
+  own Claude API key, encrypted by your operating system. Or with your Claude subscription: **Use my Claude
+  plan** runs [Claude Code](https://code.claude.com/docs/en/setup), installed and signed in on your computer,
+  so scripts count toward your plan's usage limits instead of being billed per use. The app never sees your
+  Claude sign-in, gives Claude Code no tools, MCP servers or user settings, and leaves `ANTHROPIC_API_KEY`
+  out of its environment so the plan is used. Your text goes in with the instructions rather than as Claude
+  Code's prompt, and its file mentions are off, so an `@` and a path in a script can't make it read a file
+  from your computer ([src/main/claude-code.ts](src/main/claude-code.ts)). If you
+  give the app to other people with this option, read
+  [Anthropic's conditions for products that run Claude Code](https://code.claude.com/docs/en/legal-and-compliance)
+  first. Pasting your own script needs neither.
 
 ### Left out
 

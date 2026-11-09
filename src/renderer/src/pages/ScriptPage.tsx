@@ -88,12 +88,12 @@ function Pill({ icon, label, entries }: { icon: ReactNode; label: string; entrie
 }
 
 export function ScriptPage({ prefill }: { prefill?: ScriptOrigin | null }): ReactNode {
-  const hasKey = useLibrary((s) => s.lib?.settings.hasApiKey ?? false);
+  const hasClaude = useLibrary((s) => !!(s.lib?.settings.hasApiKey || s.lib?.settings.claudeCode));
   const providers = useAi((s) => s.providers);
   const assets = useLibrary((s) => s.lib?.assets);
   const templates = useLibrary((s) => s.lib?.templates) ?? [];
-  // Writing from a topic needs a Claude key, so without one the Script tab, which needs nothing, comes first.
-  const [mode, setMode] = useState<'topic' | 'script'>(prefill?.mode ?? (hasKey ? 'topic' : 'script'));
+  // Writing from a topic needs Claude, so without it the Script tab, which needs nothing, comes first.
+  const [mode, setMode] = useState<'topic' | 'script'>(prefill?.mode ?? (hasClaude ? 'topic' : 'script'));
   /** The settings most videos leave alone stay out of the way until asked for. */
   const [more, setMore] = useState(!!prefill);
   const [topic, setTopic] = useState(prefill?.topic ?? '');
@@ -383,9 +383,9 @@ export function ScriptPage({ prefill }: { prefill?: ScriptOrigin | null }): Reac
             No text-to-speech voices are installed on this computer, so narrated videos cannot be generated.
           </Notice>
         )}
-        {mode === 'topic' && !hasKey && !reviewing && (
+        {mode === 'topic' && !hasClaude && !reviewing && (
           <Notice icon={<KeyRound size={15} />}>
-            Writing a script from a topic uses Claude, which has its own key, separate from any video service.{' '}
+            Writing a script from a topic uses Claude, with its own API key or your Claude plan, separate from any video service.{' '}
             <button type="button" className="link-btn inline" onClick={() => void openConnections()}>
               Connect Claude
             </button>{' '}
