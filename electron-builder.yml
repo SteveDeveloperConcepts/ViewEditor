@@ -1,5 +1,5 @@
 appId: com.developerconcepts.vieweditor
-productName: ViewEditor
+productName: Homecut
 copyright: Copyright © 2026 Steve Vaubell
 directories:
   buildResources: build
@@ -34,7 +34,7 @@ nsis:
   allowToChangeInstallationDirectory: true
   deleteAppDataOnUninstall: false
   # No spaces in release file names: GitHub renames uploads that have them.
-  artifactName: ViewEditor-Setup-${version}.${ext}
+  artifactName: Homecut-Setup-${version}.${ext}
 
 mac:
   icon: build/icon.png
@@ -43,7 +43,7 @@ mac:
   target:
     - dmg
     - zip
-  artifactName: ViewEditor-${version}-${arch}.${ext}
+  artifactName: Homecut-${version}-${arch}.${ext}
   # The Release workflow signs the apps with a Developer ID and has Apple notarise them (docs/RELEASING.md).
   # electron-builder notarises when APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD and APPLE_TEAM_ID are set.
   # Builds without the certificate use build/adhoc-mac.yml.
@@ -57,7 +57,7 @@ mac:
   # which allows nothing. The script explains why.
   sign: scripts/sign-mac.mjs
   extendInfo:
-    NSCameraUsageDescription: ViewEditor uses the camera when you record yourself.
-    NSMicrophoneUsageDescription: ViewEditor uses the microphone when you record a voice-over or a video.
+    NSCameraUsageDescription: Homecut uses the camera when you record yourself.
+    NSMicrophoneUsageDescription: Homecut uses the microphone when you record a voice-over or a video.
 dmg:
   sign: false

@@ -1,4 +1,4 @@
-# ViewEditor
+# Homecut
 
 A desktop video editor for Windows and macOS, built from the feature set described in the
 [Getting Started with VEED](https://support.veed.io/en/collections/3812805-getting-started-with-veed)
@@ -10,7 +10,7 @@ is optional and connects to the service of your choice with your own key.
 ## Download
 
 Installers for Windows and macOS are on the
-[Releases](https://github.com/SteveDeveloperConcepts/ViewEditor/releases) page. Once installed, ViewEditor
+[Releases](https://github.com/SteveDeveloperConcepts/ViewEditor/releases) page. Once installed, Homecut
 looks for new versions itself. On a Mac, drag it into Applications before you open it: it can only update
 itself there.
 
@@ -65,7 +65,7 @@ protocol and serves their real published schemas, so they cost nothing and need 
 
 ## What the documentation covers, and where it is here
 
-| Documentation | In ViewEditor |
+| Documentation | In Homecut |
 | --- | --- |
 | **Dashboard:** home page, left navigation, Recents, Assets, Brand, Templates, More apps | All there, regrouped. The left menu has Create (Edit my footage, Generate with AI, Video from a script, Record) and Library (Projects, Media, Templates, Brand). |
 | **AI Studio and AI Playground:** talking videos, AI images and video, from a prompt or a script | Through the AI services you connect. See [AI video](#ai-video). |
@@ -177,11 +177,12 @@ you get. Exports are rendered in chunks that are joined without re-encoding, so 
 of cuts never opens hundreds of files at once.
 
 Your library lives in the app data folder (`%APPDATA%\ViewEditor\library` on Windows,
-`~/Library/Application Support/ViewEditor/library` on macOS). Settings › Library opens it.
+`~/Library/Application Support/ViewEditor/library` on macOS). Settings › Library opens it. The folder
+keeps the app's first name, ViewEditor, so copies installed before the rename keep their library.
 
 ## Before you distribute it
 
-- **FFmpeg licence.** ViewEditor's code is MIT, and the FFmpeg programs in the installers are GPLv3, so their
+- **FFmpeg licence.** Homecut's code is MIT, and the FFmpeg programs in the installers are GPLv3, so their
   source has to stay available. [licenses/FFMPEG.md](licenses/FFMPEG.md) links to it. The Mac binaries that
   npm installs are not redistributable, so Mac builds swap in another build:
   [docs/RELEASING.md](docs/RELEASING.md#ffmpeg) has the details.

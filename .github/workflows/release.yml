@@ -66,4 +66,4 @@ jobs:
           fi
           sed "s/<version>/$version/g" .github/release-notes.md >> "$notes"
           gh release create "$GITHUB_REF_NAME" installers/* --verify-tag \
-            --title "ViewEditor $version" --notes-file "$notes" --generate-notes
+            --title "Homecut $version" --notes-file "$notes" --generate-notes

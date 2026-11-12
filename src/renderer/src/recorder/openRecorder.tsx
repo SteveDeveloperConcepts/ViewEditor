@@ -150,7 +150,7 @@ async function startCapture(c: CaptureChoices): Promise<Capture> {
 
 function friendlyError(err: unknown): string {
   const name = err instanceof DOMException ? err.name : '';
-  if (name === 'NotAllowedError') return 'Permission was refused. Allow camera, microphone or screen recording for ViewEditor in your system settings, then try again.';
+  if (name === 'NotAllowedError') return 'Permission was refused. Allow camera, microphone or screen recording for Homecut in your system settings, then try again.';
   if (name === 'NotFoundError') return 'That camera or microphone could not be found.';
   if (name === 'NotReadableError') return 'That device is in use by another app.';
   return errorMessage(err);
@@ -399,7 +399,7 @@ function RecorderBody({ options, close }: { options: RecorderOptions; close: () 
       {wantsScreen && <SourcePicker value={sourceId} onChange={setSourceId} onSources={setSourceCount} />}
       {wantsScreen && sourceCount === 0 && (
         <Notice kind="warning" icon={<CircleAlert size={15} />}>
-          No screens are available. On a Mac, allow Screen Recording for ViewEditor in System Settings › Privacy & Security, then reopen the app.
+          No screens are available. On a Mac, allow Screen Recording for Homecut in System Settings › Privacy & Security, then reopen the app.
         </Notice>
       )}
       {wantsCamera && (

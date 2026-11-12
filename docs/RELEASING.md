@@ -1,4 +1,4 @@
-# Releasing ViewEditor
+# Releasing Homecut
 
 `npm run release` publishes a new version. It raises the version in `package.json`, commits it, tags the
 commit with your release notes, and pushes the commit and tag together. The tag starts the **Release**
@@ -50,7 +50,7 @@ Delete the `.p12` file afterwards.
 
    Replace each `<…>`, angle brackets included, with your own text:
    - the version: three numbers, higher than the one in `package.json` (or the same, for the first release)
-   - each change: one short sentence written for the people who use ViewEditor
+   - each change: one short sentence written for the people who use Homecut
 
    Add `--dry-run` to see the plan and the release notes without changing anything.
 
@@ -63,8 +63,8 @@ Delete the `.p12` file afterwards.
    If a check fails, it says what's wrong and changes nothing.
 
 3. Follow the **Release** workflow on the **Actions** tab. `npm run release` prints the link. It builds:
-   - `ViewEditor-Setup-<version>.exe` for Windows
-   - `ViewEditor-<version>-arm64.dmg` and `ViewEditor-<version>-x64.dmg` for Apple silicon and Intel Macs,
+   - `Homecut-Setup-<version>.exe` for Windows
+   - `Homecut-<version>-arm64.dmg` and `Homecut-<version>-x64.dmg` for Apple silicon and Intel Macs,
      and a `.zip` of each Mac app, which installed copies update from
 
    It signs the Mac apps with your Developer ID and has Apple notarise them, which can take a while. Then it
@@ -108,16 +108,16 @@ code-signing certificate would remove it.
 
 ## How installed copies update
 
-ViewEditor checks the latest GitHub release 10 seconds after it starts, then every 4 hours
+Homecut checks the latest GitHub release 10 seconds after it starts, then every 4 hours
 (`src/main/updater.ts`). It downloads a newer version in the background and shows **Restart now**. If the
-user doesn't restart, the new version installs the next time they quit ViewEditor. `npm run dev` never
+user doesn't restart, the new version installs the next time they quit Homecut. `npm run dev` never
 checks.
 
 - **Windows:** the installer installs it.
 - **macOS:** Squirrel.Mac installs it from the release's zip, but only over a copy in Applications, and only
   if it's signed with the same Developer ID as that copy. A copy anywhere else, such as one opened from the
   disk image, says when a new version is out, and offers **Move to Applications**. If Squirrel.Mac refuses
-  an update, ViewEditor offers its release page instead.
+  an update, Homecut offers its release page instead.
 
 The checks read files that electron-builder writes next to the installers, and the workflow attaches them
 to the release: `latest.yml` (Windows), `latest-mac.yml`, the Mac `.zip` files, and the `.blockmap` files,

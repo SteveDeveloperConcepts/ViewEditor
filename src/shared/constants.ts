@@ -1,6 +1,8 @@
 import type { EncodeSpeed, ExportAdvanced, RateControl, TextStyle } from './types.ts';
 
-export const APP_NAME = 'ViewEditor';
+export const APP_NAME = 'Homecut';
+/** The app data folder's name, from when the app was called ViewEditor. Renaming it would lose people's libraries. */
+export const DATA_FOLDER = 'ViewEditor';
 
 // ---------------------------------------------------------------- supported files
 

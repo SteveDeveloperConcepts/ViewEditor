@@ -4,7 +4,7 @@ import { app, BrowserWindow, dialog, globalShortcut, Menu, nativeTheme, safeStor
 import type { AiModel } from '../shared/ai.ts';
 import type { ApiEvents } from '../shared/api.ts';
 import type { ClipServiceId } from '../shared/clips.ts';
-import { APP_NAME } from '../shared/constants.ts';
+import { APP_NAME, DATA_FOLDER } from '../shared/constants.ts';
 import { ScriptWriter } from './ai.ts';
 import { AiCatalog } from './ai/catalog.ts';
 import { fal } from './ai/fal.ts';
@@ -29,6 +29,9 @@ import { setupUpdater } from './updater.ts';
 
 // A separate data folder can be given for testing, so tests never touch the real library.
 if (process.env.VIEWEDITOR_DATA_DIR) app.setPath('userData', process.env.VIEWEDITOR_DATA_DIR);
+// Otherwise the data folder keeps the app's first name, ViewEditor, so copies from before it became
+// Homecut keep their library, settings and keys.
+else app.setPath('userData', join(app.getPath('appData'), DATA_FOLDER));
 app.setName(APP_NAME);
 registerMediaScheme();
 

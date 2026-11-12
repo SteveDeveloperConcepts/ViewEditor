@@ -148,7 +148,7 @@ vite.config.ts.timestamp-*
 # Turbo Repo
 .turbo
 
-# ViewEditor
+# Homecut
 release/
 .DS_Store
 Thumbs.db

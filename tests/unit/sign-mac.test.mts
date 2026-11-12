@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import signMac, { FFMPEG_ENTITLEMENTS, ffmpegTools, withFfmpegEntitlements } from '../../scripts/sign-mac.mjs';
 
-const app = join(tmpdir(), 'release', 'mac-arm64', 'ViewEditor.app');
+const app = join(tmpdir(), 'release', 'mac-arm64', 'Homecut.app');
 /** What electron-builder 26 picks for every file but the app itself, with the Release workflow's settings. */
 const electronBuilder = (file: string) => ({
   entitlements: 'build/entitlements.mac.plist',
@@ -34,7 +34,7 @@ test('everything else is signed as electron-builder would', () => {
   const options = withFfmpegEntitlements({ app, optionsForFile: electronBuilder });
   const others = [
     app,
-    join(app, 'Contents', 'Frameworks', 'ViewEditor Helper (Renderer).app'),
+    join(app, 'Contents', 'Frameworks', 'Homecut Helper (Renderer).app'),
     join(app, 'Contents', 'Frameworks', 'Electron Framework.framework'),
     join(app, 'Contents', 'Resources', 'app.asar.unpacked', 'node_modules', 'ffmpeg-ffprobe-static', 'ffmpeg.LICENSE'),
   ];
@@ -57,7 +57,7 @@ test('FFmpeg’s entitlements allow nothing', () => {
 test('signing stops when FFmpeg is not in the app, rather than leave it with Electron’s entitlements', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'vieweditor-sign-'));
   try {
-    await assert.rejects(signMac({ app: join(dir, 'ViewEditor.app') }), /FFmpeg isn't where the app runs it from/);
+    await assert.rejects(signMac({ app: join(dir, 'Homecut.app') }), /FFmpeg isn't where the app runs it from/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

@@ -1369,7 +1369,7 @@ section('update', async () => {
   // A Mac copy on the disk image, or anywhere else outside Applications, can't update itself there.
   await emit('update:changed', { kind: 'move' });
   await page.waitForSelector(button('Move to Applications'));
-  check((await page.textContent('.update-banner')).includes('Move ViewEditor to Applications'), 'a Mac copy that cannot update where it is asks to be moved to Applications');
+  check((await page.textContent('.update-banner')).includes('Move Homecut to Applications'), 'a Mac copy that cannot update where it is asks to be moved to Applications');
   await shot(page, '34-update-move');
   await emit('render:progress', { ...render, state: 'rendering' });
   await sleep(100);

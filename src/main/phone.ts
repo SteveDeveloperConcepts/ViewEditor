@@ -33,7 +33,7 @@ const PAGE = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Send to ViewEditor</title>
+<title>Send to Homecut</title>
 <style>
   :root { color-scheme: light dark; }
   body { font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; margin: 0; padding: 24px 20px 40px; max-width: 520px; margin-inline: auto; }
@@ -51,7 +51,7 @@ const PAGE = `<!doctype html>
 </style>
 </head>
 <body>
-<h1>Send files to ViewEditor</h1>
+<h1>Send files to Homecut</h1>
 <p>Choose videos, audio or images. They appear on your computer as soon as they finish.</p>
 <label class="pick">Choose files<input id="pick" type="file" multiple accept="video/*,audio/*,image/*"></label>
 <ul id="list"></ul>

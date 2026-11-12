@@ -1,6 +1,6 @@
-# FFmpeg in ViewEditor
+# FFmpeg in Homecut
 
-ViewEditor runs FFmpeg as a separate program to read media and export video. ViewEditor's own code is under
+Homecut runs FFmpeg as a separate program to read media and export video. Homecut's own code is under
 the MIT licence. The FFmpeg programs in its installers are under the GNU General Public License, version 3,
 which is in `GPL-3.0.txt` next to this file.
 

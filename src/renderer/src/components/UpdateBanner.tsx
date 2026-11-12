@@ -12,21 +12,21 @@ function wording(update: UpdateState): { title: string; detail: string; action: 
   switch (update.kind) {
     case 'ready':
       return {
-        title: `ViewEditor ${update.version} is ready to install`,
-        detail: 'It installs the next time you quit ViewEditor. Restart now to start using it.',
+        title: `Homecut ${update.version} is ready to install`,
+        detail: 'It installs the next time you quit Homecut. Restart now to start using it.',
         action: 'Restart now',
         dismiss: 'Later',
       };
     case 'available':
       return {
-        title: `ViewEditor ${update.version} is available`,
+        title: `Homecut ${update.version} is available`,
         detail: 'Download it from the release page, then drag it into Applications to replace this copy.',
         action: 'Download',
         dismiss: 'Later',
       };
     case 'move':
       return {
-        title: 'Move ViewEditor to Applications to keep it up to date',
+        title: 'Move Homecut to Applications to keep it up to date',
         detail: "It's running from somewhere it can't update itself, such as the disk image.",
         action: 'Move to Applications',
         dismiss: 'Not now',
@@ -35,7 +35,7 @@ function wording(update: UpdateState): { title: string; detail: string; action: 
 }
 
 /**
- * A newer ViewEditor, ready to install on restart or to download from its release page. On a Mac, a copy that
+ * A newer Homecut, ready to install on restart or to download from its release page. On a Mac, a copy that
  * can't update itself where it is offers to move to Applications.
  */
 export function UpdateBanner(): ReactNode {
@@ -54,7 +54,7 @@ export function UpdateBanner(): ReactNode {
   if (!update) return null;
   const key = update.kind === 'move' ? 'move' : update.version;
   if (later === key) return null;
-  // Restarting into a new version and moving to Applications both quit ViewEditor.
+  // Restarting into a new version and moving to Applications both quit Homecut.
   const quits = update.kind !== 'available';
   const { title, detail, action, dismiss } = wording(update);
 
